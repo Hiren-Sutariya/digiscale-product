@@ -15,11 +15,18 @@ export default function HomePage() {
     setSelectedImage(file);
     console.log("Selected Image:", file);
   };
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+  };
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <UploadCard onImageUpload={handleImageUpload} />
+        <UploadCard
+          image={selectedImage}
+          onImageUpload={handleImageUpload}
+          onRemoveImage={handleRemoveImage}
+        />
 
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-5">

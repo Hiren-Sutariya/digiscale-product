@@ -11,6 +11,7 @@ export default function OriginalPreview({
         Original Image
       </h3>
 
+      {/* Image Preview */}
       <div className="flex h-80 items-center justify-center overflow-hidden rounded-lg border bg-gray-50">
         {image ? (
           <img
@@ -24,6 +25,25 @@ export default function OriginalPreview({
           </p>
         )}
       </div>
+
+      {/* Image Information */}
+      {image && (
+        <div className="mt-4 rounded-lg border bg-gray-50 p-4">
+          <p className="text-sm">
+            <span className="font-semibold">Name:</span> {image.name}
+          </p>
+
+          <p className="mt-2 text-sm">
+            <span className="font-semibold">Size:</span>{" "}
+            {(image.size / 1024 / 1024).toFixed(2)} MB
+          </p>
+
+          <p className="mt-2 text-sm">
+            <span className="font-semibold">Type:</span>{" "}
+            {image.type}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
