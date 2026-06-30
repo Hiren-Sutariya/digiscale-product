@@ -1,0 +1,8 @@
+export interface ProductImage {
+  id: string;
+  file: File;
+  preview: string;
+  name: string;
+  size: number;
+  type: string;
+}
