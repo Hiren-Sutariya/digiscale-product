@@ -1,16 +1,32 @@
 import MainLayout from "@/components/layout/MainLayout";
+import UploadCard from "@/components/upload/UploadCard";
+import OriginalPreview from "@/components/preview/OriginalPreview";
+import ProcessedPreview from "@/components/preview/ProcessedPreview";
+import Sidebar from "@/components/sidebar/Sidebar";
 
 export default function HomePage() {
   return (
     <MainLayout>
-      <div className="rounded-xl border border-dashed border-gray-300 bg-white p-16 text-center">
-        <h2 className="text-3xl font-bold text-gray-900">
-          Welcome to DigiScale Product Studio
-        </h2>
+      <div className="space-y-6">
 
-        <p className="mt-3 text-gray-500">
-          Upload your product image to get started.
-        </p>
+        <UploadCard />
+
+        <div className="grid grid-cols-12 gap-6">
+
+          <div className="col-span-5">
+            <OriginalPreview />
+          </div>
+
+          <div className="col-span-5">
+            <ProcessedPreview />
+          </div>
+
+          <div className="col-span-2">
+            <Sidebar />
+          </div>
+
+        </div>
+
       </div>
     </MainLayout>
   );
