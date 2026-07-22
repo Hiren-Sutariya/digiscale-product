@@ -21,7 +21,7 @@ app.mount(
     name="uploads"
 )
 
-cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+cors_origins = [origin.strip().rstrip("/") for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
 
 app.add_middleware(
     CORSMiddleware,

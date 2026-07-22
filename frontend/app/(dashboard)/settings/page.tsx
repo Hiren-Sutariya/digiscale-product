@@ -32,12 +32,18 @@ async function getUserProfile() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("No session found");
   const user = session.user;
+  
+  // Count how many products are created by this user
+  const { count, error } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true });
+  
   return {
     name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
     email: user.email || "",
     plan: "Starter",
     credits_limit: 30,
-    credits_used: 5,
+    credits_used: error ? 0 : (count || 0),
     created_at: user.created_at
   };
 }

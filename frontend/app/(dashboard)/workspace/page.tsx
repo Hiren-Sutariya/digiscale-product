@@ -193,10 +193,21 @@ export default function WorkspacePage() {
   const [razorpayReady, setRazorpayReady] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session?.user);
+      
+      if (session?.access_token) {
+        localStorage.setItem("token", session.access_token);
+        localStorage.setItem("user_email", session.user.email || "");
+        localStorage.setItem("user_name", session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User");
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
+    checkAuth();
 
+    if (typeof window !== "undefined") {
       if (window.Razorpay) {
         setRazorpayReady(true);
       }
