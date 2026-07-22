@@ -5,11 +5,11 @@ click==8.4.2
 fastapi==0.138.2
 h11==0.16.0
 idna==3.18
-numpy
+numpy==2.5.0
 opencv-python-headless==4.13.0.92
 pillow==12.2.0
 pillow_heif==1.4.0
-rembg[cpu]==2.0.76
+rembg==2.0.76
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dotenv==1.2.2

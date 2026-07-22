@@ -1,4 +1,5 @@
 import os
+import rembg
 from PIL import Image
 import pillow_heif
 from app.config import settings
@@ -11,7 +12,6 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        import rembg
         # Using state-of-the-art birefnet-general model
         _rembg_session = rembg.new_session("birefnet-general")
     return _rembg_session

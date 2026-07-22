@@ -2,11 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import {
-  getProjects,
-  createProject,
-  uploadImage,
-} from "@/services/api";
+import { uploadImage } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import {
   Plus,
@@ -929,7 +925,7 @@ export default function WorkspacePage() {
                     `${imgItem.name.split(".")[0]}_composite.${ext}`, 
                     { type: imgItem.exportFormat }
                   );
-                  await uploadImage(file, parseInt(selectedCollectionId));
+                  await uploadImage(file, selectedCollectionId);
                   successCount++;
                 } catch (err) {
                   console.warn("Upload failed for batch item, cache saved: ", err);

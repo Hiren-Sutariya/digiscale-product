@@ -1,12 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import {
-  getProjects,
-  createProject,
-  getProject,
-  deleteProject,
-} from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import {
   Plus,
