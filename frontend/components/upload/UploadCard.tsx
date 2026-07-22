@@ -4,17 +4,21 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadCloud } from "lucide-react";
 
+
 interface UploadCardProps {
-    image: File | null;
-    onImageUpload: (file: File) => void;
-    onRemoveImage: () => void;
+  image: File | null;
+  onImageUpload: (file: File) => void;
+  onRemoveImage: () => void;
+
+  variant?: "landing" | "workspace";
 }
 
 export default function UploadCard({
-    image,
-    onImageUpload,
-    onRemoveImage,
-}: UploadCardProps) {
+  image,
+  onImageUpload,
+  onRemoveImage,
+  variant = "workspace",
+}: UploadCardProps){
     const [errorMessage, setErrorMessage] = useState("");
     const onDrop = useCallback(
         (acceptedFiles: File[]) => {
