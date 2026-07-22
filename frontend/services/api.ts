@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+import { API_BASE_URL } from "@/constants/api";
 
 export async function uploadImage(file: File, projectId?: string | null): Promise<any> {
   const formData = new FormData();

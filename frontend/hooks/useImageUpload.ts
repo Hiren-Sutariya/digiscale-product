@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { uploadImage as uploadImageAPI } from "@/services/api";
+import { API_BASE_URL } from "@/constants/api";
 
 export function useImageUpload() {
   const [image, setImage] = useState<File | null>(null);
@@ -24,15 +25,11 @@ export function useImageUpload() {
 
       console.log(result);
 
-      const imageUrl = `http://localhost:8000/${result.processedImage}`;
+      const imageUrl = `${API_BASE_URL}/${result.processedImage}`;
 
       console.log(imageUrl);
 
       setProcessedImage(imageUrl);
-
-      setProcessedImage(
-        `http://localhost:8000/${result.processedImage}`
-      );
 
     } catch (err) {
       setError("Failed to process image.");

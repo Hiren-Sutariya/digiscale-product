@@ -18,14 +18,14 @@ export default function DashboardLayout({
   useEffect(() => {
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!session && pathname !== "/workspace") {
         router.push("/login");
       } else {
         setLoading(false);
       }
     }
     checkAuth();
-  }, [router]);
+  }, [router, pathname]);
 
   if (loading) {
     return (
