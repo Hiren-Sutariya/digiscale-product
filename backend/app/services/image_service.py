@@ -5,7 +5,6 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
-import rembg
 from PIL import Image
 import pillow_heif
 from app.config import settings
@@ -18,6 +17,7 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
+        import rembg
         _rembg_session = rembg.new_session("u2netp", providers=["CPUExecutionProvider"])
     return _rembg_session
 
