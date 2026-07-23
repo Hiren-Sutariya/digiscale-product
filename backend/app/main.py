@@ -1,15 +1,25 @@
 import os
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.database import engine, Base
+from app.api.auth import router as auth_router
+from app.api.users import router as users_router
+from app.api.projects import router as projects_router
 from app.api.upload import router as upload_router
+from app.api.payments import router as payments_router
+
+# Create database tables at startup
+Base.metadata.create_all(bind=engine)
+
+# Migration to add deletion_scheduled_at if it does not exist in sqlite database
+from sqlalchemy import text
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN deletion_scheduled_at DATETIME NULL;"))
+except Exception as e:
+    print("Migration exception:", e)
 
 app = FastAPI(
     title="DigiScale Product Studio API",
@@ -27,18 +37,22 @@ app.mount(
     name="uploads"
 )
 
-cors_origins = [origin.strip().rstrip("/") for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=[
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include API Routers
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(projects_router)
 app.include_router(upload_router)
+app.include_router(payments_router)
 
 @app.get("/")
 def root():

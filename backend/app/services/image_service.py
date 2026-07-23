@@ -1,10 +1,5 @@
 import os
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-
+import rembg
 from PIL import Image
 import pillow_heif
 from app.config import settings
@@ -17,8 +12,10 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        import rembg
-        _rembg_session = rembg.new_session("u2netp", providers=["CPUExecutionProvider"])
+        # Using birefnet-general-lite (approx. 220MB)
+        # This is a lightweight version of the state-of-the-art BiRefNet model.
+        # It provides extremely sharp, professional edges (fixes outlines/shadows) while running fast on CPU with low RAM.
+        _rembg_session = rembg.new_session("birefnet-general-lite")
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
@@ -34,7 +31,7 @@ def remove_background(input_path: str, output_path: str) -> bool:
         if max(input_image.size) > max_size:
             input_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Remove background using rembg with the birefnet-general session
+        # Remove background using rembg with the birefnet-general-lite session
         session = get_session()
         output_image = rembg.remove(input_image, session=session)
         

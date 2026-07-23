@@ -2,9 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { uploadImage } from "@/services/api";
+import {
+  getProjects,
+  createProject,
+  uploadImage,
+} from "@/services/api";
 import { supabase } from "@/lib/supabase";
-import { API_BASE_URL } from "@/constants/api";
 import {
   Plus,
   Trash2,
@@ -194,21 +197,10 @@ export default function WorkspacePage() {
   const [razorpayReady, setRazorpayReady] = useState(false);
 
   useEffect(() => {
-    async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session?.user);
-      
-      if (session?.access_token) {
-        localStorage.setItem("token", session.access_token);
-        localStorage.setItem("user_email", session.user.email || "");
-        localStorage.setItem("user_name", session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User");
-      } else {
-        localStorage.removeItem("token");
-      }
-    }
-    checkAuth();
-
     if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+
       if (window.Razorpay) {
         setRazorpayReady(true);
       }
@@ -230,7 +222,7 @@ export default function WorkspacePage() {
 
     try {
       // 1. Create Razorpay order from backend
-      const res = await fetch(`${API_BASE_URL}/api/payments/create-order`, {
+      const res = await fetch("http://localhost:8000/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planName, billing: billingCycle }),
@@ -250,7 +242,7 @@ export default function WorkspacePage() {
         handler: async (response: any) => {
           // 3. Verify payment signature on backend
           try {
-            const verifyRes = await fetch(`${API_BASE_URL}/api/payments/verify`, {
+            const verifyRes = await fetch("http://localhost:8000/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -410,7 +402,7 @@ export default function WorkspacePage() {
                   ...item,
                   loading: false,
                   imageElementLoaded: true,
-                  processedUrl: `${API_BASE_URL}/${res.processedImage}`,
+                  processedUrl: `http://localhost:8000/${res.processedImage}`,
                 }
               : item
           )
@@ -937,7 +929,7 @@ export default function WorkspacePage() {
                     `${imgItem.name.split(".")[0]}_composite.${ext}`, 
                     { type: imgItem.exportFormat }
                   );
-                  await uploadImage(file, selectedCollectionId);
+                  await uploadImage(file, parseInt(selectedCollectionId));
                   successCount++;
                 } catch (err) {
                   console.warn("Upload failed for batch item, cache saved: ", err);

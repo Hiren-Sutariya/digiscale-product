@@ -19,6 +19,7 @@ import {
   Edit
 } from "lucide-react";
 import Link from "next/link";
+import { getUserProfile } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 
 interface Collection {
@@ -105,6 +106,10 @@ export default function QuotationView() {
   const [taxPercent, setTaxPercent] = useState<number | "">("");
   const [discountAmount, setDiscountAmount] = useState<string>("");
 
+  // Event Price Markup states
+  const [applyEventMarkup, setApplyEventMarkup] = useState<boolean>(false);
+  const [eventMarkupPercent, setEventMarkupPercent] = useState<number>(25);
+
   // Saved Quotations & Subview History
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
@@ -164,54 +169,67 @@ export default function QuotationView() {
     return dateStr;
   };
 
+  const getItemRate = (rate: string) => {
+    const numericRate = parseFloat(rate) || 0;
+    if (applyEventMarkup) {
+      const markupMultiplier = 1 + (eventMarkupPercent / 100);
+      const markedUpPrice = numericRate * markupMultiplier;
+      return (Math.round(markedUpPrice * 100) / 100).toString();
+    }
+    return rate;
+  };
+
+  const getSavedItemRate = (rate: string, applyMarkup?: boolean, markupPercent?: number) => {
+    const numericRate = parseFloat(rate) || 0;
+    if (applyMarkup) {
+      const markupMultiplier = 1 + ((markupPercent ?? 25) / 100);
+      const markedUpPrice = numericRate * markupMultiplier;
+      return (Math.round(markedUpPrice * 100) / 100).toString();
+    }
+    return rate;
+  };
+
   // Load configuration and aggregates on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedCols = localStorage.getItem("digiscale_collections");
-      if (storedCols) {
-        const cols: Collection[] = JSON.parse(storedCols);
-        setCollections(cols);
-        
-        // Aggregate all products from all collections
-        let allProds: Product[] = [];
-        cols.forEach(col => {
-          const storedProds = localStorage.getItem(`digiscale_products_${col.id}`);
-          if (storedProds) {
-            try {
-              const parsed: Product[] = JSON.parse(storedProds);
-              const tagged = parsed.map(p => ({
-                ...p,
-                collectionName: col.name,
-                collectionId: col.id
-              }));
-              allProds = [...allProds, ...tagged];
-            } catch (e) {
-              console.error(e);
-            }
-          }
-        });
+    async function loadData() {
+      try {
+        // Fetch collections from Supabase
+        const { data: colsData, error: colsErr } = await supabase.from('collections').select('*');
+        if (colsErr) throw colsErr;
+        setCollections(colsData || []);
 
-        // Filter duplicates by product ID
-        const uniqueProds: Product[] = [];
-        const seenIds = new Set<string>();
-        allProds.forEach(p => {
-          if (!seenIds.has(p.id)) {
-            seenIds.add(p.id);
-            uniqueProds.push(p);
-          }
-        });
-        setProducts(uniqueProds);
+        // Fetch products from Supabase with collection join
+        const { data: prodsData, error: prodsErr } = await supabase
+          .from('products')
+          .select('*, collection:collections(name)');
+        if (prodsErr) throw prodsErr;
+
+        const mappedProds = (prodsData || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          stock: p.stock,
+          cartonQty: p.cartonQty,
+          rate: p.rate?.toString(),
+          color: p.color,
+          length: p.length?.toString(),
+          photoUrl: p.photoUrl,
+          collectionName: p.collection?.name || '',
+          collectionId: p.collection_id,
+          description: p.description
+        }));
+        setProducts(mappedProds);
+      } catch (e) {
+        console.error("Failed to load data from Supabase:", e);
       }
     }
+    loadData();
 
     // Fetch company info from profile settings
     setLoadingProfile(true);
-    async function fetchCompanyInfo() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const email = session?.user?.email || localStorage.getItem("user_email") || "";
-      
-      if (email) {
-        const storedStr = localStorage.getItem(`digiscale_company_${email}`);
+    getUserProfile()
+      .then((profile) => {
+        const emailKey = profile.email;
+        const storedStr = localStorage.getItem(`digiscale_company_${emailKey}`);
         if (storedStr) {
           const data = JSON.parse(storedStr);
           setCompanyInfo(data);
@@ -220,12 +238,25 @@ export default function QuotationView() {
         } else {
           setTermsList(parseTerms(""));
         }
-      } else {
-        setTermsList(parseTerms(""));
-      }
-      setLoadingProfile(false);
-    }
-    fetchCompanyInfo();
+        setLoadingProfile(false);
+      })
+      .catch(() => {
+        const cachedEmail = localStorage.getItem("user_email") || "";
+        if (cachedEmail) {
+          const storedStr = localStorage.getItem(`digiscale_company_${cachedEmail}`);
+          if (storedStr) {
+            const data = JSON.parse(storedStr);
+            setCompanyInfo(data);
+            setShowBankDetails(!!(data.bankName || data.accountNumber));
+            setTermsList(parseTerms(data.termsAndConditions));
+          } else {
+            setTermsList(parseTerms(""));
+          }
+        } else {
+          setTermsList(parseTerms(""));
+        }
+        setLoadingProfile(false);
+      });
 
     // Fetch saved quotations history
     if (typeof window !== "undefined") {
@@ -241,6 +272,15 @@ export default function QuotationView() {
         }
       } else {
         setQuoteNumber("Q-1");
+      }
+
+      const storedApplyEvent = localStorage.getItem("digiscale_apply_event_markup");
+      if (storedApplyEvent) {
+        setApplyEventMarkup(storedApplyEvent === "true");
+      }
+      const storedEventPercent = localStorage.getItem("digiscale_event_markup_percent");
+      if (storedEventPercent) {
+        setEventMarkupPercent(parseFloat(storedEventPercent) || 25);
       }
     }
   }, []);
@@ -262,6 +302,8 @@ export default function QuotationView() {
       taxPercent,
       discountAmount,
       total,
+      applyEventMarkup,
+      eventMarkupPercent,
       createdAt: new Date().toISOString()
     };
 
@@ -296,6 +338,8 @@ export default function QuotationView() {
     setSelectedItems(quote.items || []);
     setTaxPercent(quote.taxPercent ?? "");
     setDiscountAmount(quote.discountAmount || "");
+    setApplyEventMarkup(quote.applyEventMarkup || false);
+    setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
     setActiveSubView("create");
   };
 
@@ -317,6 +361,8 @@ export default function QuotationView() {
     setSelectedItems(quote.items || []);
     setTaxPercent(quote.taxPercent ?? "");
     setDiscountAmount(quote.discountAmount || "");
+    setApplyEventMarkup(quote.applyEventMarkup || false);
+    setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
     setActiveSubView("create");
     setTimeout(() => {
       window.print();
@@ -366,6 +412,21 @@ export default function QuotationView() {
     );
   };
 
+  // Update quantity (QTY) manually
+  const handleUpdateQuantity = (itemId: string, qty: number) => {
+    setSelectedItems(
+      selectedItems.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            quantity: Math.max(0, qty)
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   // Filter products by global search query
   const filteredProducts = products.filter(p => {
     const q = searchQuery.trim().toLowerCase();
@@ -373,13 +434,13 @@ export default function QuotationView() {
     return (
       p.name?.toLowerCase().includes(q) ||
       p.color?.toLowerCase().includes(q) ||
-      p.length?.toLowerCase().includes(q) ||
+      p.length?.toString().toLowerCase().includes(q) ||
       p.collectionName?.toLowerCase().includes(q)
     );
   });
 
   // Calculations
-  const subtotal = selectedItems.reduce((sum, item) => sum + (item.quantity * (parseFloat(item.rate) || 0)), 0);
+  const subtotal = selectedItems.reduce((sum, item) => sum + (item.quantity * (parseFloat(getItemRate(item.rate)) || 0)), 0);
   
   const taxRate = typeof taxPercent === "number" ? taxPercent : 0;
   
@@ -711,6 +772,42 @@ export default function QuotationView() {
                     <label htmlFor="showAuthSignCheckbox" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
                       Include Authorized Sign Line
                     </label>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-2.5 mt-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="applyEventMarkupCheckbox"
+                          checked={applyEventMarkup}
+                          onChange={(e) => {
+                            setApplyEventMarkup(e.target.checked);
+                            localStorage.setItem("digiscale_apply_event_markup", e.target.checked.toString());
+                          }}
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4"
+                        />
+                        <label htmlFor="applyEventMarkupCheckbox" className="text-xs font-black text-slate-700 cursor-pointer select-none uppercase tracking-wider">
+                          Apply Event Price Markup
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={eventMarkupPercent}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setEventMarkupPercent(val);
+                            localStorage.setItem("digiscale_event_markup_percent", val.toString());
+                          }}
+                          className="w-12 rounded-lg border border-slate-200 bg-white py-1 px-1.5 text-center text-xs font-black text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-xs font-bold text-slate-500">%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1045,18 +1142,31 @@ export default function QuotationView() {
                         </td>
 
                         {/* QTY */}
-                        <td className="py-3 px-3 border-r border-slate-300 align-middle text-center font-bold text-slate-700">
-                          {item.quantity}
+                        <td className="py-2.5 px-2.5 border-r border-slate-300 align-middle text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantity === 0 ? "" : item.quantity}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? 0 : parseInt(e.target.value);
+                              handleUpdateQuantity(item.id, isNaN(val) ? 0 : val);
+                            }}
+                            placeholder="0"
+                            className="no-print w-16 rounded-lg border border-slate-205 bg-white py-1 px-1.5 text-center text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span className="hidden print:inline font-bold text-slate-700">
+                            {item.quantity}
+                          </span>
                         </td>
 
                         {/* PRICE CODE */}
                         <td className="py-3 px-3 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
-                          {item.rate}
+                          {getItemRate(item.rate)}
                         </td>
 
                         {/* TOTAL */}
                         <td className="py-3 px-3 align-middle text-right font-black text-slate-950">
-                          ₹{(item.quantity * (parseFloat(item.rate) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     ))}
@@ -1352,11 +1462,11 @@ export default function QuotationView() {
                         <td className="py-3 px-3 border-r border-slate-300 align-middle text-center font-bold text-slate-700">
                           {item.quantity}
                         </td>
-                        <td className="py-3 px-3 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
-                          {item.rate}
+                         <td className="py-3 px-3 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
+                          {getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)}
                         </td>
                         <td className="py-3 px-3 align-middle text-right font-black text-slate-955">
-                          ₹{(item.quantity * (parseFloat(item.rate) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     ))}
@@ -1403,13 +1513,13 @@ export default function QuotationView() {
               <div className="w-full md:w-72 space-y-3 text-xs">
                 <div className="flex justify-between font-bold text-slate-655">
                   <span>Amount</span>
-                  <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(item.rate) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
 
                 {typeof selectedQuoteForPreview.taxPercent === "number" && selectedQuoteForPreview.taxPercent > 0 && (
                   <div className="flex justify-between font-bold text-slate-500">
                     <span>GST ({selectedQuoteForPreview.taxPercent}%)</span>
-                    <span>₹{((selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(item.rate) || 0)), 0) * selectedQuoteForPreview.taxPercent) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>₹{((selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0) * selectedQuoteForPreview.taxPercent) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 )}
 
@@ -1419,7 +1529,7 @@ export default function QuotationView() {
                     <span>
                       - ₹{(
                         selectedQuoteForPreview.discountAmount.endsWith("%")
-                          ? (selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(item.rate) || 0)), 0) * parseFloat(selectedQuoteForPreview.discountAmount.slice(0, -1))) / 100
+                          ? (selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0) * parseFloat(selectedQuoteForPreview.discountAmount.slice(0, -1))) / 100
                           : parseFloat(selectedQuoteForPreview.discountAmount) || 0
                       ).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>

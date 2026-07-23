@@ -26,41 +26,7 @@ import {
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { supabase } from "@/lib/supabase";
-
-async function getUserProfile() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("No session found");
-  const user = session.user;
-  
-  // Count how many products are created by this user
-  const { count, error } = await supabase
-    .from("products")
-    .select("*", { count: "exact", head: true });
-  
-  return {
-    name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-    email: user.email || "",
-    plan: "Starter",
-    credits_limit: 30,
-    credits_used: error ? 0 : (count || 0),
-    created_at: user.created_at
-  };
-}
-
-async function updateUserProfile(name: string, email: string) {
-  const { data, error } = await supabase.auth.updateUser({
-    email: email,
-    data: { full_name: name }
-  });
-  if (error) throw error;
-  return data;
-}
-
-async function deleteAccount() {
-  // Mock account deletion by signing out
-  await supabase.auth.signOut();
-}
+import { getUserProfile, updateUserProfile, deleteAccount } from "@/services/api";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");

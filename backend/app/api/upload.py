@@ -2,10 +2,33 @@ import os
 import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from app.database import get_db
 from app.config import settings
+from app.services.auth_service import decode_access_token
 from app.services.image_service import remove_background, add_white_background
+from app.models.user import User
+from app.models.project import Project, ProjectImage
 
 router = APIRouter(tags=["upload"])
+
+security = HTTPBearer(auto_error=False)
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not credentials:
+        return None
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    if not payload:
+        return None
+    email = payload.get("sub")
+    if not email:
+        return None
+    return db.query(User).filter(User.email == email).first()
 
 @router.post("/upload")
 async def upload_and_process_image(

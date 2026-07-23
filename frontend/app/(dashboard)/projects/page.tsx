@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
+import {
+  getProjects,
+  createProject,
+  getProject,
+  deleteProject,
+} from "@/services/api";
 import { supabase } from "@/lib/supabase";
-import { API_BASE_URL } from "@/constants/api";
 import {
   Plus,
   Search,
@@ -183,7 +188,7 @@ function CollectionsPageContent() {
     try {
       const { data } = await supabase.from('products').select(`*, collection:collections(name)`);
       if (data) {
-         setAllProducts(data.map(p => ({
+         const mapped = data.map(p => ({
            id: p.id,
            name: p.name,
            stock: p.stock,
@@ -196,7 +201,9 @@ function CollectionsPageContent() {
            collectionId: p.collection_id,
            collectionName: p.collection?.name || "Unknown Collection",
            createdAt: p.created_at
-         })));
+         }));
+         setAllProducts(mapped);
+         localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
       }
     } catch (err) {
       console.error("Failed to refresh products:", err);
@@ -212,7 +219,9 @@ function CollectionsPageContent() {
       ]);
 
       if (rowsRes.data) {
-        setWarehouseRows(rowsRes.data.map(r => r.id));
+        const rows = rowsRes.data.map(r => r.id);
+        setWarehouseRows(rows);
+        localStorage.setItem("digiscale_cached_warehouse_rows", JSON.stringify(rows));
       }
       
       if (slotsRes.data) {
@@ -222,6 +231,7 @@ function CollectionsPageContent() {
           slotsMap[s.row_id].push(s.slot_number);
         });
         setWarehouseSlots(slotsMap);
+        localStorage.setItem("digiscale_cached_warehouse_slots", JSON.stringify(slotsMap));
       }
       
       if (assignsRes.data) {
@@ -234,6 +244,7 @@ function CollectionsPageContent() {
           });
         });
         setWarehouseAssignments(assignsMap);
+        localStorage.setItem("digiscale_cached_warehouse_assignments", JSON.stringify(assignsMap));
       }
       
       await refreshAllProducts();
@@ -243,6 +254,30 @@ function CollectionsPageContent() {
   };
 
   useEffect(() => {
+    // Load cached data instantly
+    if (typeof window !== "undefined") {
+      const cachedCols = localStorage.getItem("digiscale_cached_collections");
+      if (cachedCols) {
+        try { setCollections(JSON.parse(cachedCols)); } catch(e) {}
+      }
+      const cachedProds = localStorage.getItem("digiscale_cached_all_products");
+      if (cachedProds) {
+        try { setAllProducts(JSON.parse(cachedProds)); } catch(e) {}
+      }
+      const cachedRows = localStorage.getItem("digiscale_cached_warehouse_rows");
+      if (cachedRows) {
+        try { setWarehouseRows(JSON.parse(cachedRows)); } catch(e) {}
+      }
+      const cachedSlots = localStorage.getItem("digiscale_cached_warehouse_slots");
+      if (cachedSlots) {
+        try { setWarehouseSlots(JSON.parse(cachedSlots)); } catch(e) {}
+      }
+      const cachedAssigns = localStorage.getItem("digiscale_cached_warehouse_assignments");
+      if (cachedAssigns) {
+        try { setWarehouseAssignments(JSON.parse(cachedAssigns)); } catch(e) {}
+      }
+    }
+
     fetchCollections();
     fetchWarehouseData();
     
@@ -332,6 +367,7 @@ function CollectionsPageContent() {
           createdAt: new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         }));
         setCollections(formattedData);
+        localStorage.setItem("digiscale_cached_collections", JSON.stringify(formattedData));
       }
     } catch (err) {
       console.error("Failed to fetch collections from Supabase:", err);
@@ -527,8 +563,11 @@ function CollectionsPageContent() {
     e.preventDefault();
     const finalName = prodName.trim() || `Product #${products.length + 1}`;
 
-    const targetCollectionId = selectedCol?.id;
-    if (!targetCollectionId) return;
+    const targetCollectionId = selectedCol?.id || (editingProduct as any)?.collectionId || (editingProduct as any)?.collection_id;
+    if (!targetCollectionId) {
+      alert("No collection ID found for this product.");
+      return;
+    }
 
     const productPayload = {
       name: finalName,
@@ -1057,6 +1096,10 @@ ${rows}
           localStorage.setItem(`digiscale_products_${selectedCol.id}`, JSON.stringify(updated));
           return updated;
         });
+        supabase.from('products').update({ photoUrl: dataUrl }).eq('id', photoAssignTargetId)
+          .then(({ error }) => {
+            if (error) console.error("Failed to update product photoUrl in Supabase:", error);
+          });
       };
       img.src = src;
     };
@@ -1841,7 +1884,7 @@ ${rows}
                   {detailImages.map((img, idx) => {
                     const imgPath = img.processed_path?.startsWith("data:") || img.processed_path?.startsWith("http")
                       ? img.processed_path
-                      : `${API_BASE_URL}/${img.processed_path || img.original_path}`;
+                      : `http://localhost:8000/${img.processed_path || img.original_path}`;
 
                     return (
                       <div
@@ -2068,17 +2111,8 @@ ${rows}
                       // Format creation date
                       const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
 
-                      // Get local products count for this collection
-                      let productCount = 0;
-                      if (typeof window !== "undefined") {
-                        const cachedProds = localStorage.getItem(`digiscale_products_${col.id}`);
-                        if (cachedProds) {
-                          try {
-                            const parsedProds = JSON.parse(cachedProds);
-                            productCount = parsedProds.length;
-                          } catch(e) {}
-                        }
-                      }
+                      // Get products count for this collection from Supabase allProducts state
+                      const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
 
                       return viewMode === "grid" ? (
                         /* Grid Card */
@@ -2494,8 +2528,15 @@ ${rows}
                                     </div>
                                   </div>
                                   <button
+                                    onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
+                                    className="p-1.5 rounded-lg text-slate-350 hover:text-blue-600 hover:bg-blue-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer animate-fade-in"
+                                    title="Edit Product"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
                                     onClick={(e) => { e.stopPropagation(); zoneLocId && handleRemoveProductFromLocation(zoneLocId, prod.id); }}
-                                    className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer"
+                                    className="p-1.5 rounded-lg text-slate-350 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer"
                                     title="Remove"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -2819,6 +2860,10 @@ ${rows}
                             localStorage.setItem(`digiscale_products_${selectedCol.id}`, JSON.stringify(updated));
                             return updated;
                           });
+                          supabase.from('products').update({ photoUrl: dataUrl }).eq('id', prod.id)
+                            .then(({ error }) => {
+                              if (error) console.error("Failed to update product photoUrl in Supabase:", error);
+                            });
                         };
                         img.src = src;
                       };

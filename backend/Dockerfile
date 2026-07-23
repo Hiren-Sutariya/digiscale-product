@@ -1,33 +1,30 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    OMP_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1 \
-    OPENBLAS_NUM_THREADS=1 \
-    NUMEXPR_NUM_THREADS=1 \
-    VECLIB_MAXIMUM_THREADS=1
-
+# Set working directory
 WORKDIR /app
 
-# Install system dependencies (onnxruntime needs libgomp)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies for OpenCV, PostgreSQL, and other packages
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     build-essential \
-    libgomp1 \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY backend/requirements.txt .
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python -c "import rembg; rembg.new_session('u2netp')"
+# Copy backend files
+COPY . .
 
-# Copy backend code
-COPY backend/ .
+# Create uploads directory
+RUN mkdir -p uploads/originals uploads/processed
 
-# Expose port
-EXPOSE 10000
+# Expose port 7860 (Hugging Face Spaces uses port 7860 by default)
+EXPOSE 7860
 
-# Start app using dynamic PORT assigned by Render
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
+# Command to run uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Logo from "@/components/ui/logo";
-import { supabase } from "@/lib/supabase";
+import { getUserProfile } from "@/services/api";
 
 import {
   Bell,
@@ -50,23 +50,32 @@ export default function DashboardNavbar() {
   }, []);
 
   useEffect(() => {
-    async function fetchUser() {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session && session.user) {
-        setIsLoggedIn(true);
-        const name = session.user.user_metadata?.full_name || "User";
-        setUser({
-          name: name,
-          email: session.user.email || "",
-          plan: "Pro",
-          created_at: session.user.created_at,
-        });
-      } else {
-        setIsLoggedIn(false);
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+
+      if (token) {
+        getUserProfile()
+          .then((data) => {
+            setUser(data);
+            const storedAvatar = localStorage.getItem(`digiscale_avatar_${data.email}`);
+            if (storedAvatar) setAvatarUrl(storedAvatar);
+
+            if (data.plan === "Starter" && data.created_at) {
+              const created = new Date(data.created_at);
+              const expiry = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000);
+              const diffMs = expiry.getTime() - Date.now();
+              const days = Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+              setDaysLeft(days);
+            }
+          })
+          .catch(() => {
+            const name = localStorage.getItem("user_name") || "User";
+            const email = localStorage.getItem("user_email") || "";
+            setUser({ name, email, plan: "Starter" });
+          });
       }
     }
-    fetchUser();
   }, []);
 
   useEffect(() => {
@@ -105,41 +114,30 @@ export default function DashboardNavbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-200 cursor-pointer select-none ${
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? "bg-blue-50/80 text-blue-700 font-semibold"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                      ? "text-blue-600"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  <Icon
-                    className={`h-[18px] w-[18px] ${
-                      isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-                    }`}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+                  <Icon className="h-4 w-4" />
                   {link.label}
                 </Link>
               );
             })}
         </nav>
 
-        {/* Right — User Profile & Actions */}
-        <div className="flex items-center justify-end w-44 flex-shrink-0 gap-3">
-          
-          {/* Notifications Button */}
-          {isLoggedIn && (
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer">
-              <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
-              <span className="absolute right-2.5 top-2.5 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
-              </span>
-            </button>
-          )}
-
-          {/* User Profile Dropdown */}
+        {/* Right — Bell + Profile */}
+        <div className="flex items-center gap-2.5 w-64 flex-shrink-0 justify-end">
           {isLoggedIn ? (
-            <div className="relative" ref={dropdownRef}>
+            <>
+              {/* Bell — full navbar height pill */}
+              <button className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 hover:border-slate-300 cursor-pointer shadow-sm">
+                <Bell className="h-[18px] w-[18px] text-slate-500" />
+              </button>
+
+              {/* Profile button — tall pill */}
+              <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center gap-3 h-10 rounded-xl border border-slate-200 bg-white pl-2 pr-3 transition hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] cursor-pointer shadow-sm"
@@ -259,8 +257,8 @@ export default function DashboardNavbar() {
                     {/* Sign Out */}
                     <div className="px-2 pb-2 border-t border-slate-100 mt-0 pt-2">
                       <button
-                        onClick={async () => {
-                          await supabase.auth.signOut();
+                        onClick={() => {
+                          localStorage.removeItem("token");
                           setIsLoggedIn(false);
                           setProfileOpen(false);
                           window.location.href = "/";
@@ -276,6 +274,7 @@ export default function DashboardNavbar() {
                   </div>
                 )}
               </div>
+            </>
           ) : (
             <Link
               href="/login"

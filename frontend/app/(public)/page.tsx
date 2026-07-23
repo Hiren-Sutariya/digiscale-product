@@ -6,7 +6,6 @@ import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import Logo from "@/components/ui/logo";
 import { uploadImage } from "@/services/api";
-import { API_BASE_URL } from "@/constants/api";
 import { plans } from "@/lib/plans";
 import { saveFileToIndexedDB } from "@/lib/db";
 import Script from "next/script";
@@ -99,7 +98,7 @@ export default function HomePage() {
 
     try {
       // 1. Create Razorpay order from backend
-      const res = await fetch(`${API_BASE_URL}/api/payments/create-order`, {
+      const res = await fetch("http://localhost:8000/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planName, billing: homeBilling }),
@@ -119,7 +118,7 @@ export default function HomePage() {
         handler: async (response: any) => {
           // 3. Verify payment signature on backend
           try {
-            const verifyRes = await fetch(`${API_BASE_URL}/api/payments/verify`, {
+            const verifyRes = await fetch("http://localhost:8000/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

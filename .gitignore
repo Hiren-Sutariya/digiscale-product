@@ -10,11 +10,14 @@ frontend/.next/
 # Environment
 .env
 .env.local
-backend/.env
-backend/digiscale.db
 
 # macOS
 .DS_Store
 
 # Logs
 *.log
+
+# Database & Uploads
+backend/*.db
+backend/uploads/
+.vscode/
