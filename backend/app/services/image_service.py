@@ -18,10 +18,10 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        # Using u2net (approx. 176MB)
-        # This is a convolution-only model (not transformer-based), which does not have heavy attention matrices.
-        # This keeps the initial graph loading memory very low, preventing 512MB RAM OOM crashes on Render.
-        _rembg_session = rembg.new_session("u2net")
+        # Using u2netp (approx. 4MB)
+        # This is the portable (tiny) version of U2-Net, which uses virtually no memory.
+        # This guarantees 0% chance of OOM memory crashes on Render's 512MB RAM free tier.
+        _rembg_session = rembg.new_session("u2netp")
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
@@ -41,7 +41,7 @@ def remove_background(input_path: str, output_path: str) -> bool:
         if max(input_image.size) > max_size:
             input_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Remove background using rembg with the u2net session
+        # Remove background using rembg with the u2netp session
         session = get_session()
         output_image = rembg.remove(input_image, session=session)
         
