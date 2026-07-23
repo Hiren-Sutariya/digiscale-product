@@ -13,10 +13,10 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        # Using birefnet-general-lite (approx. 220MB)
-        # This is a lightweight version of the state-of-the-art BiRefNet model.
-        # It provides extremely sharp, professional edges (fixes outlines/shadows) while running fast on CPU with low RAM.
-        _rembg_session = rembg.new_session("birefnet-general-lite")
+        # Using u2net (approx. 176MB)
+        # This is a convolution-only model (not transformer-based), which does not have heavy attention matrices.
+        # This keeps the initial graph loading memory very low, preventing 512MB RAM OOM crashes on Render.
+        _rembg_session = rembg.new_session("u2net")
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
@@ -36,7 +36,7 @@ def remove_background(input_path: str, output_path: str) -> bool:
         if max(input_image.size) > max_size:
             input_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Remove background using rembg with the birefnet-general-lite session
+        # Remove background using rembg with the u2net session
         session = get_session()
         output_image = rembg.remove(input_image, session=session)
         
