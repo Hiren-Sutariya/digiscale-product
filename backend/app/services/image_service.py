@@ -18,7 +18,7 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        _rembg_session = rembg.new_session("u2netp", providers=["CPUExecutionProvider"])
+        _rembg_session = rembg.new_session("birefnet-general", providers=["CPUExecutionProvider"])
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
