@@ -1,5 +1,10 @@
 import os
 import gc
+
+# Set U2NET_HOME to backend/.u2net to use the pre-downloaded model
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["U2NET_HOME"] = os.path.join(backend_dir, ".u2net")
+
 import rembg
 from PIL import Image
 import pillow_heif

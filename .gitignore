@@ -20,4 +20,5 @@ frontend/.next/
 # Database & Uploads
 backend/*.db
 backend/uploads/
+backend/.u2net/
 .vscode/
