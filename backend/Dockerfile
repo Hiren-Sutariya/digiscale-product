@@ -21,8 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the birefnet-general model during image build so it is cached inside the container
-RUN python -c "import rembg; rembg.new_session('birefnet-general')"
+RUN python -c "import rembg; rembg.new_session('u2netp')"
 
 # Copy backend code
 COPY backend/ .
