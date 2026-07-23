@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://digiscale-backend-j8zz.onrender.com";
 
 // Helper to get auth header
 function getAuthHeader(): Record<string, string> {
