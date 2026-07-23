@@ -1,4 +1,5 @@
 import os
+import gc
 import rembg
 from PIL import Image
 import pillow_heif
@@ -20,6 +21,9 @@ def get_session():
 
 def remove_background(input_path: str, output_path: str) -> bool:
     try:
+        # Run garbage collection before starting to free up old memory
+        gc.collect()
+        
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
@@ -27,7 +31,8 @@ def remove_background(input_path: str, output_path: str) -> bool:
         input_image = Image.open(input_path)
         
         # Optimize resolution for fast background removal processing on CPU
-        max_size = 1600
+        # Resizing to max 1000px reduces memory usage significantly (avoiding 512MB RAM OOM crash)
+        max_size = 1000
         if max(input_image.size) > max_size:
             input_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
@@ -35,13 +40,24 @@ def remove_background(input_path: str, output_path: str) -> bool:
         session = get_session()
         output_image = rembg.remove(input_image, session=session)
         
-        # Convert to RGB if we want a white background instead of transparent
-        # For transparent background, just save directly (it will be PNG)
-        # Let's save as PNG to keep transparency
+        # Close input image to free file descriptor and memory
+        input_image.close()
+        del input_image
+        
+        # Save as PNG to keep transparency
         output_image.save(output_path, "PNG")
+        
+        # Close and delete output image references
+        output_image.close()
+        del output_image
+        
+        # Run garbage collection after finishing to clean up numpy arrays and tensors
+        gc.collect()
         return True
     except Exception as e:
         print(f"Error removing background: {e}")
+        # Run cleanup even on error
+        gc.collect()
         return False
 
 def add_white_background(input_path: str, output_path: str) -> bool:
