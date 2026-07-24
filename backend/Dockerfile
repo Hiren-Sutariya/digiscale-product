@@ -18,9 +18,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the birefnet-general model during the build phase
+# Pre-download the birefnet-general-lite model during the build phase
 # This prevents slow startup and timeout errors on first use.
-RUN python -c "import rembg; rembg.new_session('birefnet-general')"
+RUN python -c "import rembg; rembg.new_session('birefnet-general-lite')"
 
 # Copy the rest of the application
 COPY . .
