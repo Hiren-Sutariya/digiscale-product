@@ -21,7 +21,7 @@ def get_session():
         # Using u2netp (approx. 4MB)
         # This is the portable (tiny) version of U2-Net, which uses virtually no memory.
         # This guarantees 0% chance of OOM memory crashes on Render's 512MB RAM free tier.
-        _rembg_session = rembg.new_session("u2netp")
+        _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
