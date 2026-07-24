@@ -37,19 +37,9 @@ app.mount(
     name="uploads"
 )
 
-# Configure allowed CORS origins
-cors_origins = [
-    "http://localhost:3000",
-    "https://digiscale-product.vercel.app",
-    "https://digiscale-product-ruby.vercel.app",
-]
-env_origins = os.getenv("CORS_ORIGINS")
-if env_origins:
-    cors_origins.extend([origin.strip() for origin in env_origins.split(",") if origin.strip()])
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
