@@ -18,10 +18,34 @@ def get_session():
     global _rembg_session
     if _rembg_session is None:
         import rembg
-        # Using u2netp (approx. 4MB)
-        # This is the portable (tiny) version of U2-Net, which uses virtually no memory.
-        # This guarantees 0% chance of OOM memory crashes on Render's 512MB RAM free tier.
-        _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
+        
+        # Self-healing logic for corrupted model downloads
+        u2net_home = os.environ.get("U2NET_HOME", "")
+        model_path = os.path.join(u2net_home, "u2netp.onnx")
+        
+        if os.path.exists(model_path):
+            file_size = os.path.getsize(model_path)
+            # A valid u2netp.onnx is ~4.57MB (4.5 million bytes).
+            # If it is less than 4MB, it's corrupted or incomplete.
+            if file_size < 4000000:
+                print(f"Warning: Corrupted model file detected (size: {file_size} bytes). Deleting it for redownload...")
+                try:
+                    os.remove(model_path)
+                except Exception as del_err:
+                    print(f"Error removing corrupted model: {del_err}")
+        
+        try:
+            _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
+        except Exception as e:
+            print(f"Failed to load rembg session with CPU provider: {e}. Retrying after deleting model cache...")
+            if os.path.exists(model_path):
+                try:
+                    os.remove(model_path)
+                except Exception as del_err:
+                    print(f"Error removing model: {del_err}")
+            # Try to load again (will redownload the model)
+            _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
+            
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:
