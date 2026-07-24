@@ -6,6 +6,8 @@ import {
   createProject,
   getProject,
   deleteProject,
+  getUserProfile,
+  formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import {
@@ -95,6 +97,7 @@ interface Collection {
 
 function CollectionsPageContent() {
   const searchParams = useSearchParams();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -184,9 +187,12 @@ function CollectionsPageContent() {
   const photoAssignInputRef = useRef<HTMLInputElement>(null);
   const [photoAssignTargetId, setPhotoAssignTargetId] = useState<string>("");
 
-  const refreshAllProducts = async () => {
+  const refreshAllProducts = async (userId: string) => {
     try {
-      const { data } = await supabase.from('products').select(`*, collection:collections(name)`);
+      const { data } = await supabase
+        .from('products')
+        .select(`*, collection:collections(name)`)
+        .eq('user_id', userId);
       if (data) {
          const mapped = data.map(p => ({
            id: p.id,
@@ -210,12 +216,12 @@ function CollectionsPageContent() {
     }
   };
 
-  const fetchWarehouseData = async () => {
+  const fetchWarehouseData = async (userId: string) => {
     try {
       const [rowsRes, slotsRes, assignsRes] = await Promise.all([
-        supabase.from('warehouse_rows').select('*'),
-        supabase.from('warehouse_slots').select('*'),
-        supabase.from('warehouse_assignments').select('*')
+        supabase.from('warehouse_rows').select('*').eq('user_id', userId),
+        supabase.from('warehouse_slots').select('*').eq('user_id', userId),
+        supabase.from('warehouse_assignments').select('*').eq('user_id', userId)
       ]);
 
       if (rowsRes.data) {
@@ -247,7 +253,7 @@ function CollectionsPageContent() {
         localStorage.setItem("digiscale_cached_warehouse_assignments", JSON.stringify(assignsMap));
       }
       
-      await refreshAllProducts();
+      await refreshAllProducts(userId);
     } catch (err) {
       console.error("Failed to fetch warehouse data from Supabase:", err);
     }
@@ -256,6 +262,10 @@ function CollectionsPageContent() {
   useEffect(() => {
     // Load cached data instantly
     if (typeof window !== "undefined") {
+      const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
+      if (cachedUserId) {
+        setCurrentUserId(formatUserUuid(cachedUserId));
+      }
       const cachedCols = localStorage.getItem("digiscale_cached_collections");
       if (cachedCols) {
         try { setCollections(JSON.parse(cachedCols)); } catch(e) {}
@@ -278,8 +288,22 @@ function CollectionsPageContent() {
       }
     }
 
-    fetchCollections();
-    fetchWarehouseData();
+    // Fetch the logged-in user profile from our python backend
+    getUserProfile()
+      .then((profile) => {
+        if (profile && profile.id) {
+          const uId = formatUserUuid(profile.id) || profile.id.toString();
+          setCurrentUserId(uId);
+          localStorage.setItem("digiscale_cached_user_id", uId);
+          
+          // Fetch fresh isolated data from Supabase using this user ID!
+          fetchCollections(uId);
+          fetchWarehouseData(uId);
+        }
+      })
+      .catch((err) => {
+        console.error("Auth error on mount:", err);
+      });
     
     // Close card dropdowns on click outside
     const handleOutsideClick = () => setActiveDropdownId(null);
@@ -352,11 +376,12 @@ function CollectionsPageContent() {
     setGlobalSearchQuery("");
   };
 
-  const fetchCollections = async () => {
+  const fetchCollections = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('collections')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -384,7 +409,7 @@ function CollectionsPageContent() {
       
       const { error } = await supabase
         .from('collections')
-        .insert([{ id: newId, name: newCollectionName.trim() }]);
+        .insert([{ id: newId, name: newCollectionName.trim(), user_id: currentUserId }]);
         
       if (error) throw error;
       
@@ -578,7 +603,8 @@ function CollectionsPageContent() {
       color: prodColors.length > 0 ? prodColors.join(", ") : prodColor.trim(),
       description: prodDescription.trim(),
       photoUrl: prodPhotoUrl,
-      collection_id: targetCollectionId
+      collection_id: targetCollectionId,
+      user_id: currentUserId
     };
 
     if (editingProduct) {
@@ -635,7 +661,7 @@ function CollectionsPageContent() {
     }
 
     // Refresh all products to keep warehouse assignments/global search updated
-    await refreshAllProducts();
+    await refreshAllProducts(currentUserId || "");
 
     // Reset Form & Close
     resetProductForm();
@@ -913,7 +939,8 @@ ${rows}
           color: p.color,
           description: p.description,
           photoUrl: p.photoUrl,
-          collection_id: selectedCol.id
+          collection_id: selectedCol.id,
+          user_id: currentUserId
         }));
 
         try {
@@ -921,7 +948,7 @@ ${rows}
           if (error) throw error;
           
           setProducts(prev => [...result.importedProducts, ...prev]);
-          await refreshAllProducts();
+          await refreshAllProducts(currentUserId || "");
         } catch (err) {
           console.error("Failed to batch insert products into Supabase:", err);
           alert("Failed to import products to database.");
@@ -1147,7 +1174,7 @@ ${rows}
           if (error) throw error;
           
           setProducts((prev) => prev.filter((p) => p.id !== productId));
-          await refreshAllProducts();
+          await refreshAllProducts(currentUserId || "");
         } catch (err) {
           console.error("Failed to delete product from Supabase:", err);
           alert("Failed to delete product.");
@@ -1222,7 +1249,8 @@ ${rows}
       const { error } = await supabase.from('warehouse_slots').insert([{
         id: `${row}-${slotVal}`,
         row_id: row,
-        slot_number: slotVal as number
+        slot_number: slotVal as number,
+        user_id: currentUserId
       }]);
       if (error) throw error;
 
@@ -1249,7 +1277,7 @@ ${rows}
     if (warehouseRows.includes(name)) return;
     
     try {
-      const { error } = await supabase.from('warehouse_rows').insert([{ id: name }]);
+      const { error } = await supabase.from('warehouse_rows').insert([{ id: name, user_id: currentUserId }]);
       if (error) throw error;
       
       const updated = [...warehouseRows, name];
@@ -1432,7 +1460,8 @@ ${rows}
       const { error } = await supabase.from('warehouse_assignments').insert([{
         location_key: locId,
         product_id: productId,
-        collection_id: collectionId
+        collection_id: collectionId,
+        user_id: currentUserId
       }]);
       if (error) throw error;
       

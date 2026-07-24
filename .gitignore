@@ -17,8 +17,7 @@ frontend/.next/
 # Logs
 *.log
 
-# Database & Uploads
-backend/*.db
+# Databases & Uploads
+backend/digiscale.db
 backend/uploads/
-backend/.u2net/
 .vscode/

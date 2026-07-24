@@ -1,30 +1,32 @@
-FROM python:3.10-slim
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PORT=7860
 
 # Set working directory
-WORKDIR /app
+WORKDIR /code
 
-# Install system dependencies for OpenCV, PostgreSQL, and other packages
+# Install system dependencies for OpenCV and Pillow HEIF
 RUN apt-get update && apt-get install -y \
+    build-essential \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    build-essential \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements and install
 COPY requirements.txt .
-
-# Install Python requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend files
+# Pre-download the birefnet-general model during the build phase
+# This prevents slow startup and timeout errors on first use.
+RUN python -c "import rembg; rembg.new_session('birefnet-general')"
+
+# Copy the rest of the application
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads/originals uploads/processed
-
-# Expose port 7860 (Hugging Face Spaces uses port 7860 by default)
+# Expose port 7860 (Hugging Face Spaces default port)
 EXPOSE 7860
 
-# Command to run uvicorn
+# Run the app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]

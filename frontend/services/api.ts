@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://digiscale-backend-j8zz.onrender.com";
+const API_BASE_URL = "http://localhost:8000";
 
 // Helper to get auth header
 function getAuthHeader(): Record<string, string> {
@@ -180,4 +180,15 @@ export async function renameProject(projectId: number, name: string): Promise<an
     throw new Error("Failed to rename project.");
   }
   return response.json();
+}
+
+export function formatUserUuid(userId: any): string | null {
+  if (!userId) return null;
+  const idStr = userId.toString().trim();
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  if (uuidRegex.test(idStr)) {
+    return idStr;
+  }
+  const paddedId = idStr.padStart(12, "0");
+  return `00000000-0000-0000-0000-${paddedId}`;
 }

@@ -19,7 +19,7 @@ import {
   Edit
 } from "lucide-react";
 import Link from "next/link";
-import { getUserProfile } from "@/services/api";
+import { getUserProfile, formatUserUuid } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 
 interface Collection {
@@ -191,17 +191,21 @@ export default function QuotationView() {
 
   // Load configuration and aggregates on mount
   useEffect(() => {
-    async function loadData() {
+    async function loadData(userId: string) {
       try {
         // Fetch collections from Supabase
-        const { data: colsData, error: colsErr } = await supabase.from('collections').select('*');
+        const { data: colsData, error: colsErr } = await supabase
+          .from('collections')
+          .select('*')
+          .eq('user_id', userId);
         if (colsErr) throw colsErr;
         setCollections(colsData || []);
 
         // Fetch products from Supabase with collection join
         const { data: prodsData, error: prodsErr } = await supabase
           .from('products')
-          .select('*, collection:collections(name)');
+          .select('*, collection:collections(name)')
+          .eq('user_id', userId);
         if (prodsErr) throw prodsErr;
 
         const mappedProds = (prodsData || []).map((p: any) => ({
@@ -222,21 +226,25 @@ export default function QuotationView() {
         console.error("Failed to load data from Supabase:", e);
       }
     }
-    loadData();
 
     // Fetch company info from profile settings
     setLoadingProfile(true);
     getUserProfile()
       .then((profile) => {
-        const emailKey = profile.email;
-        const storedStr = localStorage.getItem(`digiscale_company_${emailKey}`);
-        if (storedStr) {
-          const data = JSON.parse(storedStr);
-          setCompanyInfo(data);
-          setShowBankDetails(!!(data.bankName || data.accountNumber));
-          setTermsList(parseTerms(data.termsAndConditions));
-        } else {
-          setTermsList(parseTerms(""));
+        if (profile && profile.id) {
+          const uId = formatUserUuid(profile.id) || profile.id.toString();
+          loadData(uId);
+
+          const emailKey = profile.email;
+          const storedStr = localStorage.getItem(`digiscale_company_${emailKey}`);
+          if (storedStr) {
+            const data = JSON.parse(storedStr);
+            setCompanyInfo(data);
+            setShowBankDetails(!!(data.bankName || data.accountNumber));
+            setTermsList(parseTerms(data.termsAndConditions));
+          } else {
+            setTermsList(parseTerms(""));
+          }
         }
         setLoadingProfile(false);
       })

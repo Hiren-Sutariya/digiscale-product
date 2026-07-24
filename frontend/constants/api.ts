@@ -1,1 +1,1 @@
-export const API_BASE_URL = "https://digiscale-backend-j8zz.onrender.com";
+export const API_BASE_URL = "http://localhost:8000";

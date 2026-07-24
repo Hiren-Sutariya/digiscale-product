@@ -6,6 +6,8 @@ import {
   getProjects,
   createProject,
   uploadImage,
+  getUserProfile,
+  formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import {
@@ -119,6 +121,7 @@ export default function WorkspacePage() {
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
 
   // Collections state
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [collections, setCollections] = useState<any[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
   const [collectionSearch, setCollectionSearch] = useState<string>("");
@@ -300,9 +303,13 @@ export default function WorkspacePage() {
 
   // Fetch collections on page load
   useEffect(() => {
-    const fetchCollections = async () => {
+    const fetchCollections = async (userId: string) => {
       try {
-        const { data, error } = await supabase.from('collections').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('collections')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
         if (error) throw error;
         
         if (data && data.length > 0) {
@@ -313,7 +320,18 @@ export default function WorkspacePage() {
         console.error("Failed to fetch collections from Supabase:", err);
       }
     };
-    fetchCollections();
+
+    getUserProfile()
+      .then((profile) => {
+        if (profile && profile.id) {
+          const uId = formatUserUuid(profile.id) || profile.id.toString();
+          setCurrentUserId(uId);
+          fetchCollections(uId);
+        }
+      })
+      .catch((err) => {
+        console.error("Auth error in workspace page:", err);
+      });
   }, []);
 
   useEffect(() => {
@@ -766,7 +784,8 @@ export default function WorkspacePage() {
             id: newProductId,
             name: (activeImage.name.split(".")[0] || "Edited Image") + ' (Edited)',
             photoUrl: dataUrl,
-            collection_id: selectedCollectionId
+            collection_id: selectedCollectionId,
+            user_id: currentUserId
           }]);
           
           if (error) throw error;
