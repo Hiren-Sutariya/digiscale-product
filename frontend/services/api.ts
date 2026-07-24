@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Helper to get auth header
 function getAuthHeader(): Record<string, string> {
