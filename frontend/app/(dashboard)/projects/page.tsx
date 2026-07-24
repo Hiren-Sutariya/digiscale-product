@@ -10,6 +10,7 @@ import {
   formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
+import { API_BASE_URL } from "@/constants/api";
 import {
   Plus,
   Search,
@@ -1913,7 +1914,7 @@ ${rows}
                   {detailImages.map((img, idx) => {
                     const imgPath = img.processed_path?.startsWith("data:") || img.processed_path?.startsWith("http")
                       ? img.processed_path
-                      : `http://localhost:8000/${img.processed_path || img.original_path}`;
+                      : `${API_BASE_URL}/${img.processed_path || img.original_path}`;
 
                     return (
                       <div

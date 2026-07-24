@@ -10,6 +10,7 @@ import {
   formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
+import { API_BASE_URL } from "@/constants/api";
 import {
   Plus,
   Trash2,
@@ -225,7 +226,7 @@ export default function WorkspacePage() {
 
     try {
       // 1. Create Razorpay order from backend
-      const res = await fetch("http://localhost:8000/api/payments/create-order", {
+      const res = await fetch(`${API_BASE_URL}/api/payments/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planName, billing: billingCycle }),
@@ -245,7 +246,7 @@ export default function WorkspacePage() {
         handler: async (response: any) => {
           // 3. Verify payment signature on backend
           try {
-            const verifyRes = await fetch("http://localhost:8000/api/payments/verify", {
+            const verifyRes = await fetch(`${API_BASE_URL}/api/payments/verify`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -420,7 +421,7 @@ export default function WorkspacePage() {
                   ...item,
                   loading: false,
                   imageElementLoaded: true,
-                  processedUrl: `http://localhost:8000/${res.processedImage}`,
+                  processedUrl: `${API_BASE_URL}/${res.processedImage}`,
                 }
               : item
           )
