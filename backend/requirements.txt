@@ -22,3 +22,4 @@ pymatting>=1.1.8
 pooch>=1.7.0
 razorpay>=1.3.0
 gunicorn>=21.2.0
+psycopg2-binary>=2.9.9
