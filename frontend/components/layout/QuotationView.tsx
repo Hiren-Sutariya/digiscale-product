@@ -41,6 +41,7 @@ interface Product {
   collectionName?: string;
   collectionId?: string;
   description?: string;
+  location?: string;
 }
 
 interface QuotationItem {
@@ -55,6 +56,7 @@ interface QuotationItem {
   photoUrl?: string;    // base64 product image
   collectionName?: string;
   description?: string;
+  location?: string;
 }
 
 interface CompanyInfo {
@@ -208,6 +210,35 @@ export default function QuotationView() {
           .eq('user_id', userId);
         if (prodsErr) throw prodsErr;
 
+        // Fetch warehouse assignments from Supabase
+        const { data: assignsData, error: assignsErr } = await supabase
+          .from('warehouse_assignments')
+          .select('*')
+          .eq('user_id', userId);
+
+        // Group and format assignments by product_id
+        const assignsMap: Record<string, string[]> = {};
+        if (assignsData) {
+          assignsData.forEach((a: any) => {
+            if (!a.product_id) return;
+            if (!assignsMap[a.product_id]) {
+              assignsMap[a.product_id] = [];
+            }
+            
+            // Format location_key (e.g. "A-1-upper" -> "A-1 (U)")
+            const parts = a.location_key.split('-');
+            if (parts.length >= 3) {
+              const row = parts[0];
+              const slot = parts[1];
+              const zone = parts[2];
+              const zoneShort = zone.toLowerCase() === 'upper' ? 'U' : zone.toLowerCase() === 'lower' ? 'L' : zone;
+              assignsMap[a.product_id].push(`${row}-${slot} (${zoneShort})`);
+            } else {
+              assignsMap[a.product_id].push(a.location_key);
+            }
+          });
+        }
+
         const mappedProds = (prodsData || []).map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -219,7 +250,8 @@ export default function QuotationView() {
           photoUrl: p.photoUrl,
           collectionName: p.collection?.name || '',
           collectionId: p.collection_id,
-          description: p.description
+          description: p.description,
+          location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
         }));
         setProducts(mappedProds);
       } catch (e) {
@@ -397,7 +429,8 @@ export default function QuotationView() {
           length: product.length,
           photoUrl: product.photoUrl,
           collectionName: product.collectionName,
-          description: product.description
+          description: product.description,
+          location: product.location
         }
       ]);
     }
@@ -1121,6 +1154,11 @@ export default function QuotationView() {
                         {/* PRODUCT NAME */}
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
                           <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+                          {item.location && (
+                            <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block no-print select-none">
+                              Loc: {item.location}
+                            </p>
+                          )}
                         </td>
 
                         {/* CTNS */}
@@ -1463,6 +1501,11 @@ export default function QuotationView() {
                         </td>
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
                           <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+                          {item.location && (
+                            <p className="text-[9px] font-bold text-blue-650 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block no-print select-none">
+                              Loc: {item.location}
+                            </p>
+                          )}
                         </td>
                         <td className="py-2 px-2 border-r border-slate-300 align-middle text-center font-bold">
                           {item.cartons}
