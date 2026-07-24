@@ -5,7 +5,6 @@ import gc
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["U2NET_HOME"] = os.path.join(backend_dir, ".u2net")
 
-import rembg
 from PIL import Image
 import pillow_heif
 from app.config import settings
@@ -18,6 +17,7 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
+        import rembg
         # Using u2netp (approx. 4MB)
         # This is the portable (tiny) version of U2-Net, which uses virtually no memory.
         # This guarantees 0% chance of OOM memory crashes on Render's 512MB RAM free tier.
@@ -42,6 +42,7 @@ def remove_background(input_path: str, output_path: str) -> bool:
             input_image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
         # Remove background using rembg with the u2netp session
+        import rembg
         session = get_session()
         output_image = rembg.remove(input_image, session=session)
         
