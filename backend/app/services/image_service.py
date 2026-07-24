@@ -34,8 +34,13 @@ def get_session():
                 except Exception as del_err:
                     print(f"Error removing corrupted model: {del_err}")
         
+        import onnxruntime as ort
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = 1
+        opts.inter_op_num_threads = 1
+        
         try:
-            _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
+            _rembg_session = rembg.new_session("u2netp", opts, providers=['CPUExecutionProvider'])
         except Exception as e:
             print(f"Failed to load rembg session with CPU provider: {e}. Retrying after deleting model cache...")
             if os.path.exists(model_path):
@@ -44,7 +49,7 @@ def get_session():
                 except Exception as del_err:
                     print(f"Error removing model: {del_err}")
             # Try to load again (will redownload the model)
-            _rembg_session = rembg.new_session("u2netp", providers=['CPUExecutionProvider'])
+            _rembg_session = rembg.new_session("u2netp", opts, providers=['CPUExecutionProvider'])
             
     return _rembg_session
 
