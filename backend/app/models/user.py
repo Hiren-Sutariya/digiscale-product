@@ -17,5 +17,6 @@ class User(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     deletion_scheduled_at = Column(DateTime, nullable=True)
-    
+
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")

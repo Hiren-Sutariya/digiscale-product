@@ -7,7 +7,6 @@ import {
   getProject,
   deleteProject,
   getUserProfile,
-  formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { API_BASE_URL } from "@/constants/api";
@@ -38,6 +37,7 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
+  ChevronDown,
   Minus,
 } from "lucide-react";
 import Link from "next/link";
@@ -83,6 +83,7 @@ interface Product {
   rate: string;      // rate/price code per unit
   length: string;
   color: string;
+  unit_type?: "pcs" | "dzn";
   description?: string;
   createdAt: string;
 }
@@ -169,6 +170,8 @@ function CollectionsPageContent() {
   const [prodStock, setProdStock] = useState("");
   const [prodCartonQty, setProdCartonQty] = useState("");
   const [prodRate, setProdRate] = useState("");
+  const [prodUnitType, setProdUnitType] = useState<"pcs" | "dzn">("pcs");
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
   const [prodLength, setProdLength] = useState("");
   const [prodColor, setProdColor] = useState(""); // kept for backward compat (comma-joined)
   const [prodColors, setProdColors] = useState<string[]>([]); // multi-color chips
@@ -203,6 +206,7 @@ function CollectionsPageContent() {
            rate: p.rate,
            length: p.length,
            color: p.color,
+           unit_type: p.unit_type || "pcs",
            description: p.description,
            photoUrl: p.photoUrl,
            collectionId: p.collection_id,
@@ -265,7 +269,7 @@ function CollectionsPageContent() {
     if (typeof window !== "undefined") {
       const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
       if (cachedUserId) {
-        setCurrentUserId(formatUserUuid(cachedUserId));
+        setCurrentUserId(cachedUserId);
       }
       const cachedCols = localStorage.getItem("digiscale_cached_collections");
       if (cachedCols) {
@@ -293,7 +297,7 @@ function CollectionsPageContent() {
     getUserProfile()
       .then((profile) => {
         if (profile && profile.id) {
-          const uId = formatUserUuid(profile.id) || profile.id.toString();
+          const uId = profile.id.toString();
           setCurrentUserId(uId);
           localStorage.setItem("digiscale_cached_user_id", uId);
           
@@ -318,14 +322,11 @@ function CollectionsPageContent() {
     const locParam = searchParams?.get("locId");
 
     if (tabParam === "quotation") {
-      setCurrentTopTab("quotation");
+      window.location.href = "/quotation";
+      return;
     } else if (tabParam === "warehouse") {
-      setCurrentTopTab("warehouse");
-      if (locParam) {
-        setSelectedLocation(locParam);
-      } else {
-        setSelectedLocation(null);
-      }
+      window.location.href = locParam ? `/warehouse?locId=${locParam}` : "/warehouse";
+      return;
     } else {
       setCurrentTopTab("collections");
       if (colParam) {
@@ -395,8 +396,8 @@ function CollectionsPageContent() {
         setCollections(formattedData);
         localStorage.setItem("digiscale_cached_collections", JSON.stringify(formattedData));
       }
-    } catch (err) {
-      console.error("Failed to fetch collections from Supabase:", err);
+    } catch (err: any) {
+      console.error("Failed to fetch collections from Supabase:", err?.message || err);
     }
   };
 
@@ -406,7 +407,7 @@ function CollectionsPageContent() {
 
     try {
       setIsCreating(true);
-      const newId = Date.now().toString();
+      const newId = 'COL-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       
       const { error } = await supabase
         .from('collections')
@@ -425,8 +426,8 @@ function CollectionsPageContent() {
       setCollections((prev) => [newCol, ...prev]);
       setNewCollectionName("");
       setIsModalOpen(false);
-    } catch (err) {
-      console.error("Failed to create collection in Supabase:", err);
+    } catch (err: any) {
+      console.error("Failed to create collection in Supabase:", err?.message || err);
       alert("Failed to create collection.");
     } finally {
       setIsCreating(false);
@@ -602,6 +603,7 @@ function CollectionsPageContent() {
       rate: prodRate.trim(),
       length: prodLength.trim(),
       color: prodColors.length > 0 ? prodColors.join(", ") : prodColor.trim(),
+      unit_type: prodUnitType,
       description: prodDescription.trim(),
       photoUrl: prodPhotoUrl,
       collection_id: targetCollectionId,
@@ -655,8 +657,8 @@ function CollectionsPageContent() {
           
           setDetailImages((prev) => prev.filter(img => img.processed_path !== prodPhotoUrl));
         }
-      } catch (err) {
-        console.error("Failed to create product:", err);
+      } catch (err: any) {
+        console.error("Failed to create product:", err?.message || err);
         alert("Failed to create product.");
       }
     }
@@ -673,6 +675,7 @@ function CollectionsPageContent() {
     setProdStock("");
     setProdCartonQty("");
     setProdRate("");
+    setProdUnitType("pcs");
     setProdLength("");
     setProdColor("");
     setProdColors([]);
@@ -1147,6 +1150,7 @@ ${rows}
     setProdStock(product.stock.toString());
     setProdCartonQty(product.cartonQty.toString());
     setProdRate(product.rate);
+    setProdUnitType(product.unit_type || "pcs");
     setProdLength(product.length);
     // Parse existing comma-separated colors into chips
     const existingColors = product.color
@@ -1191,6 +1195,7 @@ ${rows}
     setProdStock("");
     setProdCartonQty("");
     setProdRate("");
+    setProdUnitType("pcs");
     setProdLength("");
     setProdColor("");
     setProdDescription("");
@@ -1548,31 +1553,27 @@ ${rows}
             {filteredGlobalProducts.map((product) => {
               const locations = findWarehouseLocation(product.id, product.collectionId);
               return (
-                <div key={`${product.collectionId}-${product.id}`} className="py-5 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 last:border-b-0">
-                  {/* Left Side: Product Image & Details */}
-                  <div className="flex items-start gap-4 min-w-0 flex-1">
+                <div key={`${product.collectionId}-${product.id}`} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 last:border-b-0">
+                  <div className="flex items-center gap-3">
                     {product.photoUrl ? (
                       <img
                         src={product.photoUrl}
                         alt={product.name}
-                        className="h-16 w-16 rounded-xl object-contain bg-slate-50 border border-slate-200 flex-shrink-0"
+                        className="h-12 w-12 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
                       />
                     ) : (
-                      <div className="h-16 w-16 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 flex-shrink-0">
-                        <Box className="h-7 w-7 text-slate-350" />
+                      <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-350">
+                        <Box className="h-5 w-5" />
                       </div>
                     )}
-                    <div className="min-w-0 space-y-1">
-                      <h3 className="text-base font-black text-slate-800 truncate">{product.name}</h3>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-800">{product.name}</h4>
                       
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        <span className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                          📁 {product.collectionName}
-                        </span>
                         {product.rate && (
-                          <span className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
-                            Rate: {product.rate}
-                          </span>
+                          <div className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
+                            Rate: {product.rate} {product.unit_type || "pcs"}
+                          </div>
                         )}
                         {product.color && (
                           <span className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
@@ -1586,53 +1587,36 @@ ${rows}
                     </div>
                   </div>
 
-                  {/* Right Side: Locations & Actions */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0 w-full md:w-auto justify-end">
-                    {/* Warehouse locations list with individual locate buttons */}
-                    <div className="space-y-1.5 w-full sm:w-auto">
-                      <span className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1 sm:text-right">
-                        Warehouse Storage Location(s)
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        const targetCol = collections.find((col) => col.id.toString() === product.collectionId.toString());
+                        if (targetCol) {
+                          setSelectedCol(targetCol);
+                          handleOpenCollectionDetail(targetCol);
+                        }
+                        setGlobalSearchQuery("");
+                      }}
+                      className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 font-bold text-[10px] px-2.5 py-1.5 rounded-lg tracking-wider uppercase hover:bg-blue-100 transition cursor-pointer"
+                    >
+                      <Layers className="h-3 w-3" />
+                      {product.collectionName || "Uncategorized"}
+                    </button>
+                    {locations.length > 0 ? (
+                      locations.map((loc, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleLocateInWarehouse(loc.row, loc.slot)}
+                          className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition active:scale-95 cursor-pointer"
+                        >
+                          Row {loc.row} Slot {loc.slot} ({loc.zone === "upper" ? "Upper" : "Lower"})
+                        </button>
+                      ))
+                    ) : (
+                      <span className="text-[9px] font-bold text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
+                        Not Stocked
                       </span>
-                      {locations.length > 0 ? (
-                        <div className="flex flex-col gap-1.5">
-                          {locations.map((loc, i) => (
-                            <div key={i} className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1.5 justify-between min-w-[240px]">
-                              <span className="text-xs font-bold text-emerald-800">
-                                Row {loc.row} Slot {loc.slot} ({loc.zone === "upper" ? "Upper Shelf" : "Lower Shelf"})
-                              </span>
-                              <button
-                                onClick={() => handleLocateInWarehouse(loc.row, loc.slot)}
-                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition active:scale-95 cursor-pointer"
-                              >
-                                Locate
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 sm:text-right">
-                          Not Stocked in Warehouse
-                        </div>
-                      )}
-                    </div>
-
-                    {/* General actions */}
-                    <div className="border-t sm:border-t-0 sm:border-l border-slate-150 pt-4 sm:pt-0 sm:pl-4 flex flex-row sm:flex-col gap-2 w-full sm:w-auto justify-end">
-                      <button
-                        onClick={() => {
-                          const targetCol = collections.find((col) => col.id.toString() === product.collectionId.toString());
-                          if (targetCol) {
-                            setSelectedCol(targetCol);
-                            handleOpenCollectionDetail(targetCol);
-                          }
-                          setGlobalSearchQuery("");
-                        }}
-                        className="px-4 py-2.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 w-full sm:w-auto"
-                      >
-                        <span>Go to Collection</span>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1681,6 +1665,7 @@ ${rows}
                   setProdStock("");
                   setProdCartonQty("");
                   setProdRate("");
+                  setProdUnitType("pcs");
                   setProdLength("");
                   setProdColor("");
                   setProdDescription("");
@@ -1711,7 +1696,6 @@ ${rows}
               <button
                 onClick={downloadExcelTemplate}
                 className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95"
-                title="Download blank Excel template"
               >
                 <Download className="h-4 w-4" /> Get Template
               </button>
@@ -1855,7 +1839,7 @@ ${rows}
                                 <p className="text-[10px] text-slate-400 font-medium">{cartonCount} boxes total</p>
                               </td>
                               <td className="py-4 px-6 text-right font-extrabold text-slate-800">
-                                {prod.rate}
+                                {prod.rate ? `${prod.rate} ${prod.unit_type || "pcs"}` : ""}
                               </td>
                               <td className="py-4 px-6 text-right font-black text-slate-900">
                                 ₹{(prod.stock * (parseFloat(prod.rate) || 0)).toLocaleString()}
@@ -1981,56 +1965,7 @@ ${rows}
             </div>
           ) : (
             <>
-              {/* Top Tabs */}
-              <div className="flex items-center justify-between border-b border-slate-200 mb-4">
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => {
-                      setCurrentTopTab("collections");
-                      if (typeof window !== "undefined") {
-                        window.history.pushState(null, "", "?tab=collections");
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold border-b-[3px] transition ${
-                      currentTopTab === "collections"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-slate-400 hover:text-slate-700"
-                    }`}
-                  >
-                    📁 Collections
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCurrentTopTab("warehouse");
-                      if (typeof window !== "undefined") {
-                        window.history.pushState(null, "", "?tab=warehouse");
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold border-b-[3px] transition ${
-                      currentTopTab === "warehouse"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-slate-400 hover:text-slate-700"
-                    }`}
-                  >
-                    🏢 Warehouse
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCurrentTopTab("quotation");
-                      if (typeof window !== "undefined") {
-                        window.history.pushState(null, "", "?tab=quotation");
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold border-b-[3px] transition ${
-                      currentTopTab === "quotation"
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-slate-400 hover:text-slate-700"
-                    }`}
-                  >
-                    📄 Quotation
-                  </button>
-                </div>
-              </div>
+
 
               {currentTopTab === "collections" ? (
                 <>
@@ -2552,7 +2487,7 @@ ${rows}
                                       </span>
                                       {prod.rate && (
                                         <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-                                          ₹{prod.rate}
+                                          ₹{prod.rate} {prod.unit_type || "pcs"}
                                         </span>
                                       )}
                                     </div>
@@ -3142,7 +3077,7 @@ ${rows}
               </div>
 
               {/* Description, Price Code & Stock Row */}
-              <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="grid grid-cols-4 gap-3 pt-2">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                     Description
@@ -3167,6 +3102,41 @@ ${rows}
                     placeholder="e.g. 950 or PC-12"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Unit Type
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
+                      onBlur={() => setTimeout(() => setIsUnitDropdownOpen(false), 200)}
+                      className="w-full h-[38px] flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700"
+                    >
+                      {prodUnitType}
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </button>
+                    {isUnitDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-full z-50 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden py-1">
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
+                          onClick={() => { setProdUnitType("pcs"); setIsUnitDropdownOpen(false); }}
+                        >
+                          pcs
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
+                          onClick={() => { setProdUnitType("dzn"); setIsUnitDropdownOpen(false); }}
+                        >
+                          dzn
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -3290,6 +3260,10 @@ ${rows}
                   <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Product Code</p>
                     <p className="text-xs font-black text-slate-800 mt-0.5 truncate">{viewingProduct.id}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price Code</p>
+                    <p className="text-xs font-black text-slate-800 mt-0.5">{viewingProduct.rate ? `${viewingProduct.rate} ${viewingProduct.unit_type || "pcs"}` : "—"}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Color</p>

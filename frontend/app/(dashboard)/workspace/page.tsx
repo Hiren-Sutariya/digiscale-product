@@ -7,7 +7,6 @@ import {
   createProject,
   uploadImage,
   getUserProfile,
-  formatUserUuid,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { API_BASE_URL } from "@/constants/api";
@@ -325,7 +324,7 @@ export default function WorkspacePage() {
     getUserProfile()
       .then((profile) => {
         if (profile && profile.id) {
-          const uId = formatUserUuid(profile.id) || profile.id.toString();
+          const uId = profile.id.toString();
           setCurrentUserId(uId);
           fetchCollections(uId);
         }

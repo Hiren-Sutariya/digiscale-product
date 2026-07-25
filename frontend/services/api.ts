@@ -20,6 +20,17 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
   return fetch(url, { ...options, headers });
 }
 
+export function clearDigiscaleCache(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("digiscale_cached_user_id");
+    localStorage.removeItem("digiscale_cached_collections");
+    localStorage.removeItem("digiscale_cached_all_products");
+    localStorage.removeItem("digiscale_cached_warehouse_rows");
+    localStorage.removeItem("digiscale_cached_warehouse_slots");
+    localStorage.removeItem("digiscale_cached_warehouse_assignments");
+  }
+}
+
 export async function login(email: string, password: string): Promise<any> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -34,6 +45,7 @@ export async function login(email: string, password: string): Promise<any> {
 
   const data = await response.json();
   if (typeof window !== "undefined") {
+    clearDigiscaleCache();
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
@@ -55,6 +67,7 @@ export async function signup(name: string, email: string, password: string): Pro
 
   const data = await response.json();
   if (typeof window !== "undefined") {
+    clearDigiscaleCache();
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
@@ -64,6 +77,7 @@ export async function signup(name: string, email: string, password: string): Pro
 
 export function logout(): void {
   if (typeof window !== "undefined") {
+    clearDigiscaleCache();
     localStorage.removeItem("token");
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_email");
@@ -106,6 +120,26 @@ export async function getUserProfile(): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/users/me`);
   if (!response.ok) {
     throw new Error("Failed to fetch user profile.");
+  }
+  return response.json();
+}
+
+export async function getUserSettings(): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/settings/`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch user settings.");
+  }
+  return response.json();
+}
+
+export async function updateUserSettings(data: any): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/settings/`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update user settings.");
   }
   return response.json();
 }

@@ -12,8 +12,10 @@ _rembg_session = None
 def get_session():
     global _rembg_session
     if _rembg_session is None:
-        # Using birefnet-general-lite (approx. 220MB) to support free-tier hosting limits
-        _rembg_session = rembg.new_session("birefnet-general-lite")
+        # Load the model name dynamically (defaults to high-quality 'birefnet-general' locally)
+        model_name = os.getenv("BGD_MODEL_NAME", "birefnet-general")
+        print(f"Loading background removal model: {model_name}")
+        _rembg_session = rembg.new_session(model_name)
     return _rembg_session
 
 def remove_background(input_path: str, output_path: str) -> bool:

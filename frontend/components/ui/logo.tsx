@@ -5,19 +5,11 @@ export default function Logo({ href }: { href?: string }) {
   const [logoHref, setLogoHref] = useState("/");
 
   useEffect(() => {
-    if (href) {
-      setLogoHref(href);
-      return;
+    const targetHref = href || (typeof window !== "undefined" && localStorage.getItem("token") ? "/dashboard" : "/");
+    if (logoHref !== targetHref) {
+      setLogoHref(targetHref);
     }
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        setLogoHref("/dashboard");
-      } else {
-        setLogoHref("/");
-      }
-    }
-  }, [href]);
+  }, [href, logoHref]);
 
   return (
     <Link href={logoHref} className="flex items-center gap-3">

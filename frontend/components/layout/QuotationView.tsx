@@ -8,7 +8,7 @@ import {
   Trash2, 
   Building, 
   User, 
-  Check, 
+  Check,
   FileImage,
   Search,
   ChevronDown,
@@ -16,10 +16,12 @@ import {
   Settings,
   X,
   Eye,
-  Edit
+  Edit,
+  Clock,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
-import { getUserProfile, formatUserUuid } from "@/services/api";
+import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 
 interface Collection {
@@ -75,9 +77,11 @@ interface CompanyInfo {
 }
 
 export default function QuotationView() {
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
   
   // Accordion Toggles
   const [settingsOpen, setSettingsOpen] = useState(true); // Open by default
@@ -105,8 +109,9 @@ export default function QuotationView() {
 
   // Selected Quotation Items
   const [selectedItems, setSelectedItems] = useState<QuotationItem[]>([]);
-  const [taxPercent, setTaxPercent] = useState<number | "">("");
-  const [discountAmount, setDiscountAmount] = useState<string>("");
+  const [taxInput, setTaxInput] = useState<string>("");
+  const [cashAmount, setCashAmount] = useState<string>("");
+  const [bankAmount, setBankAmount] = useState<string>("");
 
   // Event Price Markup states
   const [applyEventMarkup, setApplyEventMarkup] = useState<boolean>(false);
@@ -117,6 +122,7 @@ export default function QuotationView() {
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [selectedQuoteForPreview, setSelectedQuoteForPreview] = useState<any | null>(null);
+  const [printQuoteData, setPrintQuoteData] = useState<any | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "full">("fit");
 
@@ -254,6 +260,40 @@ export default function QuotationView() {
           location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
         }));
         setProducts(mappedProds);
+        // Fetch quotations from Supabase
+        const { data: quotesData, error: quotesErr } = await supabase
+          .from('quotations')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+          
+        if (quotesErr) throw quotesErr;
+
+        if (quotesData && quotesData.length > 0) {
+          const parsedQuotes = quotesData.map((q: any) => ({
+            id: q.id,
+            quoteNumber: q.quote_number,
+            clientName: q.client_name,
+            clientCompany: q.client_company,
+            clientAddress: q.client_address,
+            quoteDate: q.quote_date,
+            taxInput: q.tax_input || "",
+            cashAmount: q.cash_amount?.toString() || "",
+            bankAmount: q.bank_amount?.toString() || "",
+            total: q.total_amount,
+            applyEventMarkup: q.apply_event_markup,
+            eventMarkupPercent: q.event_markup_percent,
+            createdAt: q.created_at,
+            isOrderDone: q.is_order_done || false,
+            items: typeof q.items === 'string' ? JSON.parse(q.items) : q.items
+          }));
+          setSavedQuotes(parsedQuotes);
+          const nextNum = getNextQuoteNumber(parsedQuotes);
+          setQuoteNumber(nextNum);
+        } else {
+          setQuoteNumber("Q-1");
+        }
+
       } catch (e) {
         console.error("Failed to load data from Supabase:", e);
       }
@@ -261,59 +301,41 @@ export default function QuotationView() {
 
     // Fetch company info from profile settings
     setLoadingProfile(true);
-    getUserProfile()
-      .then((profile) => {
-        if (profile && profile.id) {
-          const uId = formatUserUuid(profile.id) || profile.id.toString();
-          loadData(uId);
+      Promise.all([getUserProfile(), getUserSettings()])
+        .then(([profile, settingsData]) => {
+          if (profile && profile.id) {
+            const uId = profile.id.toString();
+            setCurrentUserId(uId);
+            loadData(uId);
 
-          const emailKey = profile.email;
-          const storedStr = localStorage.getItem(`digiscale_company_${emailKey}`);
-          if (storedStr) {
-            const data = JSON.parse(storedStr);
-            setCompanyInfo(data);
-            setShowBankDetails(!!(data.bankName || data.accountNumber));
-            setTermsList(parseTerms(data.termsAndConditions));
-          } else {
-            setTermsList(parseTerms(""));
-          }
+          const data = {
+            logo: settingsData.company_logo,
+            name: settingsData.company_name,
+            email: settingsData.company_email,
+            primaryPhone: settingsData.company_primary_phone,
+            secondaryPhone: settingsData.company_secondary_phone,
+            address: settingsData.company_address,
+            website: settingsData.company_website,
+            gst: settingsData.company_gst,
+            bankName: settingsData.company_bank_name,
+            accountNumber: settingsData.company_account_number,
+            ifsc: settingsData.company_ifsc,
+            termsAndConditions: settingsData.company_terms,
+          };
+          
+          setCompanyInfo(data);
+          setShowBankDetails(!!(data.bankName || data.accountNumber));
+          setTermsList(parseTerms(data.termsAndConditions || ""));
         }
         setLoadingProfile(false);
       })
       .catch(() => {
-        const cachedEmail = localStorage.getItem("user_email") || "";
-        if (cachedEmail) {
-          const storedStr = localStorage.getItem(`digiscale_company_${cachedEmail}`);
-          if (storedStr) {
-            const data = JSON.parse(storedStr);
-            setCompanyInfo(data);
-            setShowBankDetails(!!(data.bankName || data.accountNumber));
-            setTermsList(parseTerms(data.termsAndConditions));
-          } else {
-            setTermsList(parseTerms(""));
-          }
-        } else {
-          setTermsList(parseTerms(""));
-        }
+        setTermsList(parseTerms(""));
         setLoadingProfile(false);
       });
 
     // Fetch saved quotations history
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("digiscale_quotations");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setSavedQuotes(parsed);
-          const nextNum = getNextQuoteNumber(parsed);
-          setQuoteNumber(nextNum);
-        } catch (e) {
-          console.error("Failed to parse saved quotations:", e);
-        }
-      } else {
-        setQuoteNumber("Q-1");
-      }
-
       const storedApplyEvent = localStorage.getItem("digiscale_apply_event_markup");
       if (storedApplyEvent) {
         setApplyEventMarkup(storedApplyEvent === "true");
@@ -325,8 +347,12 @@ export default function QuotationView() {
     }
   }, []);
 
-  const handleSaveQuotation = () => {
+  const handleSaveQuotation = async () => {
     if (selectedItems.length === 0) return;
+    if (!currentUserId) {
+      alert("User session not found. Please log in again.");
+      return;
+    }
     
     const defaultQuoteNum = getNextQuoteNumber(savedQuotes);
     const finalQuoteNumber = quoteNumber.trim() || defaultQuoteNum;
@@ -339,34 +365,65 @@ export default function QuotationView() {
       clientAddress,
       quoteDate,
       items: selectedItems,
-      taxPercent,
-      discountAmount,
+      taxInput,
+      cashAmount,
+      bankAmount,
       total,
       applyEventMarkup,
       eventMarkupPercent,
+      isOrderDone: false, // Default for new, will be overwritten if existing
       createdAt: new Date().toISOString()
     };
 
     let updatedQuotes = [];
     const existingIndex = savedQuotes.findIndex(q => q.quoteNumber === newQuote.quoteNumber);
+    let idToUpdate = newQuote.id;
+
     if (existingIndex > -1) {
       updatedQuotes = [...savedQuotes];
-      updatedQuotes[existingIndex] = { ...savedQuotes[existingIndex], ...newQuote, id: savedQuotes[existingIndex].id };
-      setSaveSuccessMessage("Quotation updated successfully!");
+      idToUpdate = savedQuotes[existingIndex].id;
+      newQuote.isOrderDone = savedQuotes[existingIndex].isOrderDone;
+      updatedQuotes[existingIndex] = { ...savedQuotes[existingIndex], ...newQuote, id: idToUpdate };
     } else {
       updatedQuotes = [newQuote, ...savedQuotes];
-      setSaveSuccessMessage("Quotation saved successfully!");
-      // Update state to next sequence number
-      const nextNum = getNextQuoteNumber(updatedQuotes);
-      setQuoteNumber(nextNum);
     }
 
-    setSavedQuotes(updatedQuotes);
-    localStorage.setItem("digiscale_quotations", JSON.stringify(updatedQuotes));
+    try {
+      const { error } = await supabase.from('quotations').upsert({
+        id: idToUpdate,
+        quote_number: finalQuoteNumber,
+        client_name: clientName,
+        client_company: clientCompany,
+        client_address: clientAddress,
+        quote_date: quoteDate,
+        tax_input: taxInput,
+        cash_amount: cashAmount ? parseFloat(cashAmount) : 0,
+        bank_amount: bankAmount ? parseFloat(bankAmount) : 0,
+        total_amount: total,
+        apply_event_markup: applyEventMarkup,
+        event_markup_percent: eventMarkupPercent,
+        items: selectedItems,
+        user_id: parseInt(currentUserId),
+        created_at: existingIndex > -1 ? savedQuotes[existingIndex].createdAt : new Date().toISOString()
+      }, { onConflict: 'id' });
 
-    setTimeout(() => {
-      setSaveSuccessMessage(null);
-    }, 3000);
+      if (error) throw error;
+
+      setSavedQuotes(updatedQuotes);
+      
+      if (existingIndex > -1) {
+        setSaveSuccessMessage("Quotation updated successfully in database!");
+      } else {
+        setSaveSuccessMessage("Quotation saved successfully to database!");
+        const nextNum = getNextQuoteNumber(updatedQuotes);
+        setQuoteNumber(nextNum);
+      }
+    } catch (err) {
+      console.error("Failed to save quotation:", err);
+      alert("Failed to save quotation to database.");
+    } finally {
+      setTimeout(() => setSaveSuccessMessage(null), 3000);
+    }
   };
 
   const handleLoadQuote = (quote: any) => {
@@ -376,37 +433,58 @@ export default function QuotationView() {
     setClientAddress(quote.clientAddress || "");
     setQuoteDate(quote.quoteDate || "");
     setSelectedItems(quote.items || []);
-    setTaxPercent(quote.taxPercent ?? "");
-    setDiscountAmount(quote.discountAmount || "");
+    setTaxInput(quote.taxInput || "");
+    setCashAmount(quote.cashAmount || "");
+    setBankAmount(quote.bankAmount || "");
     setApplyEventMarkup(quote.applyEventMarkup || false);
     setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
     setActiveSubView("create");
   };
 
-  const handleDeleteQuote = (id: string) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this quotation?");
+  const handleToggleOrderStatus = async (id: string, currentStatus: boolean) => {
+    const actionStr = currentStatus ? "Pending" : "Done";
+    const confirmToggle = window.confirm(`Are you sure you want to mark this order as ${actionStr}?`);
+    if (!confirmToggle) return;
+    
+    try {
+      const { error } = await supabase
+        .from('quotations')
+        .update({ is_order_done: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSavedQuotes(savedQuotes.map(q => 
+        q.id === id ? { ...q, isOrderDone: !currentStatus } : q
+      ));
+    } catch (err) {
+      console.error("Failed to update order status:", err);
+      alert("Failed to update order status in database.");
+    }
+  };
+
+  const handleDeleteQuote = async (id: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this quotation from the database?");
     if (!confirmDelete) return;
 
-    const updated = savedQuotes.filter(q => q.id !== id);
-    setSavedQuotes(updated);
-    localStorage.setItem("digiscale_quotations", JSON.stringify(updated));
+    try {
+      const { error } = await supabase.from('quotations').delete().eq('id', id);
+      if (error) throw error;
+
+      const updated = savedQuotes.filter(q => q.id !== id);
+      setSavedQuotes(updated);
+    } catch (err) {
+      console.error("Failed to delete quote:", err);
+      alert("Failed to delete quotation from database.");
+    }
   };
 
   const handlePrintQuoteDirect = (quote: any) => {
-    setQuoteNumber(quote.quoteNumber || "");
-    setClientName(quote.clientName || "");
-    setClientCompany(quote.clientCompany || "");
-    setClientAddress(quote.clientAddress || "");
-    setQuoteDate(quote.quoteDate || "");
-    setSelectedItems(quote.items || []);
-    setTaxPercent(quote.taxPercent ?? "");
-    setDiscountAmount(quote.discountAmount || "");
-    setApplyEventMarkup(quote.applyEventMarkup || false);
-    setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
-    setActiveSubView("create");
+    setPrintQuoteData(quote);
     setTimeout(() => {
       window.print();
-    }, 200);
+      setTimeout(() => setPrintQuoteData(null), 100);
+    }, 300);
   };
 
   // Toggle item selection
@@ -468,6 +546,21 @@ export default function QuotationView() {
     );
   };
 
+  // Update rate manually
+  const handleUpdateRate = (itemId: string, newRate: string) => {
+    setSelectedItems(
+      selectedItems.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            rate: newRate
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   // Filter products by global search query
   const filteredProducts = products.filter(p => {
     const q = searchQuery.trim().toLowerCase();
@@ -483,22 +576,19 @@ export default function QuotationView() {
   // Calculations
   const subtotal = selectedItems.reduce((sum, item) => sum + (item.quantity * (parseFloat(getItemRate(item.rate)) || 0)), 0);
   
-  const taxRate = typeof taxPercent === "number" ? taxPercent : 0;
-  
-  // Calculate discount based on value or percentage (e.g. "10%")
-  let discountVal = 0;
-  const rawDiscount = discountAmount.trim();
-  if (rawDiscount) {
-    if (rawDiscount.endsWith("%")) {
-      const pct = parseFloat(rawDiscount.slice(0, -1)) || 0;
-      discountVal = (subtotal * pct) / 100;
+  // Calculate GST based on value or percentage (e.g. "18%")
+  let taxAmount = 0;
+  const rawTax = taxInput.trim();
+  if (rawTax) {
+    if (rawTax.endsWith("%")) {
+      const pct = parseFloat(rawTax.slice(0, -1)) || 0;
+      taxAmount = (subtotal * pct) / 100;
     } else {
-      discountVal = parseFloat(rawDiscount) || 0;
+      taxAmount = parseFloat(rawTax) || 0;
     }
   }
   
-  const taxAmount = (subtotal * taxRate) / 100;
-  const total = Math.max(0, subtotal + taxAmount - discountVal);
+  const total = Math.max(0, subtotal + taxAmount);
 
   // Print
   const handlePrint = () => {
@@ -506,7 +596,7 @@ export default function QuotationView() {
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-6 md:px-8">
+    <div className="w-full">
       {/* CSS @media print overrides: Removes URL, date/time header, page numbers, Safari bg colors, and extra blank pages */}
       <style jsx global>{`
         @media print {
@@ -519,6 +609,9 @@ export default function QuotationView() {
             color: black !important;
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
           }
           /* Hide everything except the print area */
           body * {
@@ -532,6 +625,11 @@ export default function QuotationView() {
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            min-height: auto !important;
             margin: 0 !important;
             padding: 1.2cm !important;
             border: none !important;
@@ -560,21 +658,44 @@ export default function QuotationView() {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="no-print flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <FileText className="h-5 w-5 text-blue-600" />
-            Quotation Generator
-          </h1>
+      {/* Header / Toolbar */}
+      <div className="no-print flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+        {/* Search Inputs Row */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+          {/* History Search */}
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
+            <input
+              type="text"
+              value={historySearchQuery}
+              onChange={(e) => {
+                setHistorySearchQuery(e.target.value);
+                if (activeSubView !== "history") {
+                  setActiveSubView("history");
+                }
+              }}
+              placeholder="Search saved quotes (Client, ID)..."
+              className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
+            />
+            {historySearchQuery && (
+              <button
+                type="button"
+                onClick={() => setHistorySearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Actions */}
+        <div className="flex items-center gap-3">
           {activeSubView === "create" && (
             <button
               onClick={handleSaveQuotation}
               disabled={selectedItems.length === 0}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm"
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
             >
               <Check className="h-4 w-4" />
               Save Quotation
@@ -584,7 +705,7 @@ export default function QuotationView() {
           <button
             onClick={handlePrint}
             disabled={selectedItems.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
           >
             <Printer className="h-4 w-4" />
             Print / Export PDF
@@ -596,20 +717,20 @@ export default function QuotationView() {
       <div className="no-print flex gap-2 mb-6">
         <button
           onClick={() => setActiveSubView("create")}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm ${
             activeSubView === "create"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
           }`}
         >
           📝 Create Quotation
         </button>
         <button
           onClick={() => setActiveSubView("history")}
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm ${
             activeSubView === "history"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
           }`}
         >
           📜 Saved History ({savedQuotes.length})
@@ -654,13 +775,31 @@ export default function QuotationView() {
                     <th className="py-3.5 px-4">Quote Date</th>
                     <th className="py-3.5 px-4 text-center">Items</th>
                     <th className="py-3.5 px-4 text-right">Grand Total</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
                     <th className="py-3.5 px-4 text-center w-40">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {savedQuotes.map((quote) => (
+                  {savedQuotes
+                    .filter((q) => {
+                      const qNum = (q.quoteNumber || "").toLowerCase();
+                      const client = (q.clientName || "").toLowerCase();
+                      const company = (q.clientCompany || "").toLowerCase();
+                      const term = historySearchQuery.trim().toLowerCase();
+                      return qNum.includes(term) || client.includes(term) || company.includes(term);
+                    })
+                    .map((quote) => (
                     <tr key={quote.id} className="hover:bg-slate-50/40">
-                      <td className="py-4 px-4 font-black text-slate-900">{quote.quoteNumber}</td>
+                      <td className="py-4 px-4">
+                        <div className="font-black text-slate-900">{quote.quoteNumber}</div>
+                        <div className="mt-1">
+                          {quote.applyEventMarkup ? (
+                            <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">EVENT</span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">STANDARD</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-4 px-4">
                         <p className="font-bold text-slate-800">{quote.clientName || "—"}</p>
                         {quote.clientCompany && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{quote.clientCompany}</p>}
@@ -670,14 +809,27 @@ export default function QuotationView() {
                       <td className="py-4 px-4 text-right font-black text-slate-900">
                         ₹{(quote.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          onClick={() => handleToggleOrderStatus(quote.id, quote.isOrderDone)}
+                          className={`flex items-center gap-1.5 px-2 py-1 mx-auto rounded-lg text-[10px] font-black tracking-wide uppercase transition active:scale-95 ${
+                            quote.isOrderDone 
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100" 
+                              : "bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100"
+                          }`}
+                        >
+                          {quote.isOrderDone ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {quote.isOrderDone ? "Done" : "Pending"}
+                        </button>
+                      </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => setSelectedQuoteForPreview(quote)}
+                            onClick={() => handleLoadQuote(quote)}
                             className="p-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg border border-blue-100 transition active:scale-95 cursor-pointer"
-                            title="Preview PDF"
+                            title="Edit Quotation"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handlePrintQuoteDirect(quote)}
@@ -932,15 +1084,14 @@ export default function QuotationView() {
                 3. Search & Add Products
               </h3>
               
-              {/* Standardized Global Finder Search bar matching Collections/Warehouse */}
-              <div className="relative">
+              <div className="relative mt-2">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="🌐 Global Finder (Search all products)..."
+                  placeholder="Search products to add..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-550 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
                 />
                 {searchQuery && (
                   <button
@@ -1105,6 +1256,17 @@ export default function QuotationView() {
               {(quoteNumber || quoteDate) && (
                 <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
                   <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
+                  <div className="mb-1.5">
+                    {applyEventMarkup ? (
+                      <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-purple-700 print:border-purple-300 print:text-purple-800">
+                        Event Quotation
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
+                        Standard Quotation
+                      </span>
+                    )}
+                  </div>
                   {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
                   {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
                 </div>
@@ -1207,7 +1369,27 @@ export default function QuotationView() {
 
                         {/* PRICE CODE */}
                         <td className="py-3 px-3 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
-                          {getItemRate(item.rate)}
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={applyEventMarkup ? (parseFloat(item.rate || "0") * (1 + eventMarkupPercent / 100)).toString() : (item.rate || "")}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (val !== "" && applyEventMarkup) {
+                                const num = parseFloat(val);
+                                if (!isNaN(num)) {
+                                  val = (num / (1 + eventMarkupPercent / 100)).toString();
+                                }
+                              }
+                              handleUpdateRate(item.id, val);
+                            }}
+                            placeholder="0"
+                            className="no-print w-20 rounded-lg border border-slate-205 bg-white py-1 px-1.5 text-right text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ml-auto"
+                          />
+                          <span className="hidden print:inline">
+                            {getItemRate(item.rate)}
+                          </span>
                         </td>
 
                         {/* TOTAL */}
@@ -1272,55 +1454,24 @@ export default function QuotationView() {
                   </div>
 
                   {/* 2. GST */}
-                  <div className={`flex justify-between font-bold text-slate-500 items-center ${taxRate > 0 ? "" : "print:hidden"}`}>
+                  <div className={`flex justify-between font-bold text-slate-500 items-center ${taxAmount > 0 || taxInput ? "" : "print:hidden"}`}>
                     <span className="flex items-center gap-1.5">
-                      <span>GST %</span>
-                      <span className="no-print flex items-center gap-0.5">
-                        (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          placeholder="0"
-                          value={taxPercent}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setTaxPercent(val === "" ? "" : Number(val));
-                          }}
-                          className="w-10 text-center font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded py-0.5 outline-none text-[10px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        %)
-                      </span>
-                      <span className="hidden print:inline">({taxPercent || 0}%)</span>
-                    </span>
-                    <span>
-                      ₹{taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  {/* 3. Discount */}
-                  <div className={`flex justify-between font-bold text-red-655 items-center ${discountVal > 0 ? "" : "print:hidden"}`}>
-                    <span className="flex items-center gap-1.5">
-                      <span>Discount</span>
+                      <span>GST</span>
                       <span className="no-print flex items-center gap-0.5">
                         (
                         <input
                           type="text"
-                          placeholder="e.g. 10% or 500"
-                          value={discountAmount}
-                          onChange={(e) => {
-                            setDiscountAmount(e.target.value);
-                          }}
-                          className="w-24 text-right font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded py-0.5 px-1.5 outline-none text-[10px]"
+                          placeholder="e.g. 18% or 500"
+                          value={taxInput}
+                          onChange={(e) => setTaxInput(e.target.value)}
+                          className="w-24 text-center font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded py-0.5 px-1.5 outline-none text-[10px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         )
                       </span>
-                      {discountAmount && (
-                        <span className="hidden print:inline">({discountAmount})</span>
-                      )}
+                      <span className="hidden print:inline">({taxInput})</span>
                     </span>
                     <span>
-                      - ₹{discountVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
 
@@ -1331,6 +1482,70 @@ export default function QuotationView() {
                     <span>Grand Total</span>
                     <span>₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+
+                  {/* Cash & Bank Inputs */}
+                  <div className="no-print pt-2 space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
+                      <span>Paid via Cash</span>
+                      <div className="flex items-center gap-1">
+                        ₹
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={cashAmount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCashAmount(val);
+                            if (val && !isNaN(Number(val))) {
+                              const remaining = Math.max(0, total - Number(val));
+                              setBankAmount(remaining > 0 ? remaining.toString() : "");
+                            } else if (val === "") {
+                              setBankAmount("");
+                            }
+                          }}
+                          className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
+                      <span>Paid via Bank</span>
+                      <div className="flex items-center gap-1">
+                        ₹
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={bankAmount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBankAmount(val);
+                            if (val && !isNaN(Number(val))) {
+                              const remaining = Math.max(0, total - Number(val));
+                              setCashAmount(remaining > 0 ? remaining.toString() : "");
+                            } else if (val === "") {
+                              setCashAmount("");
+                            }
+                          }}
+                          className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Print-only Cash / Bank box */}
+                  {(cashAmount || bankAmount) && (
+                    <div className="hidden print:block pt-4">
+                      <div className="border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1 w-48 ml-auto">
+                        <div className="flex justify-between border-b border-dashed border-slate-400 pb-1">
+                          <span>BANK:</span>
+                          <span>{bankAmount ? `₹${parseFloat(bankAmount).toLocaleString("en-IN")}` : "-"}</span>
+                        </div>
+                        <div className="flex justify-between pt-1">
+                          <span>CASH:</span>
+                          <span>{cashAmount ? `₹${parseFloat(cashAmount).toLocaleString("en-IN")}` : "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Authorized Sign Option */}
                   {showAuthSign && (
@@ -1464,6 +1679,17 @@ export default function QuotationView() {
                 {(selectedQuoteForPreview.quoteNumber || selectedQuoteForPreview.quoteDate) && (
                   <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
+                    <div className="mb-1.5">
+                      {selectedQuoteForPreview.applyEventMarkup ? (
+                        <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-purple-700 print:border-purple-300 print:text-purple-800">
+                          Event Quotation
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
+                          Standard Quotation
+                        </span>
+                      )}
+                    </div>
                     {selectedQuoteForPreview.quoteNumber && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{selectedQuoteForPreview.quoteNumber}</span></p>}
                     {selectedQuoteForPreview.quoteDate && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(selectedQuoteForPreview.quoteDate)}</span></p>}
                   </div>
@@ -1567,22 +1793,23 @@ export default function QuotationView() {
                   <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
 
-                {typeof selectedQuoteForPreview.taxPercent === "number" && selectedQuoteForPreview.taxPercent > 0 && (
+                {selectedQuoteForPreview.taxInput && (
                   <div className="flex justify-between font-bold text-slate-500">
-                    <span>GST ({selectedQuoteForPreview.taxPercent}%)</span>
-                    <span>₹{((selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0) * selectedQuoteForPreview.taxPercent) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                )}
-
-                {selectedQuoteForPreview.discountAmount && (
-                  <div className="flex justify-between font-bold text-red-655">
-                    <span>Discount ({selectedQuoteForPreview.discountAmount})</span>
+                    <span>GST ({selectedQuoteForPreview.taxInput})</span>
                     <span>
-                      - ₹{(
-                        selectedQuoteForPreview.discountAmount.endsWith("%")
-                          ? (selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0) * parseFloat(selectedQuoteForPreview.discountAmount.slice(0, -1))) / 100
-                          : parseFloat(selectedQuoteForPreview.discountAmount) || 0
-                      ).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{(() => {
+                        const sTotal = selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0);
+                        let tAmt = 0;
+                        const rawTax = selectedQuoteForPreview.taxInput.trim();
+                        if (rawTax) {
+                          if (rawTax.endsWith("%")) {
+                            tAmt = (sTotal * (parseFloat(rawTax.slice(0, -1)) || 0)) / 100;
+                          } else {
+                            tAmt = parseFloat(rawTax) || 0;
+                          }
+                        }
+                        return tAmt;
+                      })().toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
@@ -1594,6 +1821,22 @@ export default function QuotationView() {
                   <span>₹{(selectedQuoteForPreview.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 
+                {/* Modal Cash / Bank box */}
+                {(selectedQuoteForPreview.cashAmount || selectedQuoteForPreview.bankAmount) && (
+                  <div className="pt-2">
+                    <div className="border border-slate-300 p-2 text-xs font-bold text-slate-700 space-y-1">
+                      <div className="flex justify-between border-b border-dashed border-slate-300 pb-1">
+                        <span>BANK:</span>
+                        <span>{selectedQuoteForPreview.bankAmount ? `₹${parseFloat(selectedQuoteForPreview.bankAmount).toLocaleString("en-IN")}` : "-"}</span>
+                      </div>
+                      <div className="flex justify-between pt-1">
+                        <span>CASH:</span>
+                        <span>{selectedQuoteForPreview.cashAmount ? `₹${parseFloat(selectedQuoteForPreview.cashAmount).toLocaleString("en-IN")}` : "-"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {showAuthSign && (
                   <div className="text-right pt-16">
                     <div className="inline-block border-t border-slate-400 w-32 pt-1 text-center text-[9px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1607,6 +1850,147 @@ export default function QuotationView() {
         </div>
       </div>
     )}
+
+    {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
+    {printQuoteData && (
+      <div id="print-area" className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-4 md:p-8">
+        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+              {companyInfo?.name || "COMPANY NAME"}
+            </h1>
+            <p className="text-sm font-semibold text-slate-600 mt-1 max-w-sm">
+              {companyInfo?.address || "Company Address"}
+            </p>
+            {companyInfo?.primaryPhone && (
+              <p className="text-xs font-bold text-slate-500 mt-1">Phone: {companyInfo.primaryPhone}</p>
+            )}
+            {companyInfo?.email && (
+              <p className="text-xs font-bold text-slate-500">Email: {companyInfo.email}</p>
+            )}
+            {companyInfo?.gst && (
+              <p className="text-xs font-black text-slate-800 mt-1 uppercase">GSTIN: {companyInfo.gst}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <h2 className="text-xl font-black text-blue-600 uppercase tracking-wider mb-2">QUOTATION</h2>
+            <div className="inline-flex flex-col border border-slate-300 rounded p-2 bg-slate-50 text-left w-48">
+              <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                <span>Quote No:</span>
+                <span className="text-slate-900">{printQuoteData.quoteNumber}</span>
+              </div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                <span>Date:</span>
+                <span className="text-slate-900">
+                  {new Date(printQuoteData.quoteDate).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Quotation For:</p>
+          <p className="text-sm font-extrabold text-slate-900 uppercase">{printQuoteData.clientCompany}</p>
+          <p className="text-xs font-bold text-slate-700">{printQuoteData.clientName}</p>
+          {printQuoteData.clientAddress && (
+            <p className="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs">{printQuoteData.clientAddress}</p>
+          )}
+        </div>
+        <table className="w-full text-left text-xs mb-6 border border-slate-300">
+          <thead>
+            <tr className="bg-slate-900 text-white uppercase text-[9px] tracking-wider">
+              <th className="py-2 px-2 text-center w-10 border-r border-slate-700">SR</th>
+              <th className="py-2 px-2 border-r border-slate-700">Description</th>
+              <th className="py-2 px-2 text-center w-16 border-r border-slate-700">CTNS</th>
+              <th className="py-2 px-2 text-center w-16 border-r border-slate-700">QTY</th>
+              <th className="py-2 px-2 text-right w-20 border-r border-slate-700">Rate</th>
+              <th className="py-2 px-2 text-right w-24">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {printQuoteData.items?.map((item: any, idx: number) => (
+              <tr key={item.id} className="border-b border-slate-300">
+                <td className="py-2 px-2 text-center border-r border-slate-300">{idx + 1}</td>
+                <td className="py-2 px-2 font-bold text-slate-900 border-r border-slate-300">{item.name}</td>
+                <td className="py-2 px-2 text-center border-r border-slate-300">{item.cartons}</td>
+                <td className="py-2 px-2 text-center border-r border-slate-300">{item.quantity}</td>
+                <td className="py-2 px-2 text-right border-r border-slate-300">{getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)}</td>
+                <td className="py-2 px-2 text-right font-bold text-slate-900">
+                  ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex justify-between items-start">
+          <div className="w-3/5">
+            {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
+              <div className="mb-4">
+                <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">BANK ACCOUNT DETAILS</p>
+                <div className="border-l-2 border-slate-800 pl-2 mt-1 space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-900">{companyInfo.bankName}</p>
+                  <p className="text-[10px] font-semibold text-slate-600">A/C: <span className="font-bold text-slate-900">{companyInfo.accountNumber}</span></p>
+                  {companyInfo.ifsc && <p className="text-[10px] font-semibold text-slate-600">IFSC: <span className="font-bold text-slate-900">{companyInfo.ifsc}</span></p>}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="w-64 space-y-2 text-xs">
+            <div className="flex justify-between font-bold text-slate-600">
+              <span>Amount</span>
+              <span>₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            {printQuoteData.taxInput && (
+              <div className="flex justify-between font-bold text-slate-500">
+                <span>GST ({printQuoteData.taxInput})</span>
+                <span>
+                  ₹{(() => {
+                    const sTotal = printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0);
+                    let tAmt = 0;
+                    const rawTax = printQuoteData.taxInput.trim();
+                    if (rawTax) {
+                      if (rawTax.endsWith("%")) {
+                        tAmt = (sTotal * (parseFloat(rawTax.slice(0, -1)) || 0)) / 100;
+                      } else {
+                        tAmt = parseFloat(rawTax) || 0;
+                      }
+                    }
+                    return tAmt;
+                  })().toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+            <hr className="border-slate-400" />
+            <div className="flex justify-between text-base font-black text-slate-900">
+              <span>Grand Total</span>
+              <span>₹{(printQuoteData.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            
+            {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
+              <div className="mt-4 border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1">
+                <div className="flex justify-between border-b border-dashed border-slate-400 pb-1">
+                  <span>BANK:</span>
+                  <span>{printQuoteData.bankAmount ? `₹${parseFloat(printQuoteData.bankAmount).toLocaleString("en-IN")}` : "-"}</span>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <span>CASH:</span>
+                  <span>{printQuoteData.cashAmount ? `₹${parseFloat(printQuoteData.cashAmount).toLocaleString("en-IN")}` : "-"}</span>
+                </div>
+              </div>
+            )}
+            
+            {showAuthSign && (
+              <div className="text-right mt-16">
+                <div className="inline-block border-t border-slate-800 w-32 pt-1 text-center text-[9px] font-bold text-slate-600 uppercase tracking-wider">
+                  Authorized Sign
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
   </div>
 );
 }

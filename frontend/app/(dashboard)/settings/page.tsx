@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings } from "@/services/api";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -115,43 +115,22 @@ function ProfileSection() {
   const [verificationError, setVerificationError] = useState("");
 
   useEffect(() => {
-    getUserProfile()
-      .then((data) => {
-        setName(data.name);
-        setEmail(data.email);
-        setOriginalEmail(data.email);
+    Promise.all([getUserProfile(), getUserSettings()])
+      .then(([profileData, settingsData]) => {
+        setName(profileData.name);
+        setEmail(profileData.email);
+        setOriginalEmail(profileData.email);
         
-        // Load other custom fields from localStorage
-        const storedPhone = localStorage.getItem(`digiscale_phone_${data.email}`) || "";
-        const storedGender = localStorage.getItem(`digiscale_gender_${data.email}`) || "Male";
-        const storedAvatar = localStorage.getItem(`digiscale_avatar_${data.email}`) || null;
-        
-        setPhone(storedPhone);
-        setOriginalPhone(storedPhone);
-        setGender(storedGender);
-        setAvatarUrl(storedAvatar);
+        setPhone(settingsData.phone || "");
+        setOriginalPhone(settingsData.phone || "");
+        setGender(settingsData.gender || "Male");
+        setAvatarUrl(settingsData.avatar_url || null);
         setLoading(false);
       })
       .catch((err) => {
-        // Fallback to localStorage cached values
-        const cachedName = localStorage.getItem("user_name") || "";
-        const cachedEmail = localStorage.getItem("user_email") || "";
-        setName(cachedName);
-        setEmail(cachedEmail);
-        setOriginalEmail(cachedEmail);
-        
-        const storedPhone = localStorage.getItem(`digiscale_phone_${cachedEmail}`) || "";
-        const storedGender = localStorage.getItem(`digiscale_gender_${cachedEmail}`) || "Male";
-        const storedAvatar = localStorage.getItem(`digiscale_avatar_${cachedEmail}`) || null;
-        
-        setPhone(storedPhone);
-        setOriginalPhone(storedPhone);
-        setGender(storedGender);
-        setAvatarUrl(storedAvatar);
-
         setStatusMsg({ 
           type: "error", 
-          text: "Failed to connect to server. Showing local profile. You can edit and save details locally below." 
+          text: "Failed to connect to server." 
         });
         setLoading(false);
       });
@@ -168,7 +147,7 @@ function ProfileSection() {
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files[0] && email) {
+    if (files && files[0]) {
       const file = files[0];
       if (file.size > 2 * 1024 * 1024) {
         setStatusMsg({ type: "error", text: "Image size exceeds 2MB." });
@@ -178,8 +157,6 @@ function ProfileSection() {
       reader.onload = (event) => {
         const base64 = event.target?.result as string;
         setAvatarUrl(base64);
-        localStorage.setItem(`digiscale_avatar_${email}`, base64);
-        setStatusMsg({ type: "success", text: "Avatar updated successfully!" });
       };
       reader.readAsDataURL(file);
     }
@@ -191,30 +168,16 @@ function ProfileSection() {
     try {
       await updateUserProfile(name, email);
       
-      // If email has changed, we should migrate the localStorage keys to the new email address scope!
-      if (email !== originalEmail) {
-        // Move avatar
-        const av = localStorage.getItem(`digiscale_avatar_${originalEmail}`);
-        if (av) localStorage.setItem(`digiscale_avatar_${email}`, av);
-        
-        // Move phone
-        localStorage.setItem(`digiscale_phone_${email}`, phone);
-        // Move gender
-        localStorage.setItem(`digiscale_gender_${email}`, gender);
-        
-        // Clear old keys
-        localStorage.removeItem(`digiscale_avatar_${originalEmail}`);
-        localStorage.removeItem(`digiscale_phone_${originalEmail}`);
-        localStorage.removeItem(`digiscale_gender_${originalEmail}`);
-      } else {
-        // Save normally
-        localStorage.setItem(`digiscale_phone_${email}`, phone);
-        localStorage.setItem(`digiscale_gender_${email}`, gender);
-      }
+      await updateUserSettings({
+        phone,
+        gender,
+        avatar_url: avatarUrl
+      });
       
       // Update global context for navbar sync
       localStorage.setItem("user_name", name);
       localStorage.setItem("user_email", email);
+      if (avatarUrl) localStorage.setItem(`digiscale_avatar_${email}`, avatarUrl);
       
       setOriginalEmail(email);
       setOriginalPhone(phone);
@@ -950,61 +913,26 @@ function CompanySection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Fetch profile first to get the user email for local storage key scoping
-    getUserProfile()
-      .then((profile) => {
-        const emailKey = profile.email;
-        const storedStr = localStorage.getItem(`digiscale_company_${emailKey}`);
-        if (storedStr) {
-          try {
-            const data = JSON.parse(storedStr);
-            setLogo(data.logo || null);
-            setName(data.name || "");
-            setEmail(data.email || "");
-            setPrimaryPhone(data.primaryPhone || "");
-            setSecondaryPhone(data.secondaryPhone || "");
-            setAddress(data.address || "");
-            setWebsite(data.website || "");
-            setGst(data.gst || "");
-            setBankName(data.bankName || "");
-            setAccountNumber(data.accountNumber || "");
-            setIfsc(data.ifsc || "");
-          } catch (e) {
-            console.error("Error parsing company data", e);
-          }
-        } else {
-          // Default company email to user's registration email if blank
-          setEmail(profile.email);
-        }
+    Promise.all([getUserProfile(), getUserSettings()])
+      .then(([profile, settingsData]) => {
+        setLogo(settingsData.company_logo || null);
+        setName(settingsData.company_name || "");
+        setEmail(settingsData.company_email || profile.email);
+        setPrimaryPhone(settingsData.company_primary_phone || "");
+        setSecondaryPhone(settingsData.company_secondary_phone || "");
+        setAddress(settingsData.company_address || "");
+        setWebsite(settingsData.company_website || "");
+        setGst(settingsData.company_gst || "");
+        setBankName(settingsData.company_bank_name || "");
+        setAccountNumber(settingsData.company_account_number || "");
+        setIfsc(settingsData.company_ifsc || "");
+        setTermsAndConditions(settingsData.company_terms || "");
         setLoading(false);
       })
       .catch(() => {
-        // Fallback: get the cached email from localStorage
-        const cachedEmail = localStorage.getItem("user_email") || "";
-        setEmail(cachedEmail);
-        
-        const storedStr = localStorage.getItem(`digiscale_company_${cachedEmail}`);
-        if (storedStr) {
-          try {
-            const data = JSON.parse(storedStr);
-            setLogo(data.logo || null);
-            setName(data.name || "");
-            setEmail(data.email || cachedEmail || "");
-            setPrimaryPhone(data.primaryPhone || "");
-            setSecondaryPhone(data.secondaryPhone || "");
-            setAddress(data.address || "");
-            setWebsite(data.website || "");
-            setGst(data.gst || "");
-            setBankName(data.bankName || "");
-            setAccountNumber(data.accountNumber || "");
-            setIfsc(data.ifsc || "");
-            setTermsAndConditions(data.termsAndConditions || "");
-          } catch (e) {}
-        }
-        
         setStatusMsg({ 
           type: "error", 
-          text: "Failed to connect to server. Showing local company context. You can edit and save details locally below." 
+          text: "Failed to connect to server. Cannot load company profile." 
         });
         setLoading(false);
       });
@@ -1032,29 +960,20 @@ function CompanySection() {
     setSaving(true);
     setStatusMsg(null);
     try {
-      const profile = await getUserProfile();
-      const emailKey = profile.email;
-
-      const payload = {
-        logo,
-        name,
-        email,
-        primaryPhone,
-        secondaryPhone,
-        address,
-        website,
-        gst,
-        bankName,
-        accountNumber,
-        ifsc,
-        termsAndConditions,
-      };
-
-      localStorage.setItem(`digiscale_company_${emailKey}`, JSON.stringify(payload));
-      
-      // Update global context for company branding if any
-      localStorage.setItem(`digiscale_company_name_${emailKey}`, name);
-      localStorage.setItem(`digiscale_company_logo_${emailKey}`, logo || "");
+      await updateUserSettings({
+        company_logo: logo,
+        company_name: name,
+        company_email: email,
+        company_primary_phone: primaryPhone,
+        company_secondary_phone: secondaryPhone,
+        company_address: address,
+        company_website: website,
+        company_gst: gst,
+        company_bank_name: bankName,
+        company_account_number: accountNumber,
+        company_ifsc: ifsc,
+        company_terms: termsAndConditions,
+      });
 
       setStatusMsg({ type: "success", text: "Company profile updated successfully!" });
       setSaving(false);

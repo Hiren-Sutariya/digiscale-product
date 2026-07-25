@@ -13,8 +13,12 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
-    # Database Settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./digiscale.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    
+    def __init__(self):
+        super().__init__()
+        if not self.DATABASE_URL:
+            raise ValueError("DATABASE_URL environment variable is required. Please set it in backend/.env to your Supabase PostgreSQL connection string.")
     
     # Upload Settings
     UPLOAD_DIR: str = "uploads"

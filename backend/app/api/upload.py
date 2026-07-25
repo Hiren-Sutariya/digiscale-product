@@ -9,7 +9,6 @@ from app.config import settings
 from app.services.auth_service import decode_access_token
 from app.services.image_service import remove_background, add_white_background
 from app.models.user import User
-from app.models.project import Project, ProjectImage
 
 router = APIRouter(tags=["upload"])
 

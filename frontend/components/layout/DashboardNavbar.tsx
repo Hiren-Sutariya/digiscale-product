@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Logo from "@/components/ui/logo";
-import { getUserProfile } from "@/services/api";
+import { getUserProfile, getUserSettings } from "@/services/api";
 
 import {
   Bell,
@@ -18,12 +18,15 @@ import {
   CreditCard,
   LogOut,
   Zap,
+  Warehouse,
+  FileText,
 } from "lucide-react";
 
 const navLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/workspace", label: "Workspace", icon: Paintbrush },
   { href: "/projects", label: "Collections", icon: FolderOpen },
+  { href: "/warehouse", label: "Warehouse", icon: Warehouse },
+  { href: "/quotation", label: "Quotation", icon: FileText },
 ];
 
 export default function DashboardNavbar() {
@@ -55,11 +58,10 @@ export default function DashboardNavbar() {
       setIsLoggedIn(!!token);
 
       if (token) {
-        getUserProfile()
-          .then((data) => {
+        Promise.all([getUserProfile(), getUserSettings()])
+          .then(([data, settingsData]) => {
             setUser(data);
-            const storedAvatar = localStorage.getItem(`digiscale_avatar_${data.email}`);
-            if (storedAvatar) setAvatarUrl(storedAvatar);
+            if (settingsData?.avatar_url) setAvatarUrl(settingsData.avatar_url);
 
             if (data.plan === "Starter" && data.created_at) {
               const created = new Date(data.created_at);
@@ -98,7 +100,7 @@ export default function DashboardNavbar() {
     >
       <div className="mx-auto max-w-[1400px] w-full h-full flex items-center justify-between px-8">
 
-        {/* Left — Logo only (no badge) */}
+        {/* Left — Clickable Logo */}
         <div className="flex items-center w-44 flex-shrink-0">
           <Logo />
         </div>

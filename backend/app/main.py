@@ -6,13 +6,17 @@ from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
-from app.api.projects import router as projects_router
 from app.api.upload import router as upload_router
 from app.api.payments import router as payments_router
+from app.api.settings import router as settings_router
+
+# Import models to ensure they are registered with SQLAlchemy
+import app.models.user
+import app.models.project
+import app.models.user_settings
 
 # Create database tables at startup
 Base.metadata.create_all(bind=engine)
-
 # Migration to add deletion_scheduled_at if it does not exist in sqlite database
 from sqlalchemy import text
 try:
@@ -48,9 +52,9 @@ app.add_middleware(
 # Include API Routers
 app.include_router(auth_router)
 app.include_router(users_router)
-app.include_router(projects_router)
 app.include_router(upload_router)
 app.include_router(payments_router)
+app.include_router(settings_router, prefix="/settings", tags=["settings"])
 
 @app.get("/")
 def root():
