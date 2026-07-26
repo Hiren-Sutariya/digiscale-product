@@ -624,6 +624,7 @@ export default function WarehousePage() {
                           <Layers className="h-3 w-3" />
                           {product.collectionName || "Uncategorized"}
                         </button>
+
                         {locations.length > 0 ? (
                           locations.map((loc, idx) => (
                             <button
@@ -892,7 +893,7 @@ export default function WarehousePage() {
                                   {p.name}
                                 </h5>
                                 <p className="text-[9px] text-slate-400 font-semibold truncate">
-                                  {p.collectionName}
+                                  {p.color ? `Color: ${p.color}` : "No Color"} | Code: {p.rate || p.id.substring(0, 8)}
                                 </p>
                               </div>
                             </div>
@@ -952,7 +953,7 @@ export default function WarehousePage() {
                                   className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:shadow-sm transition border border-transparent hover:border-slate-200 flex items-center justify-between"
                                 >
                                   <span>{p.name}</span>
-                                  <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.collectionName}</span>
+                                  <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
                                 </button>
                               ))}
                             {allProducts.filter(prod => {

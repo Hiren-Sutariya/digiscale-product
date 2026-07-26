@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Helper to get auth header
 function getAuthHeader(): Record<string, string> {
@@ -116,6 +116,20 @@ export async function uploadImage(file: File, projectId?: number | null): Promis
   return response.json();
 }
 
+export async function getImageStatus(projectId: number, imageId: number): Promise<any> {
+  const headers = { ...getAuthHeader() };
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/images/${imageId}/status`, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch image status");
+  }
+
+  return response.json();
+}
+
 export async function getUserProfile(): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/users/me`);
   if (!response.ok) {
@@ -192,6 +206,107 @@ export async function deleteAccount(): Promise<any> {
     throw new Error("Failed to schedule account deletion.");
   }
   return response.json();
+}
+
+export async function getTeamMembers(): Promise<any[]> {
+  const headers = { ...getAuthHeader() };
+  const response = await fetch(`${API_BASE_URL}/api/v1/team/`, {
+    method: "GET",
+    headers,
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch team members");
+  }
+  return response.json();
+}
+
+export async function inviteTeamMember(name: string, email: string, role: string): Promise<any> {
+  const headers = { 
+    ...getAuthHeader(),
+    "Content-Type": "application/json"
+  };
+  const response = await fetch(`${API_BASE_URL}/api/v1/team/`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ name, email, role }),
+  });
+  
+  if (!response.ok) {
+    let detail = "Failed to invite member";
+    try {
+      const err = await response.json();
+      detail = err.detail || detail;
+    } catch (e) {
+      // Ignore
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+export async function removeTeamMember(memberId: string): Promise<any> {
+  const headers = { ...getAuthHeader() };
+  const response = await fetch(`${API_BASE_URL}/api/v1/team/${memberId}`, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (!response.ok) {
+    let detail = "Failed to remove member";
+    try {
+      const err = await response.json();
+      detail = err.detail || detail;
+    } catch (e) {
+      // Ignore
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+export async function getApiKeys(): Promise<any[]> {
+  const headers = { ...getAuthHeader() };
+  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/`, {
+    method: "GET",
+    headers,
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch API keys");
+  }
+  return response.json();
+}
+
+export async function createApiKey(name: string): Promise<any> {
+  const headers = { 
+    ...getAuthHeader(),
+    "Content-Type": "application/json"
+  };
+  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    let detail = "Failed to create API key";
+    try {
+      const err = await response.json();
+      detail = err.detail || detail;
+    } catch (e) {}
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+export async function revokeApiKey(keyId: number): Promise<any> {
+  const headers = { ...getAuthHeader() };
+  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/${keyId}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!response.ok) {
+    throw new Error("Failed to revoke API key");
+  }
+  return true;
 }
 
 export async function deleteProject(projectId: number): Promise<any> {

@@ -91,3 +91,32 @@ def update_project(
     db.commit()
     db.refresh(project)
     return project
+
+@router.get("/{project_id}/images/{image_id}/status")
+def get_image_status(
+    project_id: int,
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    from app.models.project import ProjectImage
+    image = db.query(ProjectImage).filter(
+        ProjectImage.id == image_id,
+        ProjectImage.project_id == project_id
+    ).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+        
+    return {
+        "id": image.id,
+        "status": image.status,
+        "originalImage": image.original_path,
+        "processedImage": image.processed_path
+    }

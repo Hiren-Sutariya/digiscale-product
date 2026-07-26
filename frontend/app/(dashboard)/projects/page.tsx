@@ -1568,22 +1568,9 @@ ${rows}
                     )}
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-800">{product.name}</h4>
-                      
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        {product.rate && (
-                          <div className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
-                            Rate: {product.rate} {product.unit_type || "pcs"}
-                          </div>
-                        )}
-                        {product.color && (
-                          <span className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
-                            Color: {product.color}
-                          </span>
-                        )}
-                        <span className="bg-slate-100 text-slate-650 px-2.5 py-1 rounded-xl text-[10px] font-bold">
-                          Stock: {product.stock} units
-                        </span>
-                      </div>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        Code: {product.rate} {product.unit_type || "pcs"} {product.color ? `| Color: ${product.color}` : ""} | Stock: {product.stock}
+                      </p>
                     </div>
                   </div>
 
@@ -1602,6 +1589,7 @@ ${rows}
                       <Layers className="h-3 w-3" />
                       {product.collectionName || "Uncategorized"}
                     </button>
+
                     {locations.length > 0 ? (
                       locations.map((loc, i) => (
                         <button
