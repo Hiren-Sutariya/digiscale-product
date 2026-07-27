@@ -760,24 +760,24 @@ function CollectionsPageContent() {
   const downloadExcelTemplate = async () => {
     const JSZip = (await import("jszip")).default;
 
-    // ── Data — columns match the Add Product form (no Photo — photos added after import) ─
+    // ── Data — columns match the Add Product form ─
     const headers = [
       "Product Name",                     // col A
-      "Image URL",                        // col B
-      "Carton Pack Qty",                  // col C
+      "Description",                      // col B
+      "Carton Qty",                       // col C
       "Unit Type (pcs/dzn)",              // col D
-      "Colors (e.g. Red, Blue, Green)",   // col E
-      "Length / Dimensions",              // col F
-      "Description",                      // col G
-      "Price Code",                       // col H
+      "Rate",                             // col E
+      "Color",                            // col F
+      "Length",                           // col G
+      "Warehouse Location",               // col H
       "Stock Quantity",                   // col I
-      "Warehouse Location",               // col J
+      "Photo URL",                        // col J
     ];
 
     const sampleRows = [
-      ["Silk Saree Premium", "https://example.com/saree.jpg", "24", "pcs", "Royal Blue, Navy", "5.5 cm", "Premium quality", "950", "120", "A-1-upper"],
-      ["Cotton Dupatta", "", "12", "dzn", "Red, Green, Yellow", "2.5 cm", "Lightweight", "A1", "200", ""],
-      ["Embroidered Kurti", "https://example.com/kurti.jpg", "6", "pcs", "Green", "3.0 cm", "", "PC-12", "50", "B-2-lower"],
+      ["Silk Saree Premium", "Premium quality", "24", "pcs", "950", "Royal Blue, Navy", "5.5 cm", "A-1-upper", "120", "https://example.com/saree.jpg"],
+      ["Cotton Dupatta", "Lightweight", "12", "dzn", "200", "Red, Green, Yellow", "2.5 cm", "", "200", ""],
+      ["Embroidered Kurti", "", "6", "pcs", "1200", "Green", "3.0 cm", "B-2-lower", "50", "https://example.com/kurti.jpg"],
     ];
 
     // ── XML Escape helper ─────────────────────────────────────────────

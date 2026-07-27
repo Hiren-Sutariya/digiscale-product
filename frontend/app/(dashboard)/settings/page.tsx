@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Users,
   Trash2,
+  QrCode,
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
@@ -924,7 +925,7 @@ function CompanySection() {
   const [ifsc, setIfsc] = useState("");
 
   const [termsAndConditions, setTermsAndConditions] = useState("");
-
+  const [upiId, setUpiId] = useState("");
   const [loading, setLoading] = useState(!(getCache("profile") && getCache("settings")));
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -945,6 +946,7 @@ function CompanySection() {
         setAccountNumber(settingsData.company_account_number || "");
         setIfsc(settingsData.company_ifsc || "");
         setTermsAndConditions(settingsData.company_terms || "");
+        setUpiId(settingsData.company_upi_id || "");
         setLoading(false);
       })
       .catch(() => {
@@ -991,6 +993,7 @@ function CompanySection() {
         company_account_number: accountNumber,
         company_ifsc: ifsc,
         company_terms: termsAndConditions,
+        company_upi_id: upiId,
       });
 
       setStatusMsg({ type: "success", text: "Company profile updated successfully!" });
@@ -1239,6 +1242,22 @@ function CompanySection() {
                 placeholder="HDFC0000123"
                 value={ifsc}
                 onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+                className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              UPI ID (For QR Code)
+            </label>
+            <div className="relative">
+              <QrCode className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="company@upi"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               />
             </div>
