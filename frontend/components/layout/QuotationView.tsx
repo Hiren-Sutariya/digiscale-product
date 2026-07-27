@@ -1557,48 +1557,61 @@ export default function QuotationView() {
 
             {/* Calculations and Bank Info footer row */}
             {selectedItems.length > 0 && (
-              <div className="mt-6 flex flex-col md:flex-row justify-between gap-6 items-start">
+              <div className="mt-6 flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start break-inside-avoid print:pt-4">
                 
                 {/* Stacked Vertical Bank Details & Terms & Conditions */}
-                <div className="w-full md:w-3/5 space-y-3">
-                  {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) ? (
-                    <div className="py-1">
-                      <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
-                        BANK ACCOUNT DETAILS (FOR PAYMENTS)
-                      </p>
-                      
-                      <div className="space-y-1.5 mt-2 text-[10px] text-slate-700 leading-tight">
-                        <p className="flex items-center">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Bank Name:</span> 
-                          <span className="font-extrabold text-slate-900">{companyInfo.bankName || "-"}</span>
+                <div className="w-full md:w-3/5 print:w-[60%] print:flex print:gap-4">
+                  <div className="space-y-3 print:space-y-0 print:flex-1">
+                    {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) ? (
+                      <div className="py-1">
+                        <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                          BANK ACCOUNT DETAILS (FOR PAYMENTS)
                         </p>
-                        <p className="flex items-center">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Account No:</span> 
-                          <span className="font-extrabold text-slate-900">{companyInfo.accountNumber || "-"}</span>
-                        </p>
-                        <p className="flex items-center">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">IFSC Code:</span> 
-                          <span className="font-extrabold text-slate-900">{companyInfo.ifsc || "-"}</span>
-                        </p>
+                        
+                        <div className="space-y-1.5 mt-2 text-[10px] text-slate-700 leading-tight">
+                          <p className="flex items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Bank Name:</span> 
+                            <span className="font-extrabold text-slate-900">{companyInfo.bankName || "-"}</span>
+                          </p>
+                          <p className="flex items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Account No:</span> 
+                            <span className="font-extrabold text-slate-900">{companyInfo.accountNumber || "-"}</span>
+                          </p>
+                          <p className="flex items-center">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">IFSC Code:</span> 
+                            <span className="font-extrabold text-slate-900">{companyInfo.ifsc || "-"}</span>
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="h-1"></div>
-                  )}
+                    ) : (
+                      <div className="h-1"></div>
+                    )}
 
-                  {/* Customizable Terms and Conditions */}
-                  {termsList.length > 0 && (
-                    <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
-                      <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
-                      {termsList.map((term, i) => (
-                        <p key={i}>{term}</p>
-                      ))}
+                    {/* Customizable Terms and Conditions */}
+                    {termsList.length > 0 && (
+                      <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
+                        <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
+                        {termsList.map((term, i) => (
+                          <p key={i}>{term}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* QR Code only visible in print */}
+                  {showBankDetails && companyInfo && companyInfo.accountNumber && companyInfo.ifsc && (
+                    <div className="hidden print:flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0">
+                      <QRCodeSVG
+                        value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                        size={60}
+                      />
+                      <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>
                     </div>
                   )}
                 </div>
 
                 {/* Reordered Totals Summary */}
-                <div className="w-full md:w-72 space-y-3 text-xs">
+                <div className="w-full md:w-72 print:w-[35%] space-y-3 print:space-y-1.5 text-xs">
                   {/* 1. Amount */}
                   <div className="flex justify-between font-bold text-slate-655">
                     <span>Amount</span>
@@ -1685,8 +1698,8 @@ export default function QuotationView() {
 
                   {/* Print-only Cash / Bank box */}
                   {(cashAmount || bankAmount) && (
-                    <div className="hidden print:block pt-4">
-                      <div className="border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1 w-48 ml-auto">
+                    <div className="hidden print:block print:mt-2">
+                      <div className="border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1 w-full">
                         <div className="flex justify-between border-b border-dashed border-slate-400 pb-1">
                           <span>BANK:</span>
                           <span>{bankAmount ? `₹${parseFloat(bankAmount).toLocaleString("en-IN")}` : "-"}</span>
@@ -1905,41 +1918,54 @@ export default function QuotationView() {
             </div>
 
             {/* Calculations and Bank Info footer row */}
-            <div className="mt-8 flex flex-col md:flex-row justify-between gap-6 items-end border-t border-slate-100 pt-6">
-              <div className="w-full md:w-3/5 space-y-3">
-                {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
-                  <div>
-                    <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
-                      BANK ACCOUNT DETAILS (FOR PAYMENTS)
-                    </p>
-                    <div className="space-y-1.5 mt-2 text-[10px] text-slate-700 leading-tight">
-                      <p className="flex items-center">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Bank Name:</span> 
-                        <span className="font-extrabold text-slate-900">{companyInfo.bankName || "-"}</span>
+            <div className="mt-8 flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start border-t border-slate-100 pt-6 break-inside-avoid print:pt-4">
+              <div className="w-full md:w-3/5 print:w-[60%] print:flex print:gap-4">
+                <div className="space-y-3 print:space-y-0 print:flex-1">
+                  {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
+                    <div>
+                      <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                        BANK ACCOUNT DETAILS (FOR PAYMENTS)
                       </p>
-                      <p className="flex items-center">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Account No:</span> 
-                        <span className="font-extrabold text-slate-900">{companyInfo.accountNumber || "-"}</span>
-                      </p>
-                      <p className="flex items-center">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">IFSC Code:</span> 
-                        <span className="font-extrabold text-slate-900">{companyInfo.ifsc || "-"}</span>
-                      </p>
+                      <div className="space-y-1.5 mt-2 text-[10px] text-slate-700 leading-tight">
+                        <p className="flex items-center">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Bank Name:</span> 
+                          <span className="font-extrabold text-slate-900">{companyInfo.bankName || "-"}</span>
+                        </p>
+                        <p className="flex items-center">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">Account No:</span> 
+                          <span className="font-extrabold text-slate-900">{companyInfo.accountNumber || "-"}</span>
+                        </p>
+                        <p className="flex items-center">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px] inline-block w-20">IFSC Code:</span> 
+                          <span className="font-extrabold text-slate-900">{companyInfo.ifsc || "-"}</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {termsList.length > 0 && (
-                  <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
-                    <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
-                    {termsList.map((term, i) => (
-                      <p key={i}>{term}</p>
-                    ))}
+                  {termsList.length > 0 && (
+                    <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
+                      <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
+                      {termsList.map((term, i) => (
+                        <p key={i}>{term}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* QR Code */}
+                {showBankDetails && companyInfo && companyInfo.accountNumber && companyInfo.ifsc && (
+                  <div className="flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0">
+                    <QRCodeSVG
+                      value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                      size={60}
+                    />
+                    <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>
                   </div>
                 )}
               </div>
 
-              <div className="w-full md:w-72 space-y-3 text-xs">
+              <div className="w-full md:w-72 print:w-[35%] space-y-3 print:space-y-1.5 text-xs">
                 <div className="flex justify-between font-bold text-slate-655">
                   <span>Amount</span>
                   <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
