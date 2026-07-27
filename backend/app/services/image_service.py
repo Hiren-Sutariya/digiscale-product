@@ -36,9 +36,8 @@ def remove_background(input_path: str, output_path: str) -> bool:
         output_image = rembg.remove(input_image, session=session)
         
         # Convert to RGB if we want a white background instead of transparent
-        # For transparent background, just save directly (it will be PNG)
-        # Let's save as PNG to keep transparency
-        output_image.save(output_path, "PNG")
+        # We will save as WEBP to drastically reduce file sizes while keeping transparency
+        output_image.save(output_path, "WEBP", lossless=False, quality=85)
         return True
     except Exception as e:
         print(f"Error removing background: {e}")
@@ -56,9 +55,9 @@ def add_white_background(input_path: str, output_path: str) -> bool:
         if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
             background = Image.new("RGB", img.size, (255, 255, 255))
             background.paste(img, mask=img.split()[3] if img.mode == 'RGBA' else img.convert('RGBA').split()[3])
-            background.save(output_path, "JPEG")
+            background.save(output_path, "WEBP", quality=85)
         else:
-            img.save(output_path, "JPEG")
+            img.save(output_path, "WEBP", quality=85)
         return True
     except Exception as e:
         print(f"Error adding white background: {e}")

@@ -5,6 +5,7 @@ import {
   getUserProfile,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
+import { getCache, setCache } from "@/lib/cache";
 import {
   Plus,
   Search,
@@ -21,6 +22,7 @@ import {
   Layers2,
   PieChart,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import PageTitle from "@/components/ui/pageTitle";
 
@@ -43,6 +45,7 @@ interface Collection {
 
 export default function WarehousePage() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   
@@ -95,12 +98,16 @@ export default function WarehousePage() {
         supabase.from("products").select("*, collection:collections(name)").eq("user_id", userId),
       ]);
 
+      let colsData: any[] = [];
+      let prodsData: any[] = [];
+
       if (colsRes.data) {
-        setCollections(colsRes.data);
+        colsData = colsRes.data;
+        setCollections(colsData);
       }
 
       if (prodsRes.data) {
-        const mapped = prodsRes.data.map((p: any) => ({
+        prodsData = prodsRes.data.map((p: any) => ({
           id: p.id,
           name: p.name,
           photoUrl: p.photoUrl,
@@ -111,10 +118,12 @@ export default function WarehousePage() {
           collectionName: p.collection?.name || "Unknown Collection",
           collectionId: p.collection_id,
         }));
-        setAllProducts(mapped);
+        setAllProducts(prodsData);
       }
+      return { collections: colsData, allProducts: prodsData };
     } catch (e) {
       console.error("Failed to load catalog:", e);
+      return { collections: [], allProducts: [] };
     }
   };
 
@@ -127,18 +136,20 @@ export default function WarehousePage() {
         supabase.from("warehouse_assignments").select("*").eq("user_id", userId),
       ]);
 
+      let rowsData: string[] = [];
+      let slotsMap: Record<string, number[]> = {};
+      let assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
+
       if (rowsRes.data) {
-        const rows = rowsRes.data.map((r) => r.id).sort();
-        setWarehouseRows(rows);
+        rowsData = rowsRes.data.map((r) => r.id).sort();
+        setWarehouseRows(rowsData);
       }
 
       if (slotsRes.data) {
-        const slotsMap: Record<string, number[]> = {};
         slotsRes.data.forEach((s) => {
           if (!slotsMap[s.row_id]) slotsMap[s.row_id] = [];
           slotsMap[s.row_id].push(s.slot_number);
         });
-        // Sort slots numerically
         Object.keys(slotsMap).forEach((row) => {
           slotsMap[row].sort((a, b) => a - b);
         });
@@ -146,7 +157,6 @@ export default function WarehousePage() {
       }
 
       if (assignsRes.data) {
-        const assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
         assignsRes.data.forEach((a) => {
           if (!assignsMap[a.location_key]) assignsMap[a.location_key] = [];
           assignsMap[a.location_key].push({
@@ -156,23 +166,67 @@ export default function WarehousePage() {
         });
         setWarehouseAssignments(assignsMap);
       }
+      return { warehouseRows: rowsData, warehouseSlots: slotsMap, warehouseAssignments: assignsMap };
     } catch (err) {
       console.error("Failed to fetch warehouse details:", err);
+      return { warehouseRows: [], warehouseSlots: {}, warehouseAssignments: {} };
     }
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
+      if (cachedUserId) setCurrentUserId(cachedUserId);
+
+      const cachedCols = localStorage.getItem("digiscale_cached_collections");
+      if (cachedCols) {
+        try { 
+          setCollections(JSON.parse(cachedCols)); 
+          setLoading(false);
+        } catch(e) {}
+      }
+      const cachedProds = localStorage.getItem("digiscale_cached_all_products");
+      if (cachedProds) {
+        try { setAllProducts(JSON.parse(cachedProds)); } catch(e) {}
+      }
+      const cachedRows = localStorage.getItem("digiscale_cached_warehouse_rows");
+      if (cachedRows) {
+        try { setWarehouseRows(JSON.parse(cachedRows)); } catch(e) {}
+      }
+      const cachedSlots = localStorage.getItem("digiscale_cached_warehouse_slots");
+      if (cachedSlots) {
+        try { setWarehouseSlots(JSON.parse(cachedSlots)); } catch(e) {}
+      }
+      const cachedAssigns = localStorage.getItem("digiscale_cached_warehouse_assignments");
+      if (cachedAssigns) {
+        try { setWarehouseAssignments(JSON.parse(cachedAssigns)); } catch(e) {}
+      }
+    }
+
     getUserProfile()
       .then((profile) => {
         if (profile && profile.id) {
           const uId = profile.id.toString();
           setCurrentUserId(uId);
-          fetchCollectionsAndProducts(uId);
-          fetchWarehouseData(uId);
+
+          const cacheKey = `warehouse_data_${uId}`;
+
+          Promise.all([
+            fetchCollectionsAndProducts(uId),
+            fetchWarehouseData(uId)
+          ]).then(([catalogData, warehouseData]) => {
+            setCache(cacheKey, {
+              ...catalogData,
+              ...warehouseData
+            });
+          }).finally(() => {
+            setLoading(false);
+          });
         }
       })
       .catch((err) => {
         console.error("Auth mount failed:", err);
+        setLoading(false);
       });
   }, []);
 
@@ -444,10 +498,24 @@ export default function WarehousePage() {
   const totalRows = warehouseRows.length;
   const totalSlots = warehouseRows.reduce((sum, row) => sum + getSlotsForRow(row).length, 0);
   const occupiedSlots = warehouseRows.reduce((sum, row) => {
-    const slots = getSlotsForRow(row);
-    const count = slots.filter((slot) => getSlotItemCount(row, slot) > 0).length;
-    return sum + count;
+    return sum + getSlotsForRow(row).filter((slot) => {
+      const locId = `${row}-${slot}`;
+      return (warehouseAssignments[locId] || []).length > 0;
+    }).length;
   }, 0);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full blur-xl bg-blue-500/20 animate-pulse"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 relative z-10" />
+        </div>
+        <p className="mt-4 text-sm font-semibold text-slate-500 animate-pulse tracking-wide">Loading workspace...</p>
+      </div>
+    );
+  }
+
   const totalAssignmentsCount = Object.values(warehouseAssignments).reduce((sum, list) => sum + list.length, 0);
   const occupancyPercentage = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
 
@@ -743,17 +811,17 @@ export default function WarehousePage() {
                               <div
                                 key={slot}
                                 onClick={() => setSelectedLocation(locationId)}
-                                className={`rounded-xl border p-3 flex flex-col justify-between h-22 transition cursor-pointer select-none relative overflow-hidden group ${
+                                className={`rounded-2xl border p-3.5 flex flex-col justify-between h-28 transition-all cursor-pointer select-none relative overflow-hidden group shadow-sm hover:shadow-md ${
                                   isSelected
-                                    ? "bg-sky-500 border-sky-500 text-white shadow-md shadow-sky-500/20"
+                                    ? "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-600 text-white shadow-blue-500/30 scale-[1.02]"
                                     : itemCount > 0
-                                    ? "bg-emerald-50/30 border-emerald-100 text-emerald-800 hover:border-emerald-300"
-                                    : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                                    ? "bg-gradient-to-br from-emerald-50 to-teal-50/30 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-100/50"
+                                    : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                                 }`}
                               >
                                 <div className="flex justify-between items-start">
-                                  <span className={`text-[10px] font-black uppercase tracking-wide ${
-                                    isSelected ? "text-sky-100" : "text-slate-400"
+                                  <span className={`text-[11px] font-extrabold uppercase tracking-wider ${
+                                    isSelected ? "text-blue-100" : (itemCount > 0 ? "text-emerald-700" : "text-slate-500")
                                   }`}>
                                     Slot {slot}
                                   </span>
@@ -772,19 +840,21 @@ export default function WarehousePage() {
                                   </button>
                                 </div>
 
-                                <div className="mt-2">
-                                  <span className="block text-sm font-black leading-none">
-                                    {row}-{slot}
-                                  </span>
-                                  <span className={`block text-[9px] font-bold mt-1 uppercase ${
-                                    isSelected
-                                      ? "text-blue-100"
-                                      : itemCount > 0
-                                      ? "text-emerald-600"
-                                      : "text-slate-400"
-                                  }`}>
-                                    {itemCount > 0 ? `${itemCount} stocked` : "empty"}
-                                  </span>
+                                <div className="mt-auto pt-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className={`flex-1 flex flex-col items-center justify-center py-1 rounded-md border ${
+                                      isSelected ? "bg-white/10 border-white/20 text-white" : (itemCount > 0 ? "bg-white border-emerald-100 text-emerald-700" : "bg-slate-50 border-slate-100 text-slate-400")
+                                    }`}>
+                                      <span className="text-[8px] font-bold uppercase opacity-80">Upper</span>
+                                      <span className="text-xs font-black">{warehouseAssignments[`${locationId}-upper`]?.length || 0}</span>
+                                    </div>
+                                    <div className={`flex-1 flex flex-col items-center justify-center py-1 rounded-md border ${
+                                      isSelected ? "bg-white/10 border-white/20 text-white" : (itemCount > 0 ? "bg-white border-emerald-100 text-emerald-700" : "bg-slate-50 border-slate-100 text-slate-400")
+                                    }`}>
+                                      <span className="text-[8px] font-bold uppercase opacity-80">Lower</span>
+                                      <span className="text-xs font-black">{warehouseAssignments[`${locationId}-lower`]?.length || 0}</span>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -793,9 +863,11 @@ export default function WarehousePage() {
                           {/* Add New Slot Box */}
                           <button
                             onClick={() => handleAddSlot(row)}
-                            className="rounded-xl border border-dashed border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/10 text-slate-400 hover:text-blue-600 flex flex-col items-center justify-center h-22 transition active:scale-98 cursor-pointer select-none"
+                            className="rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/30 text-slate-400 hover:text-blue-600 flex flex-col items-center justify-center h-28 transition-all active:scale-[0.98] cursor-pointer select-none group"
                           >
-                            <Plus className="h-5 w-5 mb-1" />
+                            <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-blue-100 group-hover:shadow transition-colors mb-2">
+                              <Plus className="h-4 w-4" />
+                            </div>
                             <span className="text-[10px] font-bold uppercase tracking-wider">Add Slot</span>
                           </button>
                         </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import Tesseract from 'tesseract.js';
 import {
   getProjects,
   createProject,
@@ -18,6 +19,7 @@ import {
   MoreHorizontal,
   Folder,
   Clock,
+  Check,
   CheckCircle2,
   AlertCircle,
   X,
@@ -85,6 +87,7 @@ interface Product {
   color: string;
   unit_type?: "pcs" | "dzn";
   description?: string;
+  warehouse?: string;
   createdAt: string;
 }
 
@@ -101,7 +104,7 @@ function CollectionsPageContent() {
   const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -116,13 +119,14 @@ function CollectionsPageContent() {
 
   // Products State
   const [products, setProducts] = useState<Product[]>([]);
+  const [draftProducts, setDraftProducts] = useState<Partial<Product>[]>([]);
   const [productSearch, setProductSearch] = useState("");
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProductRowId, setEditingProductRowId] = useState<string | null>(null);
+  const [editingProductState, setEditingProductState] = useState<Partial<Product> | null>(null);
 
   // Warehouse & Quotation States
   const [currentTopTab, setCurrentTopTab] = useState<"collections" | "warehouse" | "quotation">("collections");
-  const [isTabReady, setIsTabReady] = useState(false);
+  const [isTabReady, setIsTabReady] = useState(true);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
@@ -165,31 +169,72 @@ function CollectionsPageContent() {
   
   const [allProducts, setAllProducts] = useState<(Product & { collectionName?: string; collectionId?: string })[]>([]);
 
-  // Product Form State
-  const [prodName, setProdName] = useState("");
-  const [prodStock, setProdStock] = useState("");
-  const [prodCartonQty, setProdCartonQty] = useState("");
-  const [prodRate, setProdRate] = useState("");
-  const [prodUnitType, setProdUnitType] = useState<"pcs" | "dzn">("pcs");
-  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
-  const [prodLength, setProdLength] = useState("");
-  const [prodColor, setProdColor] = useState(""); // kept for backward compat (comma-joined)
-  const [prodColors, setProdColors] = useState<string[]>([]); // multi-color chips
-  const [colorInput, setColorInput] = useState(""); // current chip text input
-  const [prodDescription, setProdDescription] = useState("");
-  const [prodPhotoUrl, setProdPhotoUrl] = useState("");
-  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
+  // Removed old product form states
 
   const productFileInputRef = useRef<HTMLInputElement>(null);
   const excelImportRef = useRef<HTMLInputElement>(null);
   const [excelImportStatus, setExcelImportStatus] = useState<{ count: number; errors: number } | null>(null);
   const [showImportResult, setShowImportResult] = useState(false);
 
+  // Custom Warehouse Location Modal State
+  const [openLocationPicker, setOpenLocationPicker] = useState<{type: 'draft' | 'edit', idx?: number} | null>(null);
+
   // Post-import photo assignment modal state
   const [photoAssignProducts, setPhotoAssignProducts] = useState<Product[]>([]);
   const [showPhotoAssignModal, setShowPhotoAssignModal] = useState(false);
   const photoAssignInputRef = useRef<HTMLInputElement>(null);
   const [photoAssignTargetId, setPhotoAssignTargetId] = useState<string>("");
+  const [loadingOcrId, setLoadingOcrId] = useState<string | null>(null);
+
+  const parseOCRText = async (imageUrl: string, draft: any) => {
+    const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng');
+    console.log("OCR Result:", text);
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    
+    let newName = draft?.name || "";
+    let newLength = draft?.length || "";
+    let newCartonQty = draft?.cartonQty || 1;
+    let newUnitType = draft?.unit_type || "pcs";
+    let newDescription = draft?.description || "";
+    let newRate = draft?.rate || "";
+
+    if (lines.length > 0) {
+      newName = lines[0]; // 1st line is always Product Name
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Length (contains cm or CM)
+      if (line.toLowerCase().includes("cm")) {
+        const numMatch = line.match(/(\d+(?:\.\d+)?)\s*cm/i);
+        newLength = numMatch ? numMatch[1] + " cm" : line;
+        continue;
+      }
+
+      // Carton (contains PCS CTN or DZN CTN)
+      if (line.toUpperCase().includes("PCS CTN") || line.toUpperCase().includes("DZN CTN")) {
+        const cartonMatch = line.match(/(\d+)\s*(PCS|DZN)/i);
+        if (cartonMatch) {
+          newCartonQty = parseInt(cartonMatch[1], 10);
+          newUnitType = cartonMatch[2].toLowerCase();
+        } else {
+          const numbers = line.match(/(\d+)/);
+          if (numbers) newCartonQty = parseInt(numbers[1], 10);
+        }
+        continue;
+      }
+
+      // Price Code (A9 or A followed by numbers)
+      const priceMatch = line.match(/\bA9?\s*([\d\.]+)/i);
+      if (priceMatch) {
+        newRate = priceMatch[1];
+        continue;
+      }
+    }
+    
+    return { name: newName, length: newLength, cartonQty: newCartonQty, unit_type: newUnitType, description: newDescription, rate: newRate };
+  };
 
   const refreshAllProducts = async (userId: string) => {
     try {
@@ -273,7 +318,10 @@ function CollectionsPageContent() {
       }
       const cachedCols = localStorage.getItem("digiscale_cached_collections");
       if (cachedCols) {
-        try { setCollections(JSON.parse(cachedCols)); } catch(e) {}
+        try { 
+          setCollections(JSON.parse(cachedCols)); 
+          setLoading(false);
+        } catch(e) {}
       }
       const cachedProds = localStorage.getItem("digiscale_cached_all_products");
       if (cachedProds) {
@@ -308,6 +356,7 @@ function CollectionsPageContent() {
       })
       .catch((err) => {
         console.error("Auth error on mount:", err);
+        setLoading(false);
       });
     
     // Close card dropdowns on click outside
@@ -339,10 +388,6 @@ function CollectionsPageContent() {
         setSelectedCol(null);
       }
     }
-    
-    setTimeout(() => {
-      setIsTabReady(true);
-    }, 200);
   }, [searchParams]);
 
 
@@ -398,6 +443,8 @@ function CollectionsPageContent() {
       }
     } catch (err: any) {
       console.error("Failed to fetch collections from Supabase:", err?.message || err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -543,148 +590,170 @@ function CollectionsPageContent() {
     }
   };
 
-  // Product Photo Upload with canvas downscaling to prevent QuotaExceededError
-  const handleProductPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const maxDim = 250;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height) {
-            if (width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            }
-          } else {
-            if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7); // 70% quality jpeg
-            setProdPhotoUrl(compressedBase64);
-          } else {
-            setProdPhotoUrl(reader.result as string);
-          }
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   // Add or Edit Product Submit
-  const handleSaveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalName = prodName.trim() || `Product #${products.length + 1}`;
+  const handleUpdateDraft = (index: number, field: string, value: any) => {
+    setDraftProducts((prev) => {
+      const newDrafts = [...prev];
+      newDrafts[index] = { ...newDrafts[index], [field]: value };
+      return newDrafts;
+    });
+  };
 
-    const targetCollectionId = selectedCol?.id || (editingProduct as any)?.collectionId || (editingProduct as any)?.collection_id;
+  const handleSaveDraftRow = async (draft: Partial<Product>) => {
+    const finalName = draft.name?.trim() || `Product #${products.length + 1}`;
+    const targetCollectionId = selectedCol?.id;
     if (!targetCollectionId) {
       alert("No collection ID found for this product.");
       return;
     }
 
+    const newId = 'PRD-' + Math.random().toString(36).substr(2, 6).toUpperCase();
     const productPayload = {
       name: finalName,
-      stock: parseInt(prodStock) || 0,
-      cartonQty: parseInt(prodCartonQty) || 1,
-      rate: prodRate.trim(),
-      length: prodLength.trim(),
-      color: prodColors.length > 0 ? prodColors.join(", ") : prodColor.trim(),
-      unit_type: prodUnitType,
-      description: prodDescription.trim(),
-      photoUrl: prodPhotoUrl,
+      stock: draft.stock ? parseInt(draft.stock as any) || 0 : 0,
+      cartonQty: draft.cartonQty ? parseInt(draft.cartonQty as any) || 1 : 1,
+      rate: draft.rate || "",
+      length: draft.length || "",
+      color: draft.color || "",
+      unit_type: draft.unit_type || "pcs",
+      description: draft.description || "",
+      photoUrl: draft.photoUrl || "",
+      warehouse: draft.warehouse || "",
       collection_id: targetCollectionId,
       user_id: currentUserId
     };
 
-    if (editingProduct) {
-      try {
-        const { error } = await supabase
-          .from('products')
-          .update(productPayload)
-          .eq('id', editingProduct.id);
-          
-        if (error) throw error;
+    try {
+      const { error } = await supabase.from('products').insert([{ id: newId, ...productPayload }]);
+      if (error) throw error;
+      
+      const newProd: Product = {
+        id: newId,
+        ...productPayload,
+        createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      };
+      
+      setProducts(prev => [newProd, ...prev]);
+      setDraftProducts(prev => prev.filter((d) => d !== draft));
 
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === editingProduct.id
-              ? { ...p, ...productPayload, photoUrl: productPayload.photoUrl || "" }
-              : p
-          )
-        );
-      } catch (err) {
-        console.error("Failed to update product:", err);
-        alert("Failed to update product.");
+      if (productPayload.warehouse) {
+        await supabase.from("warehouse_assignments").insert([{
+          location_key: productPayload.warehouse,
+          product_id: newId,
+          collection_id: targetCollectionId,
+          user_id: currentUserId
+        }]);
+        setWarehouseAssignments(prev => {
+          const newList = prev[productPayload.warehouse] || [];
+          return { ...prev, [productPayload.warehouse]: [...newList, { productId: newId, collectionId: targetCollectionId }] };
+        });
       }
-    } else {
-      const newId = 'PRD-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-      try {
-        const { error } = await supabase
-          .from('products')
-          .insert([{ id: newId, ...productPayload }]);
-          
-        if (error) throw error;
-        
-        const newProd: Product = {
-          id: newId,
-          ...productPayload,
-          photoUrl: productPayload.photoUrl || "",
-          createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        };
-        
-        setProducts([newProd, ...products]);
 
-        // Remove the image from Workspace detailImages list if it was created from it
-        if (prodPhotoUrl) {
-          const assetToRemove = detailImages.find((img) => img.processed_path === prodPhotoUrl);
-          if (assetToRemove && assetToRemove.id?.startsWith('AST-')) {
-            await supabase.from('products').delete().eq('id', assetToRemove.id);
-          }
-          
-          setDetailImages((prev) => prev.filter(img => img.processed_path !== prodPhotoUrl));
+      if (draft.photoUrl) {
+        const assetToRemove = detailImages.find((img) => img.processed_path === draft.photoUrl);
+        if (assetToRemove && assetToRemove.id?.startsWith('AST-')) {
+          await supabase.from('products').delete().eq('id', assetToRemove.id);
         }
-      } catch (err: any) {
-        console.error("Failed to create product:", err?.message || err);
-        alert("Failed to create product.");
+        setDetailImages((prev) => prev.filter(img => img.processed_path !== draft.photoUrl));
       }
+      
+      await refreshAllProducts(currentUserId || "");
+    } catch (err: any) {
+      console.error("Failed to save product:", err?.message || err);
+      alert("Failed to save product.");
     }
-
-    // Refresh all products to keep warehouse assignments/global search updated
-    await refreshAllProducts(currentUserId || "");
-
-    // Reset Form & Close
-    resetProductForm();
   };
 
-  const resetProductForm = () => {
-    setProdName("");
-    setProdStock("");
-    setProdCartonQty("");
-    setProdRate("");
-    setProdUnitType("pcs");
-    setProdLength("");
-    setProdColor("");
-    setProdColors([]);
-    setColorInput("");
-    setProdDescription("");
-    setProdPhotoUrl("");
-    setIsDraggingPhoto(false);
-    setEditingProduct(null);
-    setIsProductModalOpen(false);
+  const handleUpdateEditState = (field: string, value: any) => {
+    if (editingProductState) {
+      setEditingProductState({ ...editingProductState, [field]: value });
+    }
+  };
+
+  const handleSaveEditRow = async () => {
+    if (!editingProductState || !editingProductRowId) return;
+    const targetCollectionId = selectedCol?.id;
+    if (!targetCollectionId) return;
+
+    const productPayload = {
+      name: editingProductState.name || "",
+      stock: editingProductState.stock ? parseInt(editingProductState.stock as any) || 0 : 0,
+      cartonQty: editingProductState.cartonQty ? parseInt(editingProductState.cartonQty as any) || 1 : 1,
+      rate: editingProductState.rate || "",
+      length: editingProductState.length || "",
+      color: editingProductState.color || "",
+      unit_type: editingProductState.unit_type || "pcs",
+      description: editingProductState.description || "",
+      photoUrl: editingProductState.photoUrl || "",
+      warehouse: editingProductState.warehouse || "",
+      collection_id: targetCollectionId,
+      user_id: currentUserId
+    };
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update(productPayload)
+        .eq('id', editingProductRowId);
+        
+      if (error) throw error;
+
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === editingProductRowId
+            ? { ...p, ...productPayload }
+            : p
+        )
+      );
+
+      // Handle warehouse assignment change
+      const existingProd = products.find(p => p.id === editingProductRowId);
+      const oldWarehouse = existingProd?.warehouse || "";
+      if (oldWarehouse !== productPayload.warehouse) {
+        if (oldWarehouse) {
+          await supabase.from("warehouse_assignments").delete().eq("product_id", editingProductRowId);
+          setWarehouseAssignments(prev => {
+            const oldList = prev[oldWarehouse] || [];
+            return { ...prev, [oldWarehouse]: oldList.filter(i => i.productId !== editingProductRowId) };
+          });
+        }
+        if (productPayload.warehouse) {
+          await supabase.from("warehouse_assignments").insert([{
+            location_key: productPayload.warehouse,
+            product_id: editingProductRowId,
+            collection_id: targetCollectionId,
+            user_id: currentUserId
+          }]);
+          setWarehouseAssignments(prev => {
+            const newList = prev[productPayload.warehouse] || [];
+            return { ...prev, [productPayload.warehouse]: [...newList, { productId: editingProductRowId!, collectionId: targetCollectionId }] };
+          });
+        }
+      }
+
+      setEditingProductRowId(null);
+      setEditingProductState(null);
+      
+      await refreshAllProducts(currentUserId || "");
+    } catch (err) {
+      console.error("Failed to update product:", err);
+      alert("Failed to update product.");
+    }
+  };
+
+  const handleEnterToNextField = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest('tr');
+      if (form) {
+        const inputs = Array.from(form.querySelectorAll('input:not([type="file"]), select')).filter((el: any) => !el.disabled && el.tabIndex !== -1);
+        const index = inputs.indexOf(e.target as Element);
+        if (index > -1 && index < inputs.length - 1) {
+          (inputs[index + 1] as HTMLElement).focus();
+        }
+      }
+    }
   };
 
   // ── Real .xlsx Template Generator (using JSZip) ────────────────────
@@ -701,12 +770,13 @@ function CollectionsPageContent() {
       "Description",                      // col F
       "Price Code",                       // col G
       "Stock Quantity",                   // col H
+      "Warehouse Location",               // col I
     ];
 
     const sampleRows = [
-      ["Silk Saree Premium",  "https://example.com/saree.jpg", "24", "Royal Blue, Navy",    "5.5 meters", "12dzn", "950",  "120"],
-      ["Cotton Dupatta",      "",                              "12", "Red, Green, Yellow",  "2.5 meters", "",      "A1",   "200"],
-      ["Embroidered Kurti",   "https://example.com/kurti.jpg", "6",  "Green",               "3.0 meters", "",      "PC-12","50"],
+      ["Silk Saree Premium",  "https://example.com/saree.jpg", "24", "Royal Blue, Navy",    "5.5 meters", "12dzn", "950",  "120", "A-1-upper"],
+      ["Cotton Dupatta",      "",                              "12", "Red, Green, Yellow",  "2.5 meters", "",      "A1",   "200", ""],
+      ["Embroidered Kurti",   "https://example.com/kurti.jpg", "6",  "Green",               "3.0 meters", "",      "PC-12","50",  "B-2-lower"],
     ];
 
     // ── XML Escape helper ─────────────────────────────────────────────
@@ -901,6 +971,7 @@ ${rows}
       const rateIdx   = colIdx(["price", "rate", "code"]);
       const stockIdx  = colIdx(["stock", "quantity", "unit", "qty"]);
       const imageIdx  = colIdx(["image", "photo", "url", "picture"]);
+      const warehouseIdx = colIdx(["warehouse", "location", "shelf"]);
 
       let imported = 0; let errors = 0;
       const newProducts: Product[] = [];
@@ -919,6 +990,7 @@ ${rows}
           color:       colorIdx  >= 0 ? (cols[colorIdx]?.trim()  || "") : "",
           description: descIdx   >= 0 ? (cols[descIdx]?.trim()   || "") : "",
           photoUrl:    imageByRow[i] || excelImageUrl || "",
+          warehouse:   warehouseIdx >= 0 ? (cols[warehouseIdx]?.trim() || "") : "",
           createdAt:   new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         });
         imported++;
@@ -943,6 +1015,7 @@ ${rows}
           color: p.color,
           description: p.description,
           photoUrl: p.photoUrl,
+          warehouse: p.warehouse || "",
           collection_id: selectedCol.id,
           user_id: currentUserId
         }));
@@ -951,6 +1024,25 @@ ${rows}
           const { error } = await supabase.from('products').insert(productPayloads);
           if (error) throw error;
           
+          // Bulk assign to warehouse
+          const assignments = productPayloads.filter(p => p.warehouse).map(p => ({
+            location_key: p.warehouse,
+            product_id: p.id,
+            collection_id: p.collection_id,
+            user_id: p.user_id
+          }));
+          if (assignments.length > 0) {
+            await supabase.from('warehouse_assignments').insert(assignments);
+            setWarehouseAssignments(prev => {
+              const updated = { ...prev };
+              assignments.forEach(a => {
+                if (!updated[a.location_key!]) updated[a.location_key!] = [];
+                updated[a.location_key!].push({ productId: a.product_id, collectionId: a.collection_id! });
+              });
+              return updated;
+            });
+          }
+
           setProducts(prev => [...result.importedProducts, ...prev]);
           await refreshAllProducts(currentUserId || "");
         } catch (err) {
@@ -1145,23 +1237,8 @@ ${rows}
   };
 
   const handleEditProductClick = (product: Product) => {
-    setEditingProduct(product);
-    setProdName(product.name);
-    setProdStock(product.stock.toString());
-    setProdCartonQty(product.cartonQty.toString());
-    setProdRate(product.rate);
-    setProdUnitType(product.unit_type || "pcs");
-    setProdLength(product.length);
-    // Parse existing comma-separated colors into chips
-    const existingColors = product.color
-      ? product.color.split(",").map(c => c.trim()).filter(Boolean)
-      : [];
-    setProdColors(existingColors);
-    setProdColor(product.color);
-    setColorInput("");
-    setProdDescription(product.description || "");
-    setProdPhotoUrl(product.photoUrl);
-    setIsProductModalOpen(true);
+    setEditingProductRowId(product.id);
+    setEditingProductState(product);
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -1190,17 +1267,7 @@ ${rows}
   };
 
   const handleCreateProductFromAsset = (assetPath: string) => {
-    setProdPhotoUrl(assetPath);
-    setProdName("");
-    setProdStock("");
-    setProdCartonQty("");
-    setProdRate("");
-    setProdUnitType("pcs");
-    setProdLength("");
-    setProdColor("");
-    setProdDescription("");
-    setEditingProduct(null);
-    setIsProductModalOpen(true);
+    setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: assetPath, warehouse: "" }, ...draftProducts]);
   };
 
   // Warehouse definitions — rows from state (user can add/remove)
@@ -1615,6 +1682,34 @@ ${rows}
     );
   };
 
+  const availableWarehouseLocations = useMemo(() => {
+    const locationsByRow: Record<string, string[]> = {};
+    warehouseRows.forEach(row => {
+      const slots = warehouseSlots[row] || [1, 2, 3, 4, 5, 6, 7, 8];
+      const rowLocs: string[] = [];
+      slots.forEach(slot => {
+        rowLocs.push(`${row}-${slot}-upper`);
+        rowLocs.push(`${row}-${slot}-lower`);
+      });
+      locationsByRow[row] = rowLocs;
+    });
+    return locationsByRow;
+  }, [warehouseRows, warehouseSlots]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full blur-xl bg-blue-500/20 animate-pulse"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 relative z-10" />
+        </div>
+        <p className="mt-4 text-sm font-semibold text-slate-500 animate-pulse tracking-wide">Loading workspace...</p>
+      </div>
+    );
+  }
+
+
+
   return (
     <div className="px-8 pt-4 pb-12 min-h-screen bg-slate-50/50">
 
@@ -1647,17 +1742,7 @@ ${rows}
             <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={() => {
-                  setEditingProduct(null);
-                  setProdPhotoUrl("");
-                  setProdName("");
-                  setProdStock("");
-                  setProdCartonQty("");
-                  setProdRate("");
-                  setProdUnitType("pcs");
-                  setProdLength("");
-                  setProdColor("");
-                  setProdDescription("");
-                  setIsProductModalOpen(true);
+                  setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
                 }}
                 className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
               >
@@ -1736,9 +1821,70 @@ ${rows}
             </button>
           </div>
 
-          {/* TAB CONTENT: PRODUCTS LISTING */}
           {activeTab === "products" && (
-            <div className="space-y-4">
+            <div 
+              className="space-y-4 rounded-2xl transition-all duration-200"
+              onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
+              onDragLeave={(ev) => { ev.currentTarget.classList.remove("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
+              onDrop={(ev) => {
+                ev.preventDefault();
+                ev.currentTarget.classList.remove("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4");
+                const files = Array.from(ev.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                
+                if (files.length > 0) {
+                  files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      const src = e.target?.result as string;
+                      const img = new window.Image();
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const maxDim = 800;
+                        let { width, height } = img;
+                        if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
+                        else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
+                        canvas.width = width; canvas.height = height;
+                        canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+                        const url = canvas.toDataURL("image/jpeg", 0.7);
+                        setDraftProducts(prev => [{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: url, warehouse: "" }, ...prev]);
+                      };
+                      img.src = src;
+                    };
+                    reader.readAsDataURL(file);
+                  });
+                } else {
+                  // Try to get image from HTML (dragged from another tab)
+                  const htmlData = ev.dataTransfer.getData("text/html");
+                  const uriData = ev.dataTransfer.getData("text/uri-list") || ev.dataTransfer.getData("URL");
+                  
+                  const droppedImages: string[] = [];
+                  
+                  if (htmlData) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlData, "text/html");
+                    const imgs = Array.from(doc.getElementsByTagName("img"));
+                    imgs.forEach(img => {
+                      if (img.src) {
+                        droppedImages.push(img.src);
+                      }
+                    });
+                  } else if (uriData) {
+                    if (uriData.match(/\.(jpeg|jpg|gif|png|webp|svg|heic)$/i)) {
+                      droppedImages.push(uriData);
+                    } else {
+                      // Sometimes it's an image URL without an extension
+                      droppedImages.push(uriData);
+                    }
+                  }
+                  
+                  if (droppedImages.length > 0) {
+                    droppedImages.forEach(src => {
+                      setDraftProducts(prev => [{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: src, warehouse: "" }, ...prev]);
+                    });
+                  }
+                }
+              }}
+            >
               {/* Product search bar */}
               <div className="relative w-full max-w-sm">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-405" />
@@ -1751,7 +1897,7 @@ ${rows}
                 />
               </div>
 
-              {filteredProducts.length === 0 ? (
+              {filteredProducts.length === 0 && draftProducts.length === 0 ? (
                 <div className="py-16 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 bg-white">
                   <Box className="h-10 w-10 text-slate-300 mb-3" />
                   <h4 className="font-bold text-slate-800 text-sm">No Products Added Yet</h4>
@@ -1759,7 +1905,9 @@ ${rows}
                     Add product item cards with specs (photo, stock, carton size, length, color & rate) inside this collection catalog.
                   </p>
                   <button
-                    onClick={() => setIsProductModalOpen(true)}
+                    onClick={() => {
+                      setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
+                    }}
                     className="mt-4 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm"
                   >
                     Add Product Now
@@ -1771,23 +1919,227 @@ ${rows}
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-wider text-slate-450">
-                          <th className="py-4 px-6">Photo</th>
-                          <th className="py-4 px-6">Product Details</th>
-                          <th className="py-4 px-6">Color</th>
-                          <th className="py-4 px-6">Length</th>
-                          <th className="py-4 px-6">Stock Status</th>
-                          <th className="py-4 px-6">Box Packing</th>
-                          <th className="py-4 px-6 text-right">Price Code</th>
-                          <th className="py-4 px-6 text-right">Value</th>
-                          <th className="py-4 px-6 text-center">Actions</th>
+                          <th className="py-4 px-6 w-[80px]">Photo</th>
+                          <th className="py-4 px-6 min-w-[200px]">Product Details</th>
+                          <th className="py-4 px-6 min-w-[150px]">Description</th>
+                          <th className="py-4 px-6 min-w-[150px]">Per Carton</th>
+                          <th className="py-4 px-6 min-w-[120px] text-right">Price Code</th>
+                          <th className="py-4 px-6 min-w-[120px]">Color</th>
+                          <th className="py-4 px-6 min-w-[100px]">Length</th>
+                          <th className="py-4 px-6 min-w-[140px]">Warehouse</th>
+                          <th className="py-4 px-6 min-w-[120px]">Stock Status</th>
+                          <th className="py-4 px-6 min-w-[120px] text-right">Value</th>
+                          <th className="py-4 px-6 w-[100px] text-center">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-slate-100 transition-colors">
+                        {draftProducts.map((draft, idx) => (
+                          <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400">
+                            <td className="py-3 px-4">
+                              <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
+                                  <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                      const src = ev.target?.result as string;
+                                      const img = new window.Image();
+                                      img.onload = () => {
+                                        const canvas = document.createElement("canvas");
+                                        const maxDim = 800;
+                                        let { width, height } = img;
+                                        if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
+                                        else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
+                                        canvas.width = width; canvas.height = height;
+                                        canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+                                        const url = canvas.toDataURL("image/jpeg", 0.7);
+                                        handleUpdateDraft(idx, "photoUrl", url);
+                                        setLoadingOcrId(`draft-${idx}`);
+                                        parseOCRText(url, draft).then(parsed => {
+                                          setDraftProducts(prev => {
+                                            const next = [...prev];
+                                            if (next[idx]) { next[idx] = { ...next[idx], ...parsed }; }
+                                            return next;
+                                          });
+                                        }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
+                                      };
+                                      img.src = src;
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }} />
+                                {loadingOcrId === `draft-${idx}` ? (
+                                  <div className="h-full w-full flex flex-col items-center justify-center bg-slate-100 text-blue-500">
+                                    <Loader2 className="h-4 w-4 animate-spin mb-1" />
+                                    <span className="text-[8px] font-bold">SCANNING</span>
+                                  </div>
+                                ) : draft.photoUrl ? (
+                                  <>
+                                    <img src={draft.photoUrl} alt="draft" className="h-full w-full object-contain" />
+                                    <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
+                                      <Edit className="h-4 w-4 text-white" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                    <ImageIcon className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </label>
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="text" placeholder="Product Name" onKeyDown={handleEnterToNextField} className="w-full text-xs font-bold p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.name || ""} onChange={(e) => handleUpdateDraft(idx, "name", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="text" placeholder="Description" onKeyDown={handleEnterToNextField} className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.description || ""} onChange={(e) => handleUpdateDraft(idx, "description", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-1.5">
+                                <input type="number" placeholder="Carton Qty" onKeyDown={handleEnterToNextField} className="w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.cartonQty || ""} onChange={(e) => handleUpdateDraft(idx, "cartonQty", e.target.value)} />
+                                <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
+                                  <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "pcs")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${draft.unit_type === 'pcs' || !draft.unit_type ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>pcs</button>
+                                  <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "dzn")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${draft.unit_type === 'dzn' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>dzn</button>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="text" placeholder="Rate" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm font-semibold text-right" value={draft.rate || ""} onChange={(e) => handleUpdateDraft(idx, "rate", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="text" placeholder="Color" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.color || ""} onChange={(e) => handleUpdateDraft(idx, "color", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.length || ""} onChange={(e) => handleUpdateDraft(idx, "length", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <button 
+                                type="button" 
+                                onClick={() => setOpenLocationPicker({ type: 'draft', idx })}
+                                className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
+                              >
+                                {draft.warehouse 
+                                  ? draft.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") 
+                                  : "Select Location..."}
+                              </button>
+                            </td>
+                            <td className="py-3 px-4">
+                              <input type="number" placeholder="Stock" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.stock || ""} onChange={(e) => handleUpdateDraft(idx, "stock", e.target.value)} />
+                            </td>
+                            <td className="py-3 px-4 font-black text-right">—</td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-2 justify-center">
+                                <button onClick={() => handleSaveDraftRow(draft)} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Product"><Check className="h-4 w-4" /></button>
+                                <button onClick={() => setDraftProducts(prev => prev.filter((d) => d !== draft))} className="p-1.5 bg-red-50 text-red-500 rounded hover:bg-red-100 transition" title="Discard"><X className="h-4 w-4" /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
                         {filteredProducts.map((prod) => {
                           const cartonCount = prod.cartonQty > 0 ? Math.ceil(prod.stock / prod.cartonQty) : 0;
+                          
+                          if (editingProductRowId === prod.id && editingProductState) {
+                            return (
+                              <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400">
+                                <td className="py-3 px-4">
+                                  <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
+                                    <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                          const src = ev.target?.result as string;
+                                          const img = new window.Image();
+                                          img.onload = () => {
+                                            const canvas = document.createElement("canvas");
+                                            const maxDim = 800;
+                                            let { width, height } = img;
+                                            if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
+                                            else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
+                                            canvas.width = width; canvas.height = height;
+                                            canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+                                            const url = canvas.toDataURL("image/jpeg", 0.7);
+                                            handleUpdateEditState("photoUrl", url);
+                                            setLoadingOcrId(`edit`);
+                                            parseOCRText(url, editingProductState).then(parsed => {
+                                              setEditingProductState(prev => prev ? { ...prev, ...parsed } : null);
+                                            }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
+                                          };
+                                          img.src = src;
+                                        };
+                                        reader.readAsDataURL(file);
+                                        e.target.value = "";
+                                      }
+                                    }} />
+                                    {loadingOcrId === `edit` ? (
+                                      <div className="h-full w-full flex flex-col items-center justify-center bg-slate-100 text-amber-600">
+                                        <Loader2 className="h-4 w-4 animate-spin mb-1" />
+                                        <span className="text-[8px] font-bold">SCANNING</span>
+                                      </div>
+                                    ) : editingProductState.photoUrl ? (
+                                      <>
+                                        <img src={editingProductState.photoUrl} alt="edit" className="h-full w-full object-contain" />
+                                        <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center">
+                                          <Edit className="h-4 w-4 text-white" />
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                        <ImageIcon className="h-5 w-5" />
+                                      </div>
+                                    )}
+                                  </label>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <input type="text" placeholder="Product Name" onKeyDown={handleEnterToNextField} className="w-full text-xs font-bold p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.name || ""} onChange={(e) => handleUpdateEditState("name", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-1.5">
+                                    <input type="number" placeholder="Carton Qty" onKeyDown={handleEnterToNextField} className="w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.cartonQty || ""} onChange={(e) => handleUpdateEditState("cartonQty", e.target.value)} />
+                                    <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
+                                      <button type="button" onClick={() => handleUpdateEditState("unit_type", "pcs")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${editingProductState.unit_type === 'pcs' || !editingProductState.unit_type ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>pcs</button>
+                                      <button type="button" onClick={() => handleUpdateEditState("unit_type", "dzn")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${editingProductState.unit_type === 'dzn' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>dzn</button>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <input type="text" placeholder="Rate" className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm text-right font-semibold" value={editingProductState.rate || ""} onChange={(e) => handleUpdateEditState("rate", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4">
+                                  <input type="text" placeholder="Color" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.color || ""} onChange={(e) => handleUpdateEditState("color", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4">
+                                  <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.length || ""} onChange={(e) => handleUpdateEditState("length", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4">
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setOpenLocationPicker({ type: 'edit' })}
+                                    className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
+                                  >
+                                    {editingProductState.warehouse 
+                                      ? editingProductState.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") 
+                                      : "Select Location..."}
+                                  </button>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <input type="number" placeholder="Stock" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.stock || ""} onChange={(e) => handleUpdateEditState("stock", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4 font-black text-right">
+                                  ₹{( (editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (parseFloat(editingProductState.rate || "0") || 0) ).toLocaleString()}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex gap-2 justify-center">
+                                    <button onClick={handleSaveEditRow} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Changes"><Check className="h-4 w-4" /></button>
+                                    <button onClick={() => { setEditingProductRowId(null); setEditingProductState(null); }} className="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200 transition" title="Cancel"><X className="h-4 w-4" /></button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+
                           return (
                             <tr key={prod.id} className="text-xs text-slate-800 hover:bg-slate-50/40 transition">
-                              <td className="py-4 px-6">
+                              <td className="py-4 px-4">
                                 <div className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center p-1.5">
                                   {prod.photoUrl ? (
                                     <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain" />
@@ -1796,13 +2148,20 @@ ${rows}
                                   )}
                                 </div>
                               </td>
-                              <td className="py-4 px-6 font-bold">
+                              <td className="py-4 px-4 font-bold">
                                 <p className="text-slate-900 font-extrabold text-sm">{prod.name}</p>
-                                {prod.description && (
-                                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">{prod.description}</p>
-                                )}
                               </td>
-                              <td className="py-4 px-6">
+                              <td className="py-4 px-4 font-semibold text-slate-600">
+                                {prod.description || "—"}
+                              </td>
+                              <td className="py-4 px-4">
+                                <p className="font-bold text-slate-700">{prod.cartonQty} {prod.unit_type || "pcs"} / Carton</p>
+                                <p className="text-[10px] text-slate-400 font-medium">{cartonCount} boxes total</p>
+                              </td>
+                              <td className="py-4 px-4 text-right font-extrabold text-slate-800">
+                                {prod.rate || "—"}
+                              </td>
+                              <td className="py-4 px-4">
                                 {prod.color ? (
                                   <div className="flex flex-wrap gap-1">
                                     {prod.color.split(",").map((c, i) => (
@@ -1815,24 +2174,20 @@ ${rows}
                                   <span className="text-slate-350 text-xs">—</span>
                                 )}
                               </td>
-                              <td className="py-4 px-6 font-semibold text-slate-600">
+                              <td className="py-4 px-4 font-semibold text-slate-600">
                                 {prod.length || "—"}
                               </td>
-                              <td className="py-4 px-6">
+                              <td className="py-4 px-4 font-semibold text-slate-700">
+                                {prod.warehouse ? prod.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") : "—"}
+                              </td>
+                              <td className="py-4 px-4">
                                 <p className="font-extrabold text-slate-800">{prod.stock} units</p>
                                 <p className="text-[10px] text-slate-400 font-medium">Available</p>
                               </td>
-                              <td className="py-4 px-6">
-                                <p className="font-bold text-slate-700">{prod.cartonQty} / Carton</p>
-                                <p className="text-[10px] text-slate-400 font-medium">{cartonCount} boxes total</p>
-                              </td>
-                              <td className="py-4 px-6 text-right font-extrabold text-slate-800">
-                                {prod.rate ? `${prod.rate} ${prod.unit_type || "pcs"}` : ""}
-                              </td>
-                              <td className="py-4 px-6 text-right font-black text-slate-900">
+                              <td className="py-4 px-4 text-right font-black text-slate-900">
                                 ₹{(prod.stock * (parseFloat(prod.rate) || 0)).toLocaleString()}
                               </td>
-                              <td className="py-4 px-6">
+                              <td className="py-4 px-4">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
                                     onClick={() => handleEditProductClick(prod)}
@@ -2033,12 +2388,7 @@ ${rows}
                 renderGlobalSearchResults()
               ) : (
                 <>
-                {loading ? (
-                  <div className="mt-16 flex flex-col items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-                    <p className="mt-2 text-sm text-slate-500">Loading your collections...</p>
-                  </div>
-                ) : filteredCollections.length === 0 ? (
+                {filteredCollections.length === 0 ? (
                   <div className="mt-16 flex flex-col items-center text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                       <Folder className="h-8 w-8 text-slate-400" />
@@ -2885,285 +3235,6 @@ ${rows}
         </div>
       )}
 
-      {/* ADD / EDIT PRODUCT MODAL */}
-      {isProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-          <div className="my-8 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                {editingProduct ? "Edit Product Details" : "Add Product to Collection"}
-              </h3>
-              <button
-                onClick={resetProductForm}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProduct} className="mt-4 space-y-4">
-              
-              {/* ── Photo drag-drop zone + Name/Carton row ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                {/* Drag & Drop Photo Zone */}
-                <div className="sm:col-span-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Photo</label>
-                  <div
-                    className={`h-36 w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden relative transition-colors cursor-pointer
-                      ${isDraggingPhoto ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40"}`}
-                    onClick={() => !prodPhotoUrl && productFileInputRef.current?.click()}
-                    onDragOver={(ev) => { ev.preventDefault(); setIsDraggingPhoto(true); }}
-                    onDragLeave={() => setIsDraggingPhoto(false)}
-                    onDrop={(ev) => {
-                      ev.preventDefault();
-                      setIsDraggingPhoto(false);
-                      const file = ev.dataTransfer.files?.[0];
-                      if (!file || !file.type.startsWith("image/")) return;
-                      const reader = new FileReader();
-                      reader.onload = (e) => {
-                        const src = e.target?.result as string;
-                        const img = new window.Image();
-                        img.onload = () => {
-                          const canvas = document.createElement("canvas");
-                          const maxDim = 800;
-                          let { width, height } = img;
-                          if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
-                          else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
-                          canvas.width = width; canvas.height = height;
-                          canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
-                          setProdPhotoUrl(canvas.toDataURL("image/jpeg", 0.7));
-                        };
-                        img.src = src;
-                      };
-                      reader.readAsDataURL(file);
-                    }}
-                  >
-                    {prodPhotoUrl ? (
-                      <>
-                        <img src={prodPhotoUrl} alt="Preview" className="h-full w-full object-contain p-2" />
-                        <button
-                          type="button"
-                          onClick={(ev) => { ev.stopPropagation(); setProdPhotoUrl(""); }}
-                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white transition"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="text-center px-3 select-none">
-                        <ImageIcon className={`h-7 w-7 mx-auto mb-1.5 transition ${isDraggingPhoto ? "text-blue-400" : "text-slate-300"}`} />
-                        <span className="text-[10px] font-bold text-slate-450 uppercase block">
-                          {isDraggingPhoto ? "Drop to upload" : "Drag & Drop"}
-                        </span>
-                        <span className="text-[9px] text-slate-350 mt-0.5 block">or click to browse</span>
-                      </div>
-                    )}
-                  </div>
-                  <input type="file" ref={productFileInputRef} accept="image/*" onChange={handleProductPhotoChange} className="hidden" />
-                </div>
-
-                <div className="sm:col-span-2 space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Product Name
-                    </label>
-                    <input
-                      type="text"
-                      value={prodName}
-                      onChange={(e) => setProdName(e.target.value)}
-                      placeholder="e.g. Silk Saree Premium"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1 font-extrabold text-blue-650">
-                      Carton Pack Qty
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={prodCartonQty}
-                      onChange={(e) => setProdCartonQty(e.target.value)}
-                      placeholder="e.g. 24 units/box"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Multi-Color Chips & Length Row ── */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Colors <span className="text-slate-350 font-normal normal-case">(press Enter or comma to add)</span>
-                  </label>
-                  {/* Chips container */}
-                  <div
-                    className="min-h-[42px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 flex flex-wrap gap-1.5 items-center focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition cursor-text"
-                    onClick={() => document.getElementById("colorChipInput")?.focus()}
-                  >
-                    {prodColors.map((c, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-100 text-blue-700 text-[10px] font-bold"
-                      >
-                        {c}
-                        <button
-                          type="button"
-                          onClick={() => setProdColors(prodColors.filter((_, j) => j !== i))}
-                          className="hover:text-red-500 transition ml-0.5"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      id="colorChipInput"
-                      type="text"
-                      value={colorInput}
-                      onChange={(e) => setColorInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.key === "Enter" || e.key === ",") && colorInput.trim()) {
-                          e.preventDefault();
-                          const newColor = colorInput.trim().replace(/,+$/, "");
-                          if (newColor && !prodColors.includes(newColor)) {
-                            setProdColors([...prodColors, newColor]);
-                          }
-                          setColorInput("");
-                        } else if (e.key === "Backspace" && !colorInput && prodColors.length > 0) {
-                          setProdColors(prodColors.slice(0, -1));
-                        }
-                      }}
-                      onBlur={() => {
-                        if (colorInput.trim()) {
-                          const newColor = colorInput.trim().replace(/,+$/, "");
-                          if (newColor && !prodColors.includes(newColor)) {
-                            setProdColors([...prodColors, newColor]);
-                          }
-                          setColorInput("");
-                        }
-                      }}
-                      placeholder={prodColors.length === 0 ? "e.g. Royal Blue" : ""}
-                      className="flex-1 min-w-[80px] outline-none bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-350"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Length / Dimensions
-                  </label>
-                  <input
-                    type="text"
-                    value={prodLength}
-                    onChange={(e) => setProdLength(e.target.value)}
-                    placeholder="e.g. 5.5 meters"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Description, Price Code & Stock Row */}
-              <div className="grid grid-cols-4 gap-3 pt-2">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Description
-                  </label>
-                  <input
-                    type="text"
-                    value={prodDescription}
-                    onChange={(e) => setProdDescription(e.target.value)}
-                    placeholder="e.g. 12dzn"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1 font-extrabold text-blue-650">
-                    Price Code
-                  </label>
-                  <input
-                    type="text"
-                    value={prodRate}
-                    onChange={(e) => setProdRate(e.target.value)}
-                    placeholder="e.g. 950 or PC-12"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Unit Type
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
-                      onBlur={() => setTimeout(() => setIsUnitDropdownOpen(false), 200)}
-                      className="w-full h-[38px] flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700"
-                    >
-                      {prodUnitType}
-                      <ChevronDown className="h-4 w-4 text-slate-400" />
-                    </button>
-                    {isUnitDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full z-50 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden py-1">
-                        <button
-                          type="button"
-                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
-                          onClick={() => { setProdUnitType("pcs"); setIsUnitDropdownOpen(false); }}
-                        >
-                          pcs
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
-                          onClick={() => { setProdUnitType("dzn"); setIsUnitDropdownOpen(false); }}
-                        >
-                          dzn
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1 font-extrabold text-green-600">
-                    Stock Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={prodStock}
-                    onChange={(e) => setProdStock(e.target.value)}
-                    placeholder="e.g. 120"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                  />
-                </div>
-              </div>
-
-              {/* Modal footer action buttons */}
-              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4 mt-6">
-                <button
-                  type="button"
-                  onClick={resetProductForm}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition active:scale-95"
-                >
-                  {editingProduct ? "Save Changes" : "Add Product"}
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* CUSTOM CONFIRMATION MODAL */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 backdrop-blur-[3px] animate-in fade-in duration-200">
@@ -3378,6 +3449,87 @@ ${rows}
               >
                 Add Row
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warehouse Location Picker Modal */}
+      {openLocationPicker && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
+                <Box className="h-4 w-4 text-blue-500" /> 
+                Select Warehouse Location
+              </h3>
+              <button 
+                onClick={() => setOpenLocationPicker(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+              >
+                <X className="h-4 w-4"/>
+              </button>
+            </div>
+            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-5 bg-slate-50/30">
+              {Object.entries(availableWarehouseLocations).map(([row, locs]) => {
+                // Group locs by slot number
+                const slotMap: Record<string, string[]> = {};
+                locs.forEach(loc => {
+                  const parts = loc.split('-');
+                  const slotNum = parts[1];
+                  if (!slotMap[slotNum]) slotMap[slotNum] = [];
+                  slotMap[slotNum].push(loc);
+                });
+                
+                return (
+                  <div key={row} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm">
+                    <h4 className="font-black text-xs text-slate-400 uppercase tracking-wider mb-3">Row {row}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {Object.entries(slotMap).map(([slotNum, slotLocs]) => (
+                         <div key={slotNum} className="border border-slate-100 rounded-lg p-2 bg-slate-50">
+                           <p className="text-[10px] font-bold text-slate-500 mb-1.5 px-1">SLOT {slotNum}</p>
+                           <div className="flex flex-col gap-1.5">
+                             {slotLocs.map(loc => {
+                               const isSelected = (openLocationPicker.type === 'draft' ? draftProducts[openLocationPicker.idx!]?.warehouse : editingProductState?.warehouse) === loc;
+                               const isUpper = loc.includes('upper');
+                               return (
+                                 <button 
+                                   key={loc}
+                                   onClick={() => {
+                                     if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", loc);
+                                     else handleUpdateEditState("warehouse", loc);
+                                     setOpenLocationPicker(null);
+                                   }}
+                                   className={`text-xs font-bold py-1.5 px-2 rounded-md transition-all flex items-center justify-between group ${
+                                     isSelected
+                                     ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
+                                     : "bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 shadow-sm"
+                                   }`}
+                                 >
+                                   <span>{isUpper ? "Upper Shelf" : "Lower Shelf"}</span>
+                                   {isSelected && <Check className="h-3 w-3" />}
+                                 </button>
+                               );
+                             })}
+                           </div>
+                         </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-end">
+               <button 
+                 onClick={() => {
+                    if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", "");
+                    else handleUpdateEditState("warehouse", "");
+                    setOpenLocationPicker(null);
+                 }} 
+                 className="text-xs px-4 py-2 rounded-lg text-slate-500 font-bold hover:bg-slate-100 transition-colors"
+               >
+                 Clear Assignment
+               </button>
             </div>
           </div>
         </div>

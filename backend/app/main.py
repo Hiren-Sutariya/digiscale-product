@@ -9,18 +9,11 @@ from app.api.users import router as users_router
 from app.api.upload import router as upload_router
 from app.api.payments import router as payments_router
 from app.api.settings import router as settings_router
-from app.api.team import router as team_router
-from app.api.api_keys import router as api_keys_router
-from app.api.public import router as public_router
 
 # Import models to ensure they are registered with SQLAlchemy
 import app.models.user
 import app.models.project
 import app.models.user_settings
-import app.models.team_member
-import app.models.api_key
-import app.models.audit_log
-import app.models.webhook
 
 # Create database tables at startup
 Base.metadata.create_all(bind=engine)
@@ -56,9 +49,7 @@ app.include_router(users_router)
 app.include_router(upload_router)
 app.include_router(payments_router)
 app.include_router(settings_router, prefix="/settings", tags=["settings"])
-app.include_router(team_router, prefix="/api/v1/team", tags=["team"])
-app.include_router(api_keys_router, prefix="/api/v1/api-keys", tags=["api_keys"])
-app.include_router(public_router, prefix="/api/v1/public", tags=["public_api"])
+
 
 @app.get("/")
 def root():

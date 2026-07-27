@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, getTeamMembers, inviteTeamMember, removeTeamMember, getApiKeys, createApiKey, revokeApiKey } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings } from "@/services/api";
+import { getCache } from "@/lib/cache";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -34,9 +35,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "company", label: "Company Profile", icon: Building },
-    { id: "team", label: "Team Sharing", icon: Users },
     { id: "billing", label: "Plan & Billing", icon: CreditCard },
-    { id: "developer", label: "Developer API", icon: HardDrive },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
   ];
@@ -83,8 +82,6 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
-          {activeTab === "team" && <TeamSharingSection />}
-          {activeTab === "developer" && <DeveloperApiSection />}
           {activeTab === "billing" && <BillingSection />}
           {activeTab === "notifications" && <NotificationsSection />}
           {activeTab === "security" && <SecuritySection />}
@@ -117,6 +114,25 @@ function ProfileSection() {
   const [verificationError, setVerificationError] = useState("");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cachedProfile = localStorage.getItem("digiscale_profile");
+      const cachedSettings = localStorage.getItem("digiscale_settings");
+      if (cachedProfile && cachedSettings) {
+        try {
+          const profileData = JSON.parse(cachedProfile);
+          const settingsData = JSON.parse(cachedSettings);
+          setName(profileData.name);
+          setEmail(profileData.email);
+          setOriginalEmail(profileData.email);
+          setPhone(settingsData.phone || "");
+          setOriginalPhone(settingsData.phone || "");
+          setGender(settingsData.gender || "Male");
+          setAvatarUrl(settingsData.avatar_url || null);
+          setLoading(false);
+        } catch(e) {}
+      }
+    }
+
     Promise.all([getUserProfile(), getUserSettings()])
       .then(([profileData, settingsData]) => {
         setName(profileData.name);
@@ -520,7 +536,7 @@ function ProfileSection() {
 function BillingSection() {
   const [user, setUser] = useState<{ plan: string; credits_limit: number; credits_used: number; created_at?: string } | null>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getCache("profile"));
 
   useEffect(() => {
     getUserProfile()
@@ -909,7 +925,7 @@ function CompanySection() {
 
   const [termsAndConditions, setTermsAndConditions] = useState("");
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!(getCache("profile") && getCache("settings")));
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1257,391 +1273,6 @@ function CompanySection() {
       >
         {saving ? "Saving..." : "Save Company Profile"}
       </button>
-    </div>
-  );
-}
-
-/* ============ Team Sharing Section ============ */
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: "Owner" | "Admin" | "Editor" | "Viewer";
-  status: "Active" | "Pending";
-}
-
-function TeamSharingSection() {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<TeamMember["role"]>("Editor");
-  const [inviteSuccess, setInviteSuccess] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const loadMembers = async () => {
-        try {
-          const apiMembers = await getTeamMembers();
-          
-          // Always show the Owner as the first member implicitly (since they aren't in the team_members table)
-          const ownerMember: TeamMember = {
-            id: "owner-1",
-            name: localStorage.getItem("user_name") || "Owner",
-            email: localStorage.getItem("user_email") || "owner@digiscale.com",
-            role: "Owner",
-            status: "Active",
-          };
-          
-          setMembers([ownerMember, ...apiMembers]);
-        } catch (error) {
-          console.error("Failed to load team members:", error);
-        }
-      };
-      
-      loadMembers();
-    }
-  }, []);
-
-  const handleSendInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteName.trim() || !inviteEmail.trim()) return;
-
-    try {
-      const newMember = await inviteTeamMember(inviteName.trim(), inviteEmail.trim().toLowerCase(), inviteRole);
-      setMembers([...members, newMember]);
-      
-      setInviteName("");
-      setInviteEmail("");
-      setInviteRole("Editor");
-      setInviteSuccess(true);
-      setTimeout(() => setInviteSuccess(false), 3000);
-    } catch (error: any) {
-      alert(error.message || "Failed to invite member");
-    }
-  };
-
-  const handleRemoveMember = async (id: string) => {
-    try {
-      await removeTeamMember(id);
-      setMembers(members.filter(m => m.id.toString() !== id.toString()));
-    } catch (error: any) {
-      alert(error.message || "Failed to remove member");
-    }
-  };
-
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return parts[0].substring(0, 2).toUpperCase();
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
-            Team Collaboration
-          </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage your workspace members, assign role permissions, and collaborate in real-time.
-          </p>
-        </div>
-        <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">
-          {members.length} Members
-        </span>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-        
-        {/* Left Column: Invite Member Form Card */}
-        <div className="bg-white border border-slate-200 shadow-md shadow-slate-200/50 rounded-2xl p-6 space-y-5 h-fit relative overflow-hidden">
-          {/* Decorative background element */}
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 rounded-full bg-blue-50 blur-2xl opacity-70 pointer-events-none"></div>
-          
-          <div className="space-y-1 relative z-10">
-            <h4 className="text-sm font-black text-slate-900">Invite Member</h4>
-            <p className="text-xs text-slate-500">Send an invitation to join this workspace.</p>
-          </div>
-
-          {inviteSuccess && (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700 leading-normal animate-in fade-in duration-150 relative z-10">
-              ✓ Invitation sent successfully!
-            </div>
-          )}
-
-          <form onSubmit={handleSendInvite} className="space-y-4 relative z-10">
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ramesh Kumar"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3.5 py-3 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <input
-                  type="email"
-                  required
-                  placeholder="ramesh@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3.5 py-3 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">Role Permission</label>
-              <div className="relative">
-                <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-8 py-3 text-xs font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 cursor-pointer appearance-none"
-                >
-                  <option value="Admin">Admin (Full Access)</option>
-                  <option value="Editor">Editor (Can edit & save)</option>
-                  <option value="Viewer">Viewer (Can view only)</option>
-                </select>
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-xs font-bold text-white transition-all active:scale-[0.98] shadow-md shadow-blue-500/20"
-            >
-              Send Invitation
-            </button>
-          </form>
-        </div>
-
-        {/* Right Column: Active Team Members List */}
-        <div className="space-y-3.5">
-          <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-800">Active Members</h4>
-            <p className="text-[10px] text-slate-455">Currently active and pending members in this workspace.</p>
-          </div>
-
-          <div className="space-y-2.5">
-            {members.map(member => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between p-4 rounded-2xl border border-slate-150/70 bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all duration-200"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm shadow-blue-500/10">
-                    {getInitials(member.name)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-extrabold text-slate-900 text-sm truncate leading-none">{member.name}</p>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-slate-50 border-slate-200 text-slate-500 leading-none">
-                        {member.role}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-450 mt-1 font-semibold truncate">{member.email}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 shrink-0">
-                  {/* Status badge with green/amber pulse dot */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      {member.status === "Active" ? (
-                        <>
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                        </>
-                      )}
-                    </span>
-                    <span className={`text-[9px] font-black uppercase tracking-wider ${
-                      member.status === "Active" ? "text-green-700" : "text-amber-700"
-                    }`}>
-                      {member.status}
-                    </span>
-                  </div>
-
-                  {member.role !== "Owner" ? (
-                    <button
-                      onClick={() => handleRemoveMember(member.id)}
-                      className="p-2 rounded-xl border border-red-150/40 text-red-500 hover:bg-red-50 hover:border-red-200 transition"
-                      title="Remove member access"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-slate-400 font-bold italic pr-2 select-none">Owner</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-/* ============ Developer API Section ============ */
-function DeveloperApiSection() {
-  const [keys, setKeys] = useState<any[]>([]);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [newKeySecret, setNewKeySecret] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchKeys = async () => {
-    try {
-      const data = await getApiKeys();
-      setKeys(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKeys();
-  }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newKeyName.trim()) return;
-    try {
-      const data = await createApiKey(newKeyName.trim());
-      setNewKeySecret(data.api_key);
-      setNewKeyName("");
-      fetchKeys();
-    } catch (err: any) {
-      alert(err.message || "Failed to create API key");
-    }
-  };
-
-  const handleRevoke = async (id: number) => {
-    if (!confirm("Are you sure you want to revoke this key? Any application using it will stop working immediately.")) return;
-    try {
-      await revokeApiKey(id);
-      fetchKeys();
-    } catch (err: any) {
-      alert(err.message || "Failed to revoke API key");
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-          <HardDrive className="h-5 w-5 text-blue-600" />
-          Developer API
-        </h3>
-        <p className="text-xs text-slate-500 mt-1">
-          Manage your API keys for programmatic access to DigiScale.
-        </p>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      {newKeySecret && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 relative mb-6">
-          <h4 className="font-bold text-blue-800 text-sm mb-1">Save your new API Key!</h4>
-          <p className="text-xs text-blue-700 mb-3">Please copy this key and save it somewhere safe. For security reasons, we will not show it again.</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 block p-3 bg-white border border-blue-100 rounded-lg text-sm font-mono text-slate-800 break-all select-all">
-              {newKeySecret}
-            </code>
-            <button 
-              onClick={() => { navigator.clipboard.writeText(newKeySecret); alert("Copied!"); }}
-              className="px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 active:scale-95 transition"
-            >
-              Copy
-            </button>
-          </div>
-          <button 
-            onClick={() => setNewKeySecret(null)}
-            className="absolute top-2 right-2 p-2 text-blue-400 hover:text-blue-600"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-        <div className="bg-white border border-slate-200 shadow-md shadow-slate-200/50 rounded-2xl p-6 h-fit relative">
-          <h4 className="text-sm font-black text-slate-900 mb-1">Create API Key</h4>
-          <p className="text-xs text-slate-500 mb-4">Generate a new key to authenticate requests.</p>
-          
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Production Server"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-slate-900 hover:bg-black py-3 text-xs font-bold text-white transition-all active:scale-[0.98] shadow-md shadow-slate-900/20"
-            >
-              Generate Key
-            </button>
-          </form>
-        </div>
-
-        <div className="space-y-3.5">
-          <h4 className="text-xs font-bold text-slate-800">Active API Keys</h4>
-          {loading ? (
-            <div className="text-xs text-slate-500 animate-pulse">Loading...</div>
-          ) : keys.length === 0 ? (
-            <div className="text-xs text-slate-500 italic p-4 border border-dashed border-slate-200 rounded-xl">No API keys generated yet.</div>
-          ) : (
-            <div className="space-y-2.5">
-              {keys.map((k) => (
-                <div key={k.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-150/70 bg-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all">
-                  <div>
-                    <h5 className="font-extrabold text-slate-900 text-sm leading-none">{k.name}</h5>
-                    <p className="text-xs text-slate-500 mt-1 font-mono">{k.api_key_hint}</p>
-                    <p className="text-[10px] text-slate-400 mt-2">
-                      Created: {new Date(k.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRevoke(k.id)}
-                    className="p-2.5 rounded-xl border border-red-150/40 text-red-500 hover:bg-red-50 hover:border-red-200 transition"
-                    title="Revoke Key"
-                  >
-                    Revoke
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

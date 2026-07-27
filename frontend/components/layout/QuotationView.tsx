@@ -18,11 +18,13 @@ import {
   Eye,
   Edit,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
+import { getCache, setCache } from "@/lib/cache";
 
 interface Collection {
   id: string;
@@ -201,26 +203,35 @@ export default function QuotationView() {
   useEffect(() => {
     async function loadData(userId: string) {
       try {
-        // Fetch collections from Supabase
-        const { data: colsData, error: colsErr } = await supabase
-          .from('collections')
-          .select('*')
-          .eq('user_id', userId);
+        const cacheKey = `quotation_data_${userId}`;
+        const cachedData = getCache(cacheKey);
+        
+        if (cachedData) {
+          setCollections(cachedData.collections);
+          setProducts(cachedData.products);
+          setSavedQuotes(cachedData.savedQuotes);
+          setQuoteNumber(cachedData.quoteNumber);
+        }
+
+        // Fetch all data from Supabase concurrently for faster loading
+        const [
+          { data: colsData, error: colsErr },
+          { data: prodsData, error: prodsErr },
+          { data: assignsData, error: assignsErr },
+          { data: quotesData, error: quotesErr }
+        ] = await Promise.all([
+          supabase.from('collections').select('*').eq('user_id', userId),
+          supabase.from('products').select('*, collection:collections(name)').eq('user_id', userId),
+          supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
+          supabase.from('quotations').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+        ]);
+
         if (colsErr) throw colsErr;
-        setCollections(colsData || []);
-
-        // Fetch products from Supabase with collection join
-        const { data: prodsData, error: prodsErr } = await supabase
-          .from('products')
-          .select('*, collection:collections(name)')
-          .eq('user_id', userId);
         if (prodsErr) throw prodsErr;
+        if (assignsErr) throw assignsErr;
+        if (quotesErr) throw quotesErr;
 
-        // Fetch warehouse assignments from Supabase
-        const { data: assignsData, error: assignsErr } = await supabase
-          .from('warehouse_assignments')
-          .select('*')
-          .eq('user_id', userId);
+        setCollections(colsData || []);
 
         // Group and format assignments by product_id
         const assignsMap: Record<string, string[]> = {};
@@ -260,14 +271,6 @@ export default function QuotationView() {
           location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
         }));
         setProducts(mappedProds);
-        // Fetch quotations from Supabase
-        const { data: quotesData, error: quotesErr } = await supabase
-          .from('quotations')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-          
-        if (quotesErr) throw quotesErr;
 
         if (quotesData && quotesData.length > 0) {
           const parsedQuotes = quotesData.map((q: any) => ({
@@ -290,8 +293,29 @@ export default function QuotationView() {
           setSavedQuotes(parsedQuotes);
           const nextNum = getNextQuoteNumber(parsedQuotes);
           setQuoteNumber(nextNum);
+          
+          const payload = {
+            collections: colsData || [],
+            products: mappedProds,
+            savedQuotes: parsedQuotes,
+            quoteNumber: nextNum
+          };
+          setCache(cacheKey, payload);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(cacheKey, JSON.stringify(payload));
+          }
         } else {
           setQuoteNumber("Q-1");
+          const payload = {
+            collections: colsData || [],
+            products: mappedProds,
+            savedQuotes: [],
+            quoteNumber: "Q-1"
+          };
+          setCache(cacheKey, payload);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(cacheKey, JSON.stringify(payload));
+          }
         }
 
       } catch (e) {
@@ -300,8 +324,53 @@ export default function QuotationView() {
     }
 
     // Fetch company info from profile settings
-    setLoadingProfile(true);
-      Promise.all([getUserProfile(), getUserSettings()])
+    if (typeof window !== "undefined") {
+      const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
+      if (cachedUserId) {
+        setCurrentUserId(cachedUserId);
+        const cachedQuotes = localStorage.getItem(`quotation_data_${cachedUserId}`);
+        if (cachedQuotes) {
+          try {
+            const parsed = JSON.parse(cachedQuotes);
+            setCollections(parsed.collections);
+            setProducts(parsed.products);
+            setSavedQuotes(parsed.savedQuotes);
+            setQuoteNumber(parsed.quoteNumber);
+          } catch(e) {}
+        }
+      }
+
+      const cachedProfile = localStorage.getItem("digiscale_profile");
+      const cachedSettings = localStorage.getItem("digiscale_settings");
+      if (cachedProfile && cachedSettings) {
+        try {
+          const profileData = JSON.parse(cachedProfile);
+          const settingsData = JSON.parse(cachedSettings);
+          
+          const data = {
+            logo: settingsData.company_logo,
+            name: settingsData.company_name,
+            email: settingsData.company_email,
+            primaryPhone: settingsData.company_primary_phone,
+            secondaryPhone: settingsData.company_secondary_phone,
+            address: settingsData.company_address,
+            website: settingsData.company_website,
+            gst: settingsData.company_gst,
+            bankName: settingsData.company_bank_name,
+            accountNumber: settingsData.company_account_number,
+            ifsc: settingsData.company_ifsc,
+            termsAndConditions: settingsData.company_terms,
+          };
+          
+          setCompanyInfo(data);
+          setShowBankDetails(!!(data.bankName || data.accountNumber));
+          setTermsList(parseTerms(data.termsAndConditions || ""));
+          setLoadingProfile(false);
+        } catch(e) {}
+      }
+    }
+
+    Promise.all([getUserProfile(), getUserSettings()])
         .then(([profile, settingsData]) => {
           if (profile && profile.id) {
             const uId = profile.id.toString();
@@ -594,6 +663,18 @@ export default function QuotationView() {
   const handlePrint = () => {
     window.print();
   };
+
+  if (loadingProfile) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full blur-xl bg-blue-500/20 animate-pulse"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 relative z-10" />
+        </div>
+        <p className="mt-4 text-sm font-semibold text-slate-500 animate-pulse tracking-wide">Loading workspace...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

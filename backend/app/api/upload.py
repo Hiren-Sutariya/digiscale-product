@@ -10,7 +10,7 @@ from app.services.auth_service import decode_access_token
 from app.services.image_service import remove_background, add_white_background
 from app.models.user import User
 from app.models.project import ProjectImage
-from app.services.audit_service import log_audit_action, trigger_webhooks
+
 
 router = APIRouter(tags=["upload"])
 
@@ -35,8 +35,7 @@ def process_image_background(
     original_path: str,
     processed_path: str,
     white_bg: bool,
-    image_id: int,
-    user_id: Optional[int]
+    image_id: int
 ):
     db = SessionLocal()
     try:
@@ -44,7 +43,7 @@ def process_image_background(
         if success:
             final_processed_path = processed_path
             if white_bg:
-                white_processed_filename = os.path.basename(processed_path).replace("_proc", "_white").replace(".png", ".jpg")
+                white_processed_filename = os.path.basename(processed_path).replace("_proc", "_white").replace(".webp", ".webp")
                 white_processed_path = os.path.join(settings.PROCESSED_DIR, white_processed_filename)
                 if add_white_background(processed_path, white_processed_path):
                     final_processed_path = white_processed_path
@@ -54,22 +53,18 @@ def process_image_background(
                 db_image.status = "completed"
                 db_image.processed_path = f"uploads/processed/{os.path.basename(final_processed_path)}"
                 db.commit()
-                if user_id:
-                    trigger_webhooks(db, user_id, "image.processed", {"image_id": image_id, "status": "completed"})
+
         else:
             db_image = db.query(ProjectImage).filter(ProjectImage.id == image_id).first()
             if db_image:
                 db_image.status = "failed"
                 db.commit()
-                if user_id:
-                    trigger_webhooks(db, user_id, "image.processed", {"image_id": image_id, "status": "failed"})
+
     except Exception as e:
         db_image = db.query(ProjectImage).filter(ProjectImage.id == image_id).first()
         if db_image:
             db_image.status = "failed"
             db.commit()
-            if user_id:
-                trigger_webhooks(db, user_id, "image.processed", {"image_id": image_id, "status": "failed"})
     finally:
         db.close()
 
@@ -92,7 +87,7 @@ async def upload_and_process_image(
         file_ext = ".png"
     unique_id = str(uuid.uuid4())
     original_filename = f"{unique_id}_orig{file_ext}"
-    processed_filename = f"{unique_id}_proc.png"
+    processed_filename = f"{unique_id}_proc.webp"
     
     original_path = os.path.join(settings.ORIGINALS_DIR, original_filename)
     processed_path = os.path.join(settings.PROCESSED_DIR, processed_filename)
@@ -125,17 +120,13 @@ async def upload_and_process_image(
 
     if image_id:
         # Process in background
-        user_id = current_user.id if current_user else None
-        if user_id:
-            log_audit_action(db, user_id, "image.upload", "image", str(image_id))
-            
+
         background_tasks.add_task(
             process_image_background,
             original_path,
             processed_path,
             white_bg,
-            image_id,
-            user_id
+            image_id
         )
         
         return {

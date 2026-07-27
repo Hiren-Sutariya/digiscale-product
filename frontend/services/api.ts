@@ -1,4 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { getCache, setCache, clearCache } from "@/lib/cache";
 
 // Helper to get auth header
 function getAuthHeader(): Record<string, string> {
@@ -21,6 +22,9 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
 }
 
 export function clearDigiscaleCache(): void {
+  // Clear shared in-memory cache
+  clearCache();
+
   if (typeof window !== "undefined") {
     localStorage.removeItem("digiscale_cached_user_id");
     localStorage.removeItem("digiscale_cached_collections");
@@ -130,20 +134,34 @@ export async function getImageStatus(projectId: number, imageId: number): Promis
   return response.json();
 }
 
-export async function getUserProfile(): Promise<any> {
+export async function getUserProfile(forceFetch: boolean = false): Promise<any> {
+  if (!forceFetch && getCache("profile")) return getCache("profile");
+  
   const response = await authFetch(`${API_BASE_URL}/users/me`);
   if (!response.ok) {
     throw new Error("Failed to fetch user profile.");
   }
-  return response.json();
+  const data = await response.json();
+  setCache("profile", data);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("digiscale_profile", JSON.stringify(data));
+  }
+  return data;
 }
 
-export async function getUserSettings(): Promise<any> {
+export async function getUserSettings(forceFetch: boolean = false): Promise<any> {
+  if (!forceFetch && getCache("settings")) return getCache("settings");
+
   const response = await authFetch(`${API_BASE_URL}/settings/`);
   if (!response.ok) {
     throw new Error("Failed to fetch user settings.");
   }
-  return response.json();
+  const data = await response.json();
+  setCache("settings", data);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("digiscale_settings", JSON.stringify(data));
+  }
+  return data;
 }
 
 export async function updateUserSettings(data: any): Promise<any> {
@@ -155,7 +173,9 @@ export async function updateUserSettings(data: any): Promise<any> {
   if (!response.ok) {
     throw new Error("Failed to update user settings.");
   }
-  return response.json();
+  const result = await response.json();
+  setCache("settings", result);
+  return result;
 }
 
 export async function getProjects(): Promise<any> {
@@ -195,7 +215,9 @@ export async function updateUserProfile(name: string, email: string): Promise<an
   if (!response.ok) {
     throw new Error("Failed to update profile.");
   }
-  return response.json();
+  const result = await response.json();
+  setCache("profile", result);
+  return result;
 }
 
 export async function deleteAccount(): Promise<any> {
@@ -208,106 +230,6 @@ export async function deleteAccount(): Promise<any> {
   return response.json();
 }
 
-export async function getTeamMembers(): Promise<any[]> {
-  const headers = { ...getAuthHeader() };
-  const response = await fetch(`${API_BASE_URL}/api/v1/team/`, {
-    method: "GET",
-    headers,
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch team members");
-  }
-  return response.json();
-}
-
-export async function inviteTeamMember(name: string, email: string, role: string): Promise<any> {
-  const headers = { 
-    ...getAuthHeader(),
-    "Content-Type": "application/json"
-  };
-  const response = await fetch(`${API_BASE_URL}/api/v1/team/`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ name, email, role }),
-  });
-  
-  if (!response.ok) {
-    let detail = "Failed to invite member";
-    try {
-      const err = await response.json();
-      detail = err.detail || detail;
-    } catch (e) {
-      // Ignore
-    }
-    throw new Error(detail);
-  }
-  return response.json();
-}
-
-export async function removeTeamMember(memberId: string): Promise<any> {
-  const headers = { ...getAuthHeader() };
-  const response = await fetch(`${API_BASE_URL}/api/v1/team/${memberId}`, {
-    method: "DELETE",
-    headers,
-  });
-
-  if (!response.ok) {
-    let detail = "Failed to remove member";
-    try {
-      const err = await response.json();
-      detail = err.detail || detail;
-    } catch (e) {
-      // Ignore
-    }
-    throw new Error(detail);
-  }
-  return response.json();
-}
-
-export async function getApiKeys(): Promise<any[]> {
-  const headers = { ...getAuthHeader() };
-  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/`, {
-    method: "GET",
-    headers,
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch API keys");
-  }
-  return response.json();
-}
-
-export async function createApiKey(name: string): Promise<any> {
-  const headers = { 
-    ...getAuthHeader(),
-    "Content-Type": "application/json"
-  };
-  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    let detail = "Failed to create API key";
-    try {
-      const err = await response.json();
-      detail = err.detail || detail;
-    } catch (e) {}
-    throw new Error(detail);
-  }
-  return response.json();
-}
-
-export async function revokeApiKey(keyId: number): Promise<any> {
-  const headers = { ...getAuthHeader() };
-  const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/${keyId}`, {
-    method: "DELETE",
-    headers,
-  });
-  if (!response.ok) {
-    throw new Error("Failed to revoke API key");
-  }
-  return true;
-}
 
 export async function deleteProject(projectId: number): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/projects/${projectId}`, {

@@ -33,8 +33,27 @@ export default function DashboardNavbar() {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; plan: string; created_at?: string } | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("token");
+    }
+    return true; // Assume logged in on server to prevent navbar link mismatch
+  });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const [user, setUser] = useState<{ name: string; email: string; plan: string; created_at?: string } | null>(() => {
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("user_name");
+      const email = localStorage.getItem("user_email");
+      const plan = localStorage.getItem("user_plan");
+      const created_at = localStorage.getItem("user_created_at");
+      if (name) {
+        return { name, email: email || "", plan: plan || "Starter", created_at: created_at || undefined };
+      }
+    }
+    return null;
+  });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -61,6 +80,12 @@ export default function DashboardNavbar() {
         Promise.all([getUserProfile(), getUserSettings()])
           .then(([data, settingsData]) => {
             setUser(data);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("user_name", data.name || "");
+              localStorage.setItem("user_email", data.email || "");
+              localStorage.setItem("user_plan", data.plan || "Starter");
+              if (data.created_at) localStorage.setItem("user_created_at", data.created_at);
+            }
             if (settingsData?.avatar_url) setAvatarUrl(settingsData.avatar_url);
 
             if (data.plan === "Starter" && data.created_at) {
@@ -146,27 +171,38 @@ export default function DashboardNavbar() {
                 >
                   {/* Avatar */}
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-[11px] font-black text-white overflow-hidden shrink-0">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                    {mounted ? (
+                      avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        getInitials(user?.name || "User")
+                      )
                     ) : (
-                      getInitials(user?.name || "User")
+                      <div className="h-full w-full bg-blue-400/50 animate-pulse"></div>
                     )}
                   </div>
 
-                  <div className="hidden text-left md:block">
-                    <p className="text-[12px] font-bold text-slate-800 leading-none whitespace-nowrap">
-                      {user?.name || "User"}
-                    </p>
-                    <p className="text-[10px] mt-0.5 leading-none">
-                      {user?.plan === "Starter" ? (
-                        <span className="text-amber-500 font-semibold">
-                          Trial{daysLeft !== null ? ` · ${daysLeft}d left` : ""}
+                  {mounted ? (
+                    <div className="hidden text-left md:block">
+                      <p className="text-[12px] font-bold text-slate-800 leading-none whitespace-nowrap">
+                        {user?.name || "User"}
+                      </p>
+                      <p className="text-[10px] mt-0.5 leading-none">
+                        <span 
+                          className={user?.plan === "Starter" ? "text-amber-500 font-semibold" : "text-blue-600 font-semibold"}
+                        >
+                          {user?.plan === "Starter" 
+                            ? `Trial${daysLeft !== null ? ` · ${daysLeft}d left` : ""}` 
+                            : (user?.plan || "Free")}
                         </span>
-                      ) : (
-                        <span className="text-blue-600 font-semibold">{user?.plan || "Free"}</span>
-                      )}
-                    </p>
-                  </div>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="hidden text-left md:block space-y-1.5 w-20">
+                      <div className="h-3 w-16 bg-slate-200 rounded animate-pulse"></div>
+                      <div className="h-2 w-10 bg-slate-200 rounded animate-pulse"></div>
+                    </div>
+                  )}
 
                   <ChevronDown
                     className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
