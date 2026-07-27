@@ -765,18 +765,19 @@ function CollectionsPageContent() {
       "Product Name",                     // col A
       "Image URL",                        // col B
       "Carton Pack Qty",                  // col C
-      "Colors (e.g. Red, Blue, Green)",   // col D
-      "Length / Dimensions",              // col E
-      "Description",                      // col F
-      "Price Code",                       // col G
-      "Stock Quantity",                   // col H
-      "Warehouse Location",               // col I
+      "Unit Type (pcs/dzn)",              // col D
+      "Colors (e.g. Red, Blue, Green)",   // col E
+      "Length / Dimensions",              // col F
+      "Description",                      // col G
+      "Price Code",                       // col H
+      "Stock Quantity",                   // col I
+      "Warehouse Location",               // col J
     ];
 
     const sampleRows = [
-      ["Silk Saree Premium", "https://example.com/saree.jpg", "24", "Royal Blue, Navy", "5.5 meters", "12dzn", "950", "120", "A-1-upper"],
-      ["Cotton Dupatta", "", "12", "Red, Green, Yellow", "2.5 meters", "", "A1", "200", ""],
-      ["Embroidered Kurti", "https://example.com/kurti.jpg", "6", "Green", "3.0 meters", "", "PC-12", "50", "B-2-lower"],
+      ["Silk Saree Premium", "https://example.com/saree.jpg", "24", "pcs", "Royal Blue, Navy", "5.5 cm", "Premium quality", "950", "120", "A-1-upper"],
+      ["Cotton Dupatta", "", "12", "dzn", "Red, Green, Yellow", "2.5 cm", "Lightweight", "A1", "200", ""],
+      ["Embroidered Kurti", "https://example.com/kurti.jpg", "6", "pcs", "Green", "3.0 cm", "", "PC-12", "50", "B-2-lower"],
     ];
 
     // ── XML Escape helper ─────────────────────────────────────────────
@@ -969,7 +970,8 @@ ${rows}
       const lengthIdx = colIdx(["length", "dimension", "len", "dim"]);
       const descIdx = colIdx(["desc", "description", "note"]);
       const rateIdx = colIdx(["price", "rate", "code"]);
-      const stockIdx = colIdx(["stock", "quantity", "unit", "qty"]);
+      const stockIdx = colIdx(["stock", "quantity", "qty"]);
+      const unitTypeIdx = colIdx(["unit type", "pcs", "dzn"]);
       const imageIdx = colIdx(["image", "photo", "url", "picture"]);
       const warehouseIdx = colIdx(["warehouse", "location", "shelf"]);
 
@@ -980,11 +982,13 @@ ${rows}
         const name = nameIdx >= 0 ? cols[nameIdx]?.trim() : "";
         if (!name) { errors++; return; }
         const excelImageUrl = imageIdx >= 0 ? cols[imageIdx]?.trim() : "";
+        const parsedUnitType = unitTypeIdx >= 0 ? cols[unitTypeIdx]?.trim().toLowerCase() : "";
         newProducts.push({
           id: `excel_${Date.now()}_${i}`,
           name,
           stock: stockIdx >= 0 ? (parseInt(cols[stockIdx]) || 0) : 0,
           cartonQty: cartonIdx >= 0 ? (parseInt(cols[cartonIdx]) || 1) : 1,
+          unit_type: parsedUnitType === "dzn" ? "dzn" : "pcs",
           rate: rateIdx >= 0 ? (cols[rateIdx]?.trim() || "") : "",
           length: lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "") : "",
           color: colorIdx >= 0 ? (cols[colorIdx]?.trim() || "") : "",
