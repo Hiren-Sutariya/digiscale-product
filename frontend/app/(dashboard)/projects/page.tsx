@@ -133,7 +133,7 @@ function CollectionsPageContent() {
   const [selectedShelfZone, setSelectedShelfZone] = useState<"upper" | "lower">("upper");
   const [warehouseAssignments, setWarehouseAssignments] = useState<Record<string, { productId: string; collectionId: string }[]>>({});
   const [warehouseSlots, setWarehouseSlots] = useState<Record<string, number[]>>({});
-  const [warehouseRows, setWarehouseRows] = useState<string[]>(["A","B","C","D","E","F","G","H","I","J","K"]);
+  const [warehouseRows, setWarehouseRows] = useState<string[]>(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignSearchQuery, setAssignSearchQuery] = useState("");
   // Add Slot / Row modals
@@ -158,7 +158,7 @@ function CollectionsPageContent() {
     isOpen: false,
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   // Collection Actions State
@@ -166,7 +166,7 @@ function CollectionsPageContent() {
   const [renamingCol, setRenamingCol] = useState<Collection | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
-  
+
   const [allProducts, setAllProducts] = useState<(Product & { collectionName?: string; collectionId?: string })[]>([]);
 
   // Removed old product form states
@@ -177,7 +177,7 @@ function CollectionsPageContent() {
   const [showImportResult, setShowImportResult] = useState(false);
 
   // Custom Warehouse Location Modal State
-  const [openLocationPicker, setOpenLocationPicker] = useState<{type: 'draft' | 'edit', idx?: number} | null>(null);
+  const [openLocationPicker, setOpenLocationPicker] = useState<{ type: 'draft' | 'edit', idx?: number } | null>(null);
 
   // Post-import photo assignment modal state
   const [photoAssignProducts, setPhotoAssignProducts] = useState<Product[]>([]);
@@ -190,7 +190,7 @@ function CollectionsPageContent() {
     const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng');
     console.log("OCR Result:", text);
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    
+
     let newName = draft?.name || "";
     let newLength = draft?.length || "";
     let newCartonQty = draft?.cartonQty || 1;
@@ -232,7 +232,7 @@ function CollectionsPageContent() {
         continue;
       }
     }
-    
+
     return { name: newName, length: newLength, cartonQty: newCartonQty, unit_type: newUnitType, description: newDescription, rate: newRate };
   };
 
@@ -243,23 +243,23 @@ function CollectionsPageContent() {
         .select(`*, collection:collections(name)`)
         .eq('user_id', userId);
       if (data) {
-         const mapped = data.map(p => ({
-           id: p.id,
-           name: p.name,
-           stock: p.stock,
-           cartonQty: p.cartonQty,
-           rate: p.rate,
-           length: p.length,
-           color: p.color,
-           unit_type: p.unit_type || "pcs",
-           description: p.description,
-           photoUrl: p.photoUrl,
-           collectionId: p.collection_id,
-           collectionName: p.collection?.name || "Unknown Collection",
-           createdAt: p.created_at
-         }));
-         setAllProducts(mapped);
-         localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
+        const mapped = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          stock: p.stock,
+          cartonQty: p.cartonQty,
+          rate: p.rate,
+          length: p.length,
+          color: p.color,
+          unit_type: p.unit_type || "pcs",
+          description: p.description,
+          photoUrl: p.photoUrl,
+          collectionId: p.collection_id,
+          collectionName: p.collection?.name || "Unknown Collection",
+          createdAt: p.created_at
+        }));
+        setAllProducts(mapped);
+        localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
       }
     } catch (err) {
       console.error("Failed to refresh products:", err);
@@ -279,7 +279,7 @@ function CollectionsPageContent() {
         setWarehouseRows(rows);
         localStorage.setItem("digiscale_cached_warehouse_rows", JSON.stringify(rows));
       }
-      
+
       if (slotsRes.data) {
         const slotsMap: Record<string, number[]> = {};
         slotsRes.data.forEach(s => {
@@ -289,7 +289,7 @@ function CollectionsPageContent() {
         setWarehouseSlots(slotsMap);
         localStorage.setItem("digiscale_cached_warehouse_slots", JSON.stringify(slotsMap));
       }
-      
+
       if (assignsRes.data) {
         const assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
         assignsRes.data.forEach(a => {
@@ -302,7 +302,7 @@ function CollectionsPageContent() {
         setWarehouseAssignments(assignsMap);
         localStorage.setItem("digiscale_cached_warehouse_assignments", JSON.stringify(assignsMap));
       }
-      
+
       await refreshAllProducts(userId);
     } catch (err) {
       console.error("Failed to fetch warehouse data from Supabase:", err);
@@ -318,26 +318,26 @@ function CollectionsPageContent() {
       }
       const cachedCols = localStorage.getItem("digiscale_cached_collections");
       if (cachedCols) {
-        try { 
-          setCollections(JSON.parse(cachedCols)); 
+        try {
+          setCollections(JSON.parse(cachedCols));
           setLoading(false);
-        } catch(e) {}
+        } catch (e) { }
       }
       const cachedProds = localStorage.getItem("digiscale_cached_all_products");
       if (cachedProds) {
-        try { setAllProducts(JSON.parse(cachedProds)); } catch(e) {}
+        try { setAllProducts(JSON.parse(cachedProds)); } catch (e) { }
       }
       const cachedRows = localStorage.getItem("digiscale_cached_warehouse_rows");
       if (cachedRows) {
-        try { setWarehouseRows(JSON.parse(cachedRows)); } catch(e) {}
+        try { setWarehouseRows(JSON.parse(cachedRows)); } catch (e) { }
       }
       const cachedSlots = localStorage.getItem("digiscale_cached_warehouse_slots");
       if (cachedSlots) {
-        try { setWarehouseSlots(JSON.parse(cachedSlots)); } catch(e) {}
+        try { setWarehouseSlots(JSON.parse(cachedSlots)); } catch (e) { }
       }
       const cachedAssigns = localStorage.getItem("digiscale_cached_warehouse_assignments");
       if (cachedAssigns) {
-        try { setWarehouseAssignments(JSON.parse(cachedAssigns)); } catch(e) {}
+        try { setWarehouseAssignments(JSON.parse(cachedAssigns)); } catch (e) { }
       }
     }
 
@@ -348,7 +348,7 @@ function CollectionsPageContent() {
           const uId = profile.id.toString();
           setCurrentUserId(uId);
           localStorage.setItem("digiscale_cached_user_id", uId);
-          
+
           // Fetch fresh isolated data from Supabase using this user ID!
           fetchCollections(uId);
           fetchWarehouseData(uId);
@@ -358,7 +358,7 @@ function CollectionsPageContent() {
         console.error("Auth error on mount:", err);
         setLoading(false);
       });
-    
+
     // Close card dropdowns on click outside
     const handleOutsideClick = () => setActiveDropdownId(null);
     window.addEventListener("click", handleOutsideClick);
@@ -381,7 +381,7 @@ function CollectionsPageContent() {
       if (colParam) {
         supabase.from('collections').select('*').eq('id', colParam).single().then(({ data }) => {
           if (data && (!selectedCol || selectedCol.id !== colParam)) {
-             handleOpenCollectionDetail(data, true);
+            handleOpenCollectionDetail(data, true);
           }
         });
       } else {
@@ -430,7 +430,7 @@ function CollectionsPageContent() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-        
+
       if (error) throw error;
       if (data) {
         // Map created_at to createdAt for frontend UI
@@ -455,13 +455,13 @@ function CollectionsPageContent() {
     try {
       setIsCreating(true);
       const newId = 'COL-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-      
+
       const { error } = await supabase
         .from('collections')
         .insert([{ id: newId, name: newCollectionName.trim(), user_id: currentUserId }]);
-        
+
       if (error) throw error;
-      
+
       const newCol: Collection = {
         id: newId,
         name: newCollectionName.trim(),
@@ -483,7 +483,7 @@ function CollectionsPageContent() {
 
   const handleDeleteCollection = async (colId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     setConfirmModal({
       isOpen: true,
       title: "Delete Collection",
@@ -494,7 +494,7 @@ function CollectionsPageContent() {
         try {
           const { error } = await supabase.from('collections').delete().eq('id', colId);
           if (error) throw error;
-          
+
           setCollections((prev) => prev.filter((c) => c.id !== colId));
         } catch (err) {
           console.error("Failed to delete project on Supabase:", err);
@@ -518,7 +518,7 @@ function CollectionsPageContent() {
       setIsRenaming(true);
       const { error } = await supabase.from('collections').update({ name: newName }).eq('id', colId);
       if (error) throw error;
-      
+
       setCollections((prev) => prev.map((c) => (c.id === colId ? { ...c, name: newName } : c)));
     } catch (err) {
       console.error("Failed to rename project on Supabase:", err);
@@ -535,13 +535,13 @@ function CollectionsPageContent() {
     setSelectedCol(col);
     setDetailImages([]);
     setActiveTab("products");
-    
+
     if (!skipPushState && typeof window !== "undefined") {
       window.history.pushState(null, "", "?tab=collections&colId=" + col.id);
     }
     await fetchProductsForCollection(col.id);
   };
-  
+
   const fetchProductsForCollection = async (collectionId: string) => {
     try {
       setLoadingDetail(true);
@@ -552,16 +552,16 @@ function CollectionsPageContent() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       if (data) {
         const catalogProducts = data.filter(p => !p.id.startsWith('AST-'));
         const assetProducts = data.filter(p => p.id.startsWith('AST-')).map(p => ({
-            id: p.id,
-            processed_path: p.photoUrl,
-            name: p.name,
-            created_at: p.created_at
+          id: p.id,
+          processed_path: p.photoUrl,
+          name: p.name,
+          created_at: p.created_at
         }));
-        
+
         const mappedProducts: Product[] = catalogProducts.map(p => ({
           id: p.id,
           name: p.name,
@@ -627,13 +627,13 @@ function CollectionsPageContent() {
     try {
       const { error } = await supabase.from('products').insert([{ id: newId, ...productPayload }]);
       if (error) throw error;
-      
+
       const newProd: Product = {
         id: newId,
         ...productPayload,
         createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       };
-      
+
       setProducts(prev => [newProd, ...prev]);
       setDraftProducts(prev => prev.filter((d) => d !== draft));
 
@@ -657,7 +657,7 @@ function CollectionsPageContent() {
         }
         setDetailImages((prev) => prev.filter(img => img.processed_path !== draft.photoUrl));
       }
-      
+
       await refreshAllProducts(currentUserId || "");
     } catch (err: any) {
       console.error("Failed to save product:", err?.message || err);
@@ -696,7 +696,7 @@ function CollectionsPageContent() {
         .from('products')
         .update(productPayload)
         .eq('id', editingProductRowId);
-        
+
       if (error) throw error;
 
       setProducts((prev) =>
@@ -734,7 +734,7 @@ function CollectionsPageContent() {
 
       setEditingProductRowId(null);
       setEditingProductState(null);
-      
+
       await refreshAllProducts(currentUserId || "");
     } catch (err) {
       console.error("Failed to update product:", err);
@@ -774,9 +774,9 @@ function CollectionsPageContent() {
     ];
 
     const sampleRows = [
-      ["Silk Saree Premium",  "https://example.com/saree.jpg", "24", "Royal Blue, Navy",    "5.5 meters", "12dzn", "950",  "120", "A-1-upper"],
-      ["Cotton Dupatta",      "",                              "12", "Red, Green, Yellow",  "2.5 meters", "",      "A1",   "200", ""],
-      ["Embroidered Kurti",   "https://example.com/kurti.jpg", "6",  "Green",               "3.0 meters", "",      "PC-12","50",  "B-2-lower"],
+      ["Silk Saree Premium", "https://example.com/saree.jpg", "24", "Royal Blue, Navy", "5.5 meters", "12dzn", "950", "120", "A-1-upper"],
+      ["Cotton Dupatta", "", "12", "Red, Green, Yellow", "2.5 meters", "", "A1", "200", ""],
+      ["Embroidered Kurti", "https://example.com/kurti.jpg", "6", "Green", "3.0 meters", "", "PC-12", "50", "B-2-lower"],
     ];
 
     // ── XML Escape helper ─────────────────────────────────────────────
@@ -963,14 +963,14 @@ ${rows}
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const colIdx = (keys: string[]) => headerRow.findIndex(h => keys.some(k => normalize(h).includes(normalize(k))));
 
-      const nameIdx   = colIdx(["name", "product"]);
+      const nameIdx = colIdx(["name", "product"]);
       const cartonIdx = colIdx(["carton", "ctn", "pack"]);
-      const colorIdx  = colIdx(["color", "colour"]);
+      const colorIdx = colIdx(["color", "colour"]);
       const lengthIdx = colIdx(["length", "dimension", "len", "dim"]);
-      const descIdx   = colIdx(["desc", "description", "note"]);
-      const rateIdx   = colIdx(["price", "rate", "code"]);
-      const stockIdx  = colIdx(["stock", "quantity", "unit", "qty"]);
-      const imageIdx  = colIdx(["image", "photo", "url", "picture"]);
+      const descIdx = colIdx(["desc", "description", "note"]);
+      const rateIdx = colIdx(["price", "rate", "code"]);
+      const stockIdx = colIdx(["stock", "quantity", "unit", "qty"]);
+      const imageIdx = colIdx(["image", "photo", "url", "picture"]);
       const warehouseIdx = colIdx(["warehouse", "location", "shelf"]);
 
       let imported = 0; let errors = 0;
@@ -983,15 +983,15 @@ ${rows}
         newProducts.push({
           id: `excel_${Date.now()}_${i}`,
           name,
-          stock:       stockIdx  >= 0 ? (parseInt(cols[stockIdx])  || 0) : 0,
-          cartonQty:   cartonIdx >= 0 ? (parseInt(cols[cartonIdx]) || 1) : 1,
-          rate:        rateIdx   >= 0 ? (cols[rateIdx]?.trim()   || "") : "",
-          length:      lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "") : "",
-          color:       colorIdx  >= 0 ? (cols[colorIdx]?.trim()  || "") : "",
-          description: descIdx   >= 0 ? (cols[descIdx]?.trim()   || "") : "",
-          photoUrl:    imageByRow[i] || excelImageUrl || "",
-          warehouse:   warehouseIdx >= 0 ? (cols[warehouseIdx]?.trim() || "") : "",
-          createdAt:   new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          stock: stockIdx >= 0 ? (parseInt(cols[stockIdx]) || 0) : 0,
+          cartonQty: cartonIdx >= 0 ? (parseInt(cols[cartonIdx]) || 1) : 1,
+          rate: rateIdx >= 0 ? (cols[rateIdx]?.trim() || "") : "",
+          length: lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "") : "",
+          color: colorIdx >= 0 ? (cols[colorIdx]?.trim() || "") : "",
+          description: descIdx >= 0 ? (cols[descIdx]?.trim() || "") : "",
+          photoUrl: imageByRow[i] || excelImageUrl || "",
+          warehouse: warehouseIdx >= 0 ? (cols[warehouseIdx]?.trim() || "") : "",
+          createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         });
         imported++;
       });
@@ -1023,7 +1023,7 @@ ${rows}
         try {
           const { error } = await supabase.from('products').insert(productPayloads);
           if (error) throw error;
-          
+
           // Bulk assign to warehouse
           const assignments = productPayloads.filter(p => p.warehouse).map(p => ({
             location_key: p.warehouse,
@@ -1254,7 +1254,7 @@ ${rows}
         try {
           const { error } = await supabase.from('products').delete().eq('id', productId);
           if (error) throw error;
-          
+
           setProducts((prev) => prev.filter((p) => p.id !== productId));
           await refreshAllProducts(currentUserId || "");
         } catch (err) {
@@ -1296,20 +1296,20 @@ ${rows}
   const handleConfirmAddSlot = async () => {
     const { row, defaultName } = addSlotModal;
     let name = addSlotName.trim() ? addSlotName.trim() : defaultName.split("-")[1];
-    
+
     // If user typed e.g., "A-11", strip the "A-" part so it's just "11"
     if (name.toUpperCase().startsWith(`${row.toUpperCase()}-`)) {
       name = name.substring(row.length + 1);
     }
-    
+
     const slotVal = isNaN(Number(name)) ? name : Number(name);
-    
+
     // Validate slotVal is a valid number, since Supabase expects an integer for slot_number
     if (isNaN(Number(slotVal))) {
       alert("Slot must be a valid number.");
       return;
     }
-    
+
     const current = getSlotsForRow(row);
     // Avoid duplicates
     if (current.includes(slotVal as any)) {
@@ -1348,11 +1348,11 @@ ${rows}
   const handleAddRow = async () => {
     const name = addRowName.trim().toUpperCase() || String.fromCharCode(65 + warehouseRows.length);
     if (warehouseRows.includes(name)) return;
-    
+
     try {
       const { error } = await supabase.from('warehouse_rows').insert([{ id: name, user_id: currentUserId }]);
       if (error) throw error;
-      
+
       const updated = [...warehouseRows, name];
       setWarehouseRows(updated);
     } catch (err) {
@@ -1379,7 +1379,7 @@ ${rows}
       });
       return;
     }
-    
+
     setConfirmModal({
       isOpen: true,
       title: "Remove Row",
@@ -1390,7 +1390,7 @@ ${rows}
         try {
           const { error } = await supabase.from('warehouse_rows').delete().eq('id', row);
           if (error) throw error;
-          
+
           const updated = warehouseRows.filter(r => r !== row);
           setWarehouseRows(updated);
           if (expandedRow === row) setExpandedRow(null);
@@ -1409,7 +1409,7 @@ ${rows}
     const locationUpper = `${row}-${slot}-upper`;
     const locationLower = `${row}-${slot}-lower`;
     const hasProducts = (warehouseAssignments[locationUpper]?.length || 0) > 0 ||
-                        (warehouseAssignments[locationLower]?.length || 0) > 0;
+      (warehouseAssignments[locationLower]?.length || 0) > 0;
     if (hasProducts) {
       setConfirmModal({
         isOpen: true,
@@ -1421,7 +1421,7 @@ ${rows}
       });
       return;
     }
-    
+
     setConfirmModal({
       isOpen: true,
       title: "Remove Slot",
@@ -1432,7 +1432,7 @@ ${rows}
         try {
           const { error } = await supabase.from('warehouse_slots').delete().eq('id', `${row}-${slot}`);
           if (error) throw error;
-          
+
           const current = getSlotsForRow(row);
           const updated = { ...warehouseSlots, [row]: current.filter(s => s !== slot) };
           setWarehouseSlots(updated);
@@ -1497,21 +1497,21 @@ ${rows}
         .delete()
         .eq('location_key', locId)
         .eq('product_id', productId);
-        
+
       if (error) throw error;
-      
+
       const list = warehouseAssignments[locId] || [];
       const updated = list.filter((item) => item.productId !== productId);
-      
+
       const newAssignments = {
         ...warehouseAssignments,
         [locId]: updated
       };
-      
+
       if (updated.length === 0) {
         delete newAssignments[locId];
       }
-      
+
       setWarehouseAssignments(newAssignments);
     } catch (err) {
       console.error("Failed to remove product from location:", err);
@@ -1528,7 +1528,7 @@ ${rows}
     if (list.some((item) => item.productId === productId)) {
       return;
     }
-    
+
     try {
       const { error } = await supabase.from('warehouse_assignments').insert([{
         location_key: locId,
@@ -1537,13 +1537,13 @@ ${rows}
         user_id: currentUserId
       }]);
       if (error) throw error;
-      
+
       const updated = [...list, { productId, collectionId }];
       const newAssignments = {
         ...warehouseAssignments,
         [locId]: updated
       };
-      
+
       setWarehouseAssignments(newAssignments);
     } catch (err) {
       console.error("Failed to assign product to location:", err);
@@ -1579,13 +1579,13 @@ ${rows}
   const query = globalSearchQuery.trim().toLowerCase();
   const filteredGlobalProducts = query
     ? globalProducts.filter((product) => {
-        return (
-          product.name.toLowerCase().includes(query) ||
-          (product.rate && String(product.rate).toLowerCase().includes(query)) ||
-          (product.color && String(product.color).toLowerCase().includes(query)) ||
-          product.collectionName.toLowerCase().includes(query)
-        );
-      })
+      return (
+        product.name.toLowerCase().includes(query) ||
+        (product.rate && String(product.rate).toLowerCase().includes(query)) ||
+        (product.color && String(product.color).toLowerCase().includes(query)) ||
+        product.collectionName.toLowerCase().includes(query)
+      );
+    })
     : [];
 
   // Render search results UI
@@ -1642,7 +1642,7 @@ ${rows}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => {
                         const targetCol = collections.find((col) => col.id.toString() === product.collectionId.toString());
                         if (targetCol) {
@@ -1784,11 +1784,10 @@ ${rows}
 
           {/* Excel Import Result Banner */}
           {showImportResult && excelImportStatus && (
-            <div className={`flex items-center justify-between gap-3 px-5 py-3 rounded-2xl text-xs font-semibold border animate-in fade-in slide-in-from-top-1 ${
-              excelImportStatus.errors > 0
+            <div className={`flex items-center justify-between gap-3 px-5 py-3 rounded-2xl text-xs font-semibold border animate-in fade-in slide-in-from-top-1 ${excelImportStatus.errors > 0
                 ? "bg-amber-50 border-amber-200 text-amber-800"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"
-            }`}>
+              }`}>
               <span>
                 ✅ Successfully imported <strong>{excelImportStatus.count}</strong> product{excelImportStatus.count !== 1 ? "s" : ""}
                 {excelImportStatus.errors > 0 && ` · ⚠️ ${excelImportStatus.errors} row(s) skipped (missing Product Name)`}
@@ -1801,28 +1800,26 @@ ${rows}
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab("products")}
-              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${
-                activeTab === "products"
+              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "products"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-405 hover:text-slate-700"
-              }`}
+                }`}
             >
               Products Catalog ({filteredProducts.length})
             </button>
             <button
               onClick={() => setActiveTab("assets")}
-              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${
-                activeTab === "assets"
+              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "assets"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-405 hover:text-slate-700"
-              }`}
+                }`}
             >
               Workspace Images ({detailImages.length})
             </button>
           </div>
 
           {activeTab === "products" && (
-            <div 
+            <div
               className="space-y-4 rounded-2xl transition-all duration-200"
               onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
               onDragLeave={(ev) => { ev.currentTarget.classList.remove("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
@@ -1830,7 +1827,7 @@ ${rows}
                 ev.preventDefault();
                 ev.currentTarget.classList.remove("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4");
                 const files = Array.from(ev.dataTransfer.files).filter(f => f.type.startsWith("image/"));
-                
+
                 if (files.length > 0) {
                   files.forEach(file => {
                     const reader = new FileReader();
@@ -1856,9 +1853,9 @@ ${rows}
                   // Try to get image from HTML (dragged from another tab)
                   const htmlData = ev.dataTransfer.getData("text/html");
                   const uriData = ev.dataTransfer.getData("text/uri-list") || ev.dataTransfer.getData("URL");
-                  
+
                   const droppedImages: string[] = [];
-                  
+
                   if (htmlData) {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlData, "text/html");
@@ -1876,7 +1873,7 @@ ${rows}
                       droppedImages.push(uriData);
                     }
                   }
-                  
+
                   if (droppedImages.length > 0) {
                     droppedImages.forEach(src => {
                       setDraftProducts(prev => [{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: src, warehouse: "" }, ...prev]);
@@ -1937,7 +1934,7 @@ ${rows}
                           <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400">
                             <td className="py-3 px-4">
                               <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
-                                  <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
+                                <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
                                     const reader = new FileReader();
@@ -2012,13 +2009,13 @@ ${rows}
                               <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.length || ""} onChange={(e) => handleUpdateDraft(idx, "length", e.target.value)} />
                             </td>
                             <td className="py-3 px-4">
-                              <button 
-                                type="button" 
+                              <button
+                                type="button"
                                 onClick={() => setOpenLocationPicker({ type: 'draft', idx })}
                                 className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
                               >
-                                {draft.warehouse 
-                                  ? draft.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") 
+                                {draft.warehouse
+                                  ? draft.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ")
                                   : "Select Location..."}
                               </button>
                             </td>
@@ -2036,7 +2033,7 @@ ${rows}
                         ))}
                         {filteredProducts.map((prod) => {
                           const cartonCount = prod.cartonQty > 0 ? Math.ceil(prod.stock / prod.cartonQty) : 0;
-                          
+
                           if (editingProductRowId === prod.id && editingProductState) {
                             return (
                               <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400">
@@ -2111,13 +2108,13 @@ ${rows}
                                   <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.length || ""} onChange={(e) => handleUpdateEditState("length", e.target.value)} />
                                 </td>
                                 <td className="py-3 px-4">
-                                  <button 
-                                    type="button" 
+                                  <button
+                                    type="button"
                                     onClick={() => setOpenLocationPicker({ type: 'edit' })}
                                     className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
                                   >
-                                    {editingProductState.warehouse 
-                                      ? editingProductState.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") 
+                                    {editingProductState.warehouse
+                                      ? editingProductState.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ")
                                       : "Select Location..."}
                                   </button>
                                 </td>
@@ -2125,7 +2122,7 @@ ${rows}
                                   <input type="number" placeholder="Stock" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.stock || ""} onChange={(e) => handleUpdateEditState("stock", e.target.value)} />
                                 </td>
                                 <td className="py-3 px-4 font-black text-right">
-                                  ₹{( (editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (parseFloat(editingProductState.rate || "0") || 0) ).toLocaleString()}
+                                  ₹{((editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (parseFloat(editingProductState.rate || "0") || 0)).toLocaleString()}
                                 </td>
                                 <td className="py-3 px-4">
                                   <div className="flex gap-2 justify-center">
@@ -2312,570 +2309,557 @@ ${rows}
 
               {currentTopTab === "collections" ? (
                 <>
-              {/* Toolbar */}
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-                {/* Search Inputs Row */}
-                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
-                  {/* Collections Search */}
-                  <div className="relative w-full sm:w-[35%]">
-                    <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search collections..."
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                    />
-                  </div>
-                  {/* Global Finder */}
-                  <div className="relative w-full sm:w-[65%]">
-                    <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
-                    <input
-                      type="text"
-                      value={globalSearchQuery}
-                      onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                      placeholder="Global Finder (Search all products)..."
-                      className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
-                    />
-                    {globalSearchQuery && (
-                      <button
-                        onClick={() => setGlobalSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* View Toggle and Action Button */}
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`rounded-lg p-2.5 transition ${
-                        viewMode === "grid"
-                          ? "bg-slate-100 text-slate-900"
-                          : "text-slate-400 hover:text-slate-600"
-                      }`}
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </button>
-
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`rounded-lg p-2.5 transition ${
-                        viewMode === "list"
-                          ? "bg-slate-100 text-slate-900"
-                          : "text-slate-400 hover:text-slate-600"
-                      }`}
-                    >
-                      <List className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Collection
-                  </button>
-                </div>
-              </div>
-
-              {globalSearchQuery.trim() !== "" ? (
-                renderGlobalSearchResults()
-              ) : (
-                <>
-                {filteredCollections.length === 0 ? (
-                  <div className="mt-16 flex flex-col items-center text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                      <Folder className="h-8 w-8 text-slate-400" />
+                  {/* Toolbar */}
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+                    {/* Search Inputs Row */}
+                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
+                      {/* Collections Search */}
+                      <div className="relative w-full sm:w-[35%]">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Search collections..."
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                        />
+                      </div>
+                      {/* Global Finder */}
+                      <div className="relative w-full sm:w-[65%]">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
+                        <input
+                          type="text"
+                          value={globalSearchQuery}
+                          onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                          placeholder="Global Finder (Search all products)..."
+                          className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
+                        />
+                        {globalSearchQuery && (
+                          <button
+                            onClick={() => setGlobalSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                      No collections found
-                    </h3>
-                    <p className="mt-2 text-slate-550">
-                      {search
-                        ? "Try a different search term."
-                        : "Create your first collection to catalog multiple items."}
-                    </p>
-                  </div>
-                ) : (
-                  <div
-                    className={`mt-6 ${
-                      viewMode === "grid"
-                        ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]"
-                        : "space-y-3"
-                    }`}
-                  >
-                    {filteredCollections.map((col) => {
-                      // Format creation date
-                      const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
 
-                      // Get products count for this collection from Supabase allProducts state
-                      const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
-
-                      return viewMode === "grid" ? (
-                        /* Grid Card */
-                        <div
-                          key={col.id}
-                          onClick={() => handleOpenCollectionDetail(col)}
-                          className="group relative flex flex-col rounded-[22px] border border-slate-200/70 bg-white p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto"
+                    {/* View Toggle and Action Button */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                        <button
+                          onClick={() => setViewMode("grid")}
+                          className={`rounded-lg p-2.5 transition ${viewMode === "grid"
+                              ? "bg-slate-100 text-slate-900"
+                              : "text-slate-400 hover:text-slate-600"
+                            }`}
                         >
-                          {/* Folder Icon / Preview Area */}
-                          <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
-                            {/* Decorative background blur */}
-                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[16px]" />
-                            
-                            <div className="relative transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1 z-10">
-                                <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                <Folder className="relative h-14 w-14 text-blue-500/70 fill-blue-50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
-                            </div>
-                            
-                            {/* Options Button */}
-                            <div className="absolute top-2.5 right-2.5 z-50">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
-                                  }}
-                                  className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-400 opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </button>
-                                
-                                {activeDropdownId === col.id && (
-                                  <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50">
+                          <Grid3X3 className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          onClick={() => setViewMode("list")}
+                          className={`rounded-lg p-2.5 transition ${viewMode === "list"
+                              ? "bg-slate-100 text-slate-900"
+                              : "text-slate-400 hover:text-slate-600"
+                            }`}
+                        >
+                          <List className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                        New Collection
+                      </button>
+                    </div>
+                  </div>
+
+                  {globalSearchQuery.trim() !== "" ? (
+                    renderGlobalSearchResults()
+                  ) : (
+                    <>
+                      {filteredCollections.length === 0 ? (
+                        <div className="mt-16 flex flex-col items-center text-center">
+                          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                            <Folder className="h-8 w-8 text-slate-400" />
+                          </div>
+                          <h3 className="mt-4 text-lg font-semibold text-slate-900">
+                            No collections found
+                          </h3>
+                          <p className="mt-2 text-slate-550">
+                            {search
+                              ? "Try a different search term."
+                              : "Create your first collection to catalog multiple items."}
+                          </p>
+                        </div>
+                      ) : (
+                        <div
+                          className={`mt-6 ${viewMode === "grid"
+                              ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]"
+                              : "space-y-3"
+                            }`}
+                        >
+                          {filteredCollections.map((col) => {
+                            // Format creation date
+                            const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
+
+                            // Get products count for this collection from Supabase allProducts state
+                            const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
+
+                            return viewMode === "grid" ? (
+                              /* Grid Card */
+                              <div
+                                key={col.id}
+                                onClick={() => handleOpenCollectionDetail(col)}
+                                className="group relative flex flex-col rounded-[22px] border border-slate-200/70 bg-white p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto"
+                              >
+                                {/* Folder Icon / Preview Area */}
+                                <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
+                                  {/* Decorative background blur */}
+                                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[16px]" />
+
+                                  <div className="relative transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1 z-10">
+                                    <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <Folder className="relative h-14 w-14 text-blue-500/70 fill-blue-50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
+                                  </div>
+
+                                  {/* Options Button */}
+                                  <div className="absolute top-2.5 right-2.5 z-50">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setRenamingCol(col);
-                                        setRenameValue(col.name);
-                                        setActiveDropdownId(null);
+                                        setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
                                       }}
-                                      className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                                      className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-400 opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
                                     >
-                                      Rename
+                                      <MoreHorizontal className="h-4 w-4" />
                                     </button>
-                                    <button
-                                      onClick={(e) => handleDeleteCollection(col.id, e)}
-                                      className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition mt-0.5"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                            </div>
-                          </div>
 
-                          {/* Info Area */}
-                          <div className="mt-4 px-2.5 flex flex-col justify-end shrink-0 pb-1 z-20">
-                            <div>
-                              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-[15px] truncate pr-2">
-                                {col.name}
-                              </h3>
-                              <div className="mt-1 flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
-                                  <span className="flex items-center gap-1.5">
-                                    <div className="h-[4.5px] w-[4.5px] rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors" />
-                                    {productCount} {productCount === 1 ? 'product' : 'products'}
-                                  </span>
-                                  <span className="text-slate-300 font-normal">·</span>
-                                  <span>{dateStr}</span>
-                                </div>
-                                <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
-                                  <ChevronRight className="h-3.5 w-3.5" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        /* List Row */
-                        <div
-                          key={col.id}
-                          onClick={() => handleOpenCollectionDetail(col)}
-                          className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 transition hover:border-blue-200 hover:shadow-sm cursor-pointer"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
-                              <Folder className="h-6 w-6 text-blue-550/80 fill-blue-50/50" />
-                            </div>
-
-                            <div>
-                              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                {col.name}
-                              </h3>
-
-                              <p className="text-xs text-slate-400 font-semibold">
-                                {productCount} products · {dateStr}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
-                                }}
-                                className="rounded-lg p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
-
-                              {activeDropdownId === col.id && (
-                                <div className="absolute right-0 top-full mt-1 z-10 w-32 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRenamingCol(col);
-                                      setRenameValue(col.name);
-                                      setActiveDropdownId(null);
-                                    }}
-                                    className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-                                  >
-                                    Rename
-                                  </button>
-                                  <button
-                                    onClick={(e) => handleDeleteCollection(col.id, e)}
-                                    className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-655 hover:bg-red-50 transition"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-          ) : currentTopTab === "warehouse" ? (
-            /* WAREHOUSE — REDESIGNED */
-            <>
-              {/* Warehouse Toolbar */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 mt-2">
-                <div className="relative w-full max-w-md">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
-                  <input
-                    type="text"
-                    value={globalSearchQuery}
-                    onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                    placeholder="Global Finder (Search all products)..."
-                    className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
-                  />
-                  {globalSearchQuery && (
-                    <button
-                      onClick={() => setGlobalSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Hidable warehouse content */}
-              {globalSearchQuery.trim() !== "" ? (
-                renderGlobalSearchResults()
-              ) : (
-                <div className="flex gap-6 items-start">
-
-              {/* ── LEFT: Shelf row list ── */}
-              <div className="flex-1 min-w-0 space-y-2">
-                {rows.map((row) => {
-                  const isExpanded = expandedRow === row;
-                  const assignedCount = getAssignedCountForRow(row);
-                  const rowSlots = getSlotsForRow(row);
-                  const hasItems = assignedCount > 0;
-
-                  return (
-                    <div
-                      key={row}
-                      className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 ${
-                        isExpanded
-                          ? "border-blue-200 shadow-md shadow-blue-50"
-                          : "border-slate-200 shadow-sm hover:border-slate-300"
-                      }`}
-                    >
-                      {/* Row Header */}
-                      <div
-                        onClick={() => setExpandedRow(isExpanded ? null : row)}
-                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/40 transition text-left cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition ${
-                            isExpanded
-                              ? "bg-blue-600 text-white shadow-sm shadow-blue-200"
-                              : "bg-blue-50 border border-blue-100 text-blue-600"
-                          }`}>
-                            {row}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm leading-tight">Row {row} Shelf</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-slate-400 font-medium">{rowSlots.length} slots</span>
-                              {hasItems && (
-                                <>
-                                  <span className="text-slate-300">·</span>
-                                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
-                                    {assignedCount} stocked
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider transition ${
-                            isExpanded ? "text-blue-500" : "text-slate-400"
-                          }`}>
-                            {isExpanded ? "Collapse" : "Expand"}
-                          </span>
-                          <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${
-                            isExpanded ? "rotate-90 text-blue-500" : "text-slate-300"
-                          }`} />
-                          
-                          {/* Row Delete Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveRow(row);
-                            }}
-                            className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition shrink-0 cursor-pointer"
-                            title={`Delete Row ${row}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Slot Grid */}
-                      {isExpanded && (
-                        <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/60 to-white px-5 pt-4 pb-5">
-                          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
-                            {rowSlots.map((slot) => {
-                              const locationId = `${row}-${slot}`;
-                              const isSelected = selectedLocation === locationId;
-                              const itemCount = getSlotItemCount(row, slot);
-                              const isFilled = itemCount > 0;
-
-                              return (
-                                <div key={locationId} className="relative group/slot">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedLocation(locationId);
-                                      setSelectedShelfZone("upper");
-                                      if (typeof window !== "undefined") {
-                                        window.history.pushState(null, "", `?tab=warehouse&locId=${locationId}`);
-                                      }
-                                    }}
-                                    className={`w-full flex flex-col items-center justify-center py-4 px-1 rounded-xl border-2 text-center transition-all duration-150 active:scale-95 cursor-pointer ${
-                                      isSelected
-                                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
-                                        : isFilled
-                                        ? "bg-emerald-50 border-emerald-200 text-emerald-800 hover:border-emerald-400"
-                                        : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/30"
-                                    }`}
-                                  >
-                                    <span className="text-[11px] font-black tracking-wide leading-none">{locationId}</span>
-                                    <span className={`text-[8px] font-bold mt-2 px-1.5 py-0.5 rounded-full leading-none ${
-                                      isSelected
-                                        ? "bg-white/20 text-white"
-                                        : isFilled
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "bg-slate-100 text-slate-400"
-                                    }`}>
-                                      {isFilled ? `${itemCount} item${itemCount > 1 ? "s" : ""}` : "empty"}
-                                    </span>
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleRemoveSlot(row, slot); }}
-                                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition shadow-sm hover:bg-red-600 cursor-pointer z-10"
-                                    title={`Remove slot ${locationId}`}
-                                  >
-                                    <Minus className="h-2.5 w-2.5" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-
-                            {/* Add Slot */}
-                            <button
-                              onClick={() => handleAddSlot(row)}
-                              className="flex flex-col items-center justify-center py-4 px-1 rounded-xl border-2 border-dashed border-slate-200 text-slate-300 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/20 transition cursor-pointer active:scale-95"
-                            >
-                              <Plus className="h-4 w-4" />
-                              <span className="text-[8px] font-bold mt-1.5 uppercase tracking-widest">Add</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Add New Row */}
-                <button
-                  onClick={() => { setAddRowName(""); setAddRowModal(true); }}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/10 py-4 transition cursor-pointer active:scale-95"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Add New Row</span>
-                </button>
-              </div>
-
-              {/* ── RIGHT: Slot Detail Panel (40% proportional width) ── */}
-              <div className="w-[380px] shrink-0">
-                <div className="border border-slate-200 rounded-2xl bg-white shadow-sm sticky top-20 overflow-hidden">
-                  {selectedLocation ? (() => {
-                    const zoneLocId = getActiveZoneLocationId();
-                    const zoneProducts = zoneLocId ? getLocationProducts(zoneLocId) : [];
-                    return (
-                      <>
-                        {/* Panel Header gradient */}
-                        <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4">
-                          <span className="text-[9px] font-black uppercase text-blue-200 tracking-widest">Active Slot</span>
-                          <h3 className="text-lg font-black text-white mt-0.5">Shelf {selectedLocation}</h3>
-                        </div>
-
-                        <div className="p-4 space-y-3">
-                          {/* Upper / Lower Toggle */}
-                          <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
-                            <button
-                              onClick={() => setSelectedShelfZone("upper")}
-                              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-                                selectedShelfZone === "upper"
-                                  ? "bg-white text-blue-600 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
-                              }`}
-                            >
-                              <ArrowUp className="h-3.5 w-3.5" />
-                              Upper
-                              <span className={`text-[9px] min-w-[18px] text-center px-1.5 py-0.5 rounded-full font-black ${
-                                selectedShelfZone === "upper" ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-500"
-                              }`}>
-                                {(warehouseAssignments[`${selectedLocation}-upper`] || []).length}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => setSelectedShelfZone("lower")}
-                              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-                                selectedShelfZone === "lower"
-                                  ? "bg-white text-blue-600 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
-                              }`}
-                            >
-                              <ArrowDown className="h-3.5 w-3.5" />
-                              Lower
-                              <span className={`text-[9px] min-w-[18px] text-center px-1.5 py-0.5 rounded-full font-black ${
-                                selectedShelfZone === "lower" ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-500"
-                              }`}>
-                                {(warehouseAssignments[`${selectedLocation}-lower`] || []).length}
-                              </span>
-                            </button>
-                          </div>
-
-                          {/* Assign Button */}
-                          <button
-                            onClick={() => { setAssignSearchQuery(""); setIsAssignModalOpen(true); }}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-sm font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Assign to {selectedShelfZone === "upper" ? "Upper" : "Lower"} Shelf
-                          </button>
-
-                          {/* Product Cards */}
-                          <div className="space-y-2 max-h-[420px] overflow-y-auto">
-                            {zoneProducts.length === 0 ? (
-                              <div className="flex flex-col items-center justify-center text-center py-10">
-                                <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-                                  <Box className="h-6 w-6 text-slate-300" />
-                                </div>
-                                <p className="text-xs font-bold text-slate-700">{selectedShelfZone === "upper" ? "Upper" : "Lower"} shelf is empty</p>
-                                <p className="text-[10px] text-slate-400 mt-1">Assign products using the button above.</p>
-                              </div>
-                            ) : (
-                              zoneProducts.map((prod) => (
-                                <div
-                                  key={prod.id}
-                                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-slate-200 hover:shadow-sm transition cursor-pointer group/card"
-                                  onClick={() => setViewingProduct(prod)}
-                                >
-                                  <div className="h-14 w-14 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                                    {prod.photoUrl ? (
-                                      <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain" />
-                                    ) : (
-                                      <ImageIcon className="h-6 w-6 text-slate-300" />
+                                    {activeDropdownId === col.id && (
+                                      <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setRenamingCol(col);
+                                            setRenameValue(col.name);
+                                            setActiveDropdownId(null);
+                                          }}
+                                          className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                                        >
+                                          Rename
+                                        </button>
+                                        <button
+                                          onClick={(e) => handleDeleteCollection(col.id, e)}
+                                          className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition mt-0.5"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="font-bold text-slate-900 text-xs leading-tight truncate">{prod.name}</h5>
-                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
-                                        {prod.stock} units
-                                      </span>
-                                      {prod.rate && (
-                                        <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
-                                          ₹{prod.rate} {prod.unit_type || "pcs"}
+                                </div>
+
+                                {/* Info Area */}
+                                <div className="mt-4 px-2.5 flex flex-col justify-end shrink-0 pb-1 z-20">
+                                  <div>
+                                    <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-[15px] truncate pr-2">
+                                      {col.name}
+                                    </h3>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                                        <span className="flex items-center gap-1.5">
+                                          <div className="h-[4.5px] w-[4.5px] rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors" />
+                                          {productCount} {productCount === 1 ? 'product' : 'products'}
                                         </span>
+                                        <span className="text-slate-300 font-normal">·</span>
+                                        <span>{dateStr}</span>
+                                      </div>
+                                      <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
+                                        <ChevronRight className="h-3.5 w-3.5" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              /* List Row */
+                              <div
+                                key={col.id}
+                                onClick={() => handleOpenCollectionDetail(col)}
+                                className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 transition hover:border-blue-200 hover:shadow-sm cursor-pointer"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
+                                    <Folder className="h-6 w-6 text-blue-550/80 fill-blue-50/50" />
+                                  </div>
+
+                                  <div>
+                                    <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                      {col.name}
+                                    </h3>
+
+                                    <p className="text-xs text-slate-400 font-semibold">
+                                      {productCount} products · {dateStr}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
+                                      }}
+                                      className="rounded-lg p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </button>
+
+                                    {activeDropdownId === col.id && (
+                                      <div className="absolute right-0 top-full mt-1 z-10 w-32 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setRenamingCol(col);
+                                            setRenameValue(col.name);
+                                            setActiveDropdownId(null);
+                                          }}
+                                          className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                                        >
+                                          Rename
+                                        </button>
+                                        <button
+                                          onClick={(e) => handleDeleteCollection(col.id, e)}
+                                          className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-655 hover:bg-red-50 transition"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : currentTopTab === "warehouse" ? (
+                /* WAREHOUSE — REDESIGNED */
+                <>
+                  {/* Warehouse Toolbar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 mt-2">
+                    <div className="relative w-full max-w-md">
+                      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
+                      <input
+                        type="text"
+                        value={globalSearchQuery}
+                        onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                        placeholder="Global Finder (Search all products)..."
+                        className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
+                      />
+                      {globalSearchQuery && (
+                        <button
+                          onClick={() => setGlobalSearchQuery("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Hidable warehouse content */}
+                  {globalSearchQuery.trim() !== "" ? (
+                    renderGlobalSearchResults()
+                  ) : (
+                    <div className="flex gap-6 items-start">
+
+                      {/* ── LEFT: Shelf row list ── */}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {rows.map((row) => {
+                          const isExpanded = expandedRow === row;
+                          const assignedCount = getAssignedCountForRow(row);
+                          const rowSlots = getSlotsForRow(row);
+                          const hasItems = assignedCount > 0;
+
+                          return (
+                            <div
+                              key={row}
+                              className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 ${isExpanded
+                                  ? "border-blue-200 shadow-md shadow-blue-50"
+                                  : "border-slate-200 shadow-sm hover:border-slate-300"
+                                }`}
+                            >
+                              {/* Row Header */}
+                              <div
+                                onClick={() => setExpandedRow(isExpanded ? null : row)}
+                                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/40 transition text-left cursor-pointer select-none"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition ${isExpanded
+                                      ? "bg-blue-600 text-white shadow-sm shadow-blue-200"
+                                      : "bg-blue-50 border border-blue-100 text-blue-600"
+                                    }`}>
+                                    {row}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-900 text-sm leading-tight">Row {row} Shelf</h4>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] text-slate-400 font-medium">{rowSlots.length} slots</span>
+                                      {hasItems && (
+                                        <>
+                                          <span className="text-slate-300">·</span>
+                                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                                            {assignedCount} stocked
+                                          </span>
+                                        </>
                                       )}
                                     </div>
                                   </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[10px] font-bold uppercase tracking-wider transition ${isExpanded ? "text-blue-500" : "text-slate-400"
+                                    }`}>
+                                    {isExpanded ? "Collapse" : "Expand"}
+                                  </span>
+                                  <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-90 text-blue-500" : "text-slate-300"
+                                    }`} />
+
+                                  {/* Row Delete Button */}
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
-                                    className="p-1.5 rounded-lg text-slate-350 hover:text-blue-600 hover:bg-blue-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer animate-fade-in"
-                                    title="Edit Product"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveRow(row);
+                                    }}
+                                    className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition shrink-0 cursor-pointer"
+                                    title={`Delete Row ${row}`}
                                   >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); zoneLocId && handleRemoveProductFromLocation(zoneLocId, prod.id); }}
-                                    className="p-1.5 rounded-lg text-slate-350 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer"
-                                    title="Remove"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-4 w-4" />
                                   </button>
                                 </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })() : (
-                    <div className="flex flex-col items-center justify-center text-center p-10 min-h-[300px]">
-                      <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                        <Box className="h-7 w-7 text-slate-300" />
+                              </div>
+
+                              {/* Slot Grid */}
+                              {isExpanded && (
+                                <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/60 to-white px-5 pt-4 pb-5">
+                                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+                                    {rowSlots.map((slot) => {
+                                      const locationId = `${row}-${slot}`;
+                                      const isSelected = selectedLocation === locationId;
+                                      const itemCount = getSlotItemCount(row, slot);
+                                      const isFilled = itemCount > 0;
+
+                                      return (
+                                        <div key={locationId} className="relative group/slot">
+                                          <button
+                                            onClick={() => {
+                                              setSelectedLocation(locationId);
+                                              setSelectedShelfZone("upper");
+                                              if (typeof window !== "undefined") {
+                                                window.history.pushState(null, "", `?tab=warehouse&locId=${locationId}`);
+                                              }
+                                            }}
+                                            className={`w-full flex flex-col items-center justify-center py-4 px-1 rounded-xl border-2 text-center transition-all duration-150 active:scale-95 cursor-pointer ${isSelected
+                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                                                : isFilled
+                                                  ? "bg-emerald-50 border-emerald-200 text-emerald-800 hover:border-emerald-400"
+                                                  : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/30"
+                                              }`}
+                                          >
+                                            <span className="text-[11px] font-black tracking-wide leading-none">{locationId}</span>
+                                            <span className={`text-[8px] font-bold mt-2 px-1.5 py-0.5 rounded-full leading-none ${isSelected
+                                                ? "bg-white/20 text-white"
+                                                : isFilled
+                                                  ? "bg-emerald-100 text-emerald-700"
+                                                  : "bg-slate-100 text-slate-400"
+                                              }`}>
+                                              {isFilled ? `${itemCount} item${itemCount > 1 ? "s" : ""}` : "empty"}
+                                            </span>
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleRemoveSlot(row, slot); }}
+                                            className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition shadow-sm hover:bg-red-600 cursor-pointer z-10"
+                                            title={`Remove slot ${locationId}`}
+                                          >
+                                            <Minus className="h-2.5 w-2.5" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+
+                                    {/* Add Slot */}
+                                    <button
+                                      onClick={() => handleAddSlot(row)}
+                                      className="flex flex-col items-center justify-center py-4 px-1 rounded-xl border-2 border-dashed border-slate-200 text-slate-300 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/20 transition cursor-pointer active:scale-95"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                      <span className="text-[8px] font-bold mt-1.5 uppercase tracking-widest">Add</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Add New Row */}
+                        <button
+                          onClick={() => { setAddRowName(""); setAddRowModal(true); }}
+                          className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/10 py-4 transition cursor-pointer active:scale-95"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Add New Row</span>
+                        </button>
                       </div>
-                      <h4 className="font-bold text-slate-800 text-sm">Select a shelf slot</h4>
-                      <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed max-w-[200px]">
-                        Expand any row and click a slot to view and manage assigned products.
-                      </p>
+
+                      {/* ── RIGHT: Slot Detail Panel (40% proportional width) ── */}
+                      <div className="w-[380px] shrink-0">
+                        <div className="border border-slate-200 rounded-2xl bg-white shadow-sm sticky top-20 overflow-hidden">
+                          {selectedLocation ? (() => {
+                            const zoneLocId = getActiveZoneLocationId();
+                            const zoneProducts = zoneLocId ? getLocationProducts(zoneLocId) : [];
+                            return (
+                              <>
+                                {/* Panel Header gradient */}
+                                <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4">
+                                  <span className="text-[9px] font-black uppercase text-blue-200 tracking-widest">Active Slot</span>
+                                  <h3 className="text-lg font-black text-white mt-0.5">Shelf {selectedLocation}</h3>
+                                </div>
+
+                                <div className="p-4 space-y-3">
+                                  {/* Upper / Lower Toggle */}
+                                  <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+                                    <button
+                                      onClick={() => setSelectedShelfZone("upper")}
+                                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${selectedShelfZone === "upper"
+                                          ? "bg-white text-blue-600 shadow-sm"
+                                          : "text-slate-400 hover:text-slate-600"
+                                        }`}
+                                    >
+                                      <ArrowUp className="h-3.5 w-3.5" />
+                                      Upper
+                                      <span className={`text-[9px] min-w-[18px] text-center px-1.5 py-0.5 rounded-full font-black ${selectedShelfZone === "upper" ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-500"
+                                        }`}>
+                                        {(warehouseAssignments[`${selectedLocation}-upper`] || []).length}
+                                      </span>
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedShelfZone("lower")}
+                                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${selectedShelfZone === "lower"
+                                          ? "bg-white text-blue-600 shadow-sm"
+                                          : "text-slate-400 hover:text-slate-600"
+                                        }`}
+                                    >
+                                      <ArrowDown className="h-3.5 w-3.5" />
+                                      Lower
+                                      <span className={`text-[9px] min-w-[18px] text-center px-1.5 py-0.5 rounded-full font-black ${selectedShelfZone === "lower" ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-500"
+                                        }`}>
+                                        {(warehouseAssignments[`${selectedLocation}-lower`] || []).length}
+                                      </span>
+                                    </button>
+                                  </div>
+
+                                  {/* Assign Button */}
+                                  <button
+                                    onClick={() => { setAssignSearchQuery(""); setIsAssignModalOpen(true); }}
+                                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-sm font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Assign to {selectedShelfZone === "upper" ? "Upper" : "Lower"} Shelf
+                                  </button>
+
+                                  {/* Product Cards */}
+                                  <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                                    {zoneProducts.length === 0 ? (
+                                      <div className="flex flex-col items-center justify-center text-center py-10">
+                                        <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+                                          <Box className="h-6 w-6 text-slate-300" />
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-700">{selectedShelfZone === "upper" ? "Upper" : "Lower"} shelf is empty</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">Assign products using the button above.</p>
+                                      </div>
+                                    ) : (
+                                      zoneProducts.map((prod) => (
+                                        <div
+                                          key={prod.id}
+                                          className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-slate-200 hover:shadow-sm transition cursor-pointer group/card"
+                                          onClick={() => setViewingProduct(prod)}
+                                        >
+                                          <div className="h-14 w-14 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                                            {prod.photoUrl ? (
+                                              <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain" />
+                                            ) : (
+                                              <ImageIcon className="h-6 w-6 text-slate-300" />
+                                            )}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h5 className="font-bold text-slate-900 text-xs leading-tight truncate">{prod.name}</h5>
+                                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
+                                                {prod.stock} units
+                                              </span>
+                                              {prod.rate && (
+                                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
+                                                  ₹{prod.rate} {prod.unit_type || "pcs"}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
+                                            className="p-1.5 rounded-lg text-slate-350 hover:text-blue-600 hover:bg-blue-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer animate-fade-in"
+                                            title="Edit Product"
+                                          >
+                                            <Edit className="h-3.5 w-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); zoneLocId && handleRemoveProductFromLocation(zoneLocId, prod.id); }}
+                                            className="p-1.5 rounded-lg text-slate-350 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/card:opacity-100 shrink-0 cursor-pointer"
+                                            title="Remove"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })() : (
+                            <div className="flex flex-col items-center justify-center text-center p-10 min-h-[300px]">
+                              <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                                <Box className="h-7 w-7 text-slate-300" />
+                              </div>
+                              <h4 className="font-bold text-slate-800 text-sm">Select a shelf slot</h4>
+                              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed max-w-[200px]">
+                                Expand any row and click a slot to view and manage assigned products.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
+                </>
+              ) : (
+                <div className="mt-6">
+                  <QuotationView />
                 </div>
-              </div>
-            </div>
-          )}
-        </>
-          ) : (
-            <div className="mt-6">
-              <QuotationView />
-            </div>
+              )}
+            </>
           )}
         </>
       )}
-    </>
-  )}
 
       {/* SEARCHABLE ASSIGN PRODUCT MODAL */}
       {isAssignModalOpen && selectedLocation && (
@@ -2965,11 +2949,10 @@ ${rows}
                             handleAssignProductToLocation(zId, prod.id, prod.collectionId);
                           }
                         }}
-                        className={`rounded-xl px-4 py-2 text-xs font-bold transition active:scale-95 duration-100 ${
-                          isAssigned
+                        className={`rounded-xl px-4 py-2 text-xs font-bold transition active:scale-95 duration-100 ${isAssigned
                             ? "bg-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-100"
                             : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
+                          }`}
                       >
                         {isAssigned ? "Assigned (Remove)" : "Assign"}
                       </button>
@@ -3262,11 +3245,10 @@ ${rows}
               <button
                 type="button"
                 onClick={confirmModal.onConfirm}
-                className={`flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${
-                  confirmModal.isDanger
+                className={`flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${confirmModal.isDanger
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                  }`}
               >
                 {confirmModal.confirmText || "Confirm"}
               </button>
@@ -3460,14 +3442,14 @@ ${rows}
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
-                <Box className="h-4 w-4 text-blue-500" /> 
+                <Box className="h-4 w-4 text-blue-500" />
                 Select Warehouse Location
               </h3>
-              <button 
+              <button
                 onClick={() => setOpenLocationPicker(null)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
               >
-                <X className="h-4 w-4"/>
+                <X className="h-4 w-4" />
               </button>
             </div>
             <div className="p-5 max-h-[60vh] overflow-y-auto space-y-5 bg-slate-50/30">
@@ -3480,39 +3462,38 @@ ${rows}
                   if (!slotMap[slotNum]) slotMap[slotNum] = [];
                   slotMap[slotNum].push(loc);
                 });
-                
+
                 return (
                   <div key={row} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm">
                     <h4 className="font-black text-xs text-slate-400 uppercase tracking-wider mb-3">Row {row}</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {Object.entries(slotMap).map(([slotNum, slotLocs]) => (
-                         <div key={slotNum} className="border border-slate-100 rounded-lg p-2 bg-slate-50">
-                           <p className="text-[10px] font-bold text-slate-500 mb-1.5 px-1">SLOT {slotNum}</p>
-                           <div className="flex flex-col gap-1.5">
-                             {slotLocs.map(loc => {
-                               const isSelected = (openLocationPicker.type === 'draft' ? draftProducts[openLocationPicker.idx!]?.warehouse : editingProductState?.warehouse) === loc;
-                               const isUpper = loc.includes('upper');
-                               return (
-                                 <button 
-                                   key={loc}
-                                   onClick={() => {
-                                     if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", loc);
-                                     else handleUpdateEditState("warehouse", loc);
-                                     setOpenLocationPicker(null);
-                                   }}
-                                   className={`text-xs font-bold py-1.5 px-2 rounded-md transition-all flex items-center justify-between group ${
-                                     isSelected
-                                     ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
-                                     : "bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 shadow-sm"
-                                   }`}
-                                 >
-                                   <span>{isUpper ? "Upper Shelf" : "Lower Shelf"}</span>
-                                   {isSelected && <Check className="h-3 w-3" />}
-                                 </button>
-                               );
-                             })}
-                           </div>
-                         </div>
+                        <div key={slotNum} className="border border-slate-100 rounded-lg p-2 bg-slate-50">
+                          <p className="text-[10px] font-bold text-slate-500 mb-1.5 px-1">SLOT {slotNum}</p>
+                          <div className="flex flex-col gap-1.5">
+                            {slotLocs.map(loc => {
+                              const isSelected = (openLocationPicker.type === 'draft' ? draftProducts[openLocationPicker.idx!]?.warehouse : editingProductState?.warehouse) === loc;
+                              const isUpper = loc.includes('upper');
+                              return (
+                                <button
+                                  key={loc}
+                                  onClick={() => {
+                                    if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", loc);
+                                    else handleUpdateEditState("warehouse", loc);
+                                    setOpenLocationPicker(null);
+                                  }}
+                                  className={`text-xs font-bold py-1.5 px-2 rounded-md transition-all flex items-center justify-between group ${isSelected
+                                      ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
+                                      : "bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 shadow-sm"
+                                    }`}
+                                >
+                                  <span>{isUpper ? "Upper Shelf" : "Lower Shelf"}</span>
+                                  {isSelected && <Check className="h-3 w-3" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -3520,16 +3501,16 @@ ${rows}
               })}
             </div>
             <div className="p-4 border-t border-slate-100 bg-white flex justify-end">
-               <button 
-                 onClick={() => {
-                    if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", "");
-                    else handleUpdateEditState("warehouse", "");
-                    setOpenLocationPicker(null);
-                 }} 
-                 className="text-xs px-4 py-2 rounded-lg text-slate-500 font-bold hover:bg-slate-100 transition-colors"
-               >
-                 Clear Assignment
-               </button>
+              <button
+                onClick={() => {
+                  if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", "");
+                  else handleUpdateEditState("warehouse", "");
+                  setOpenLocationPicker(null);
+                }}
+                className="text-xs px-4 py-2 rounded-lg text-slate-500 font-bold hover:bg-slate-100 transition-colors"
+              >
+                Clear Assignment
+              </button>
             </div>
           </div>
         </div>
