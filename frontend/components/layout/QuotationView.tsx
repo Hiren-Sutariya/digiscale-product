@@ -23,6 +23,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { QRCodeSVG } from 'qrcode.react';
 import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { getCache, setCache } from "@/lib/cache";
@@ -425,6 +426,17 @@ export default function QuotationView() {
       }
     }
   }, []);
+
+  // Auto-balance cash/bank when total changes
+  useEffect(() => {
+    if (cashAmount && !isNaN(Number(cashAmount))) {
+      const remaining = Math.max(0, total - Number(cashAmount));
+      setBankAmount(remaining > 0 ? remaining.toString() : "");
+    } else if (bankAmount && !isNaN(Number(bankAmount))) {
+      const remaining = Math.max(0, total - Number(bankAmount));
+      setCashAmount(remaining > 0 ? remaining.toString() : "");
+    }
+  }, [total, cashAmount, bankAmount]);
 
   const handleSaveQuotation = async () => {
     if (selectedItems.length === 0) return;
@@ -1524,7 +1536,17 @@ export default function QuotationView() {
 
                         {/* TOTAL */}
                         <td className="py-3 px-3 align-middle text-right font-black text-slate-950">
-                          ₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <div className="flex items-center justify-end gap-2">
+                            <span>₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedItems(selectedItems.filter(i => i.id !== item.id))}
+                              className="no-print p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2052,8 +2074,8 @@ export default function QuotationView() {
             ))}
           </tbody>
         </table>
-        <div className="flex justify-between items-start">
-          <div className="w-3/5">
+        <div className="flex justify-between items-start break-inside-avoid pt-4">
+          <div className="w-[60%] flex gap-4">
             {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
               <div className="mb-4">
                 <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">BANK ACCOUNT DETAILS</p>
@@ -2064,8 +2086,18 @@ export default function QuotationView() {
                 </div>
               </div>
             )}
+            
+            {showBankDetails && companyInfo && companyInfo.accountNumber && companyInfo.ifsc && (
+              <div className="flex flex-col items-center justify-center p-1 border border-slate-200 rounded">
+                <QRCodeSVG
+                  value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                  size={60}
+                />
+                <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>
+              </div>
+            )}
           </div>
-          <div className="w-64 space-y-2 text-xs">
+          <div className="w-[35%] space-y-1.5 text-xs">
             <div className="flex justify-between font-bold text-slate-600">
               <span>Amount</span>
               <span>₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -2090,14 +2122,14 @@ export default function QuotationView() {
                 </span>
               </div>
             )}
-            <hr className="border-slate-400" />
+            <hr className="border-slate-800" />
             <div className="flex justify-between text-base font-black text-slate-900">
               <span>Grand Total</span>
               <span>₹{(printQuoteData.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             
             {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
-              <div className="mt-4 border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1">
+              <div className="mt-2 border border-slate-800 p-2 text-[10px] font-bold text-slate-900 space-y-1">
                 <div className="flex justify-between border-b border-dashed border-slate-400 pb-1">
                   <span>BANK:</span>
                   <span>{printQuoteData.bankAmount ? `₹${parseFloat(printQuoteData.bankAmount).toLocaleString("en-IN")}` : "-"}</span>
@@ -2110,7 +2142,7 @@ export default function QuotationView() {
             )}
             
             {showAuthSign && (
-              <div className="text-right mt-16">
+              <div className="text-right mt-12 mb-4">
                 <div className="inline-block border-t border-slate-800 w-32 pt-1 text-center text-[9px] font-bold text-slate-600 uppercase tracking-wider">
                   Authorized Sign
                 </div>
