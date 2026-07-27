@@ -19,7 +19,8 @@ import {
   Edit,
   Clock,
   CheckCircle2,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { getUserProfile, getUserSettings } from "@/services/api";
@@ -122,11 +123,20 @@ export default function QuotationView() {
   // Saved Quotations & Subview History
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
+  const [historyTab, setHistoryTab] = useState<"follow_up" | "done">("follow_up");
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [selectedQuoteForPreview, setSelectedQuoteForPreview] = useState<any | null>(null);
   const [printQuoteData, setPrintQuoteData] = useState<any | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "full">("fit");
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    isDanger?: boolean;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", confirmText: "", onConfirm: () => {} });
 
   useEffect(() => {
     if (selectedQuoteForPreview && zoomMode === "fit") {
@@ -511,41 +521,55 @@ export default function QuotationView() {
   };
 
   const handleToggleOrderStatus = async (id: string, currentStatus: boolean) => {
-    const actionStr = currentStatus ? "Pending" : "Done";
-    const confirmToggle = window.confirm(`Are you sure you want to mark this order as ${actionStr}?`);
-    if (!confirmToggle) return;
-    
-    try {
-      const { error } = await supabase
+    const actionStr = currentStatus ? "Follow Up" : "Done";
+    setConfirmModal({
+      isOpen: true,
+      title: `Mark as ${actionStr}`,
+      message: `Are you sure you want to mark this order as ${actionStr}?`,
+      confirmText: actionStr,
+      isDanger: false,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const { error } = await supabase
         .from('quotations')
         .update({ is_order_done: !currentStatus })
         .eq('id', id);
 
       if (error) throw error;
 
-      setSavedQuotes(savedQuotes.map(q => 
-        q.id === id ? { ...q, isOrderDone: !currentStatus } : q
-      ));
-    } catch (err) {
-      console.error("Failed to update order status:", err);
-      alert("Failed to update order status in database.");
-    }
+          setSavedQuotes(savedQuotes.map(q => 
+            q.id === id ? { ...q, isOrderDone: !currentStatus } : q
+          ));
+        } catch (err) {
+          console.error("Failed to update order status:", err);
+          alert("Failed to update order status in database.");
+        }
+      }
+    });
   };
 
   const handleDeleteQuote = async (id: string) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this quotation from the database?");
-    if (!confirmDelete) return;
-
-    try {
-      const { error } = await supabase.from('quotations').delete().eq('id', id);
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Quotation",
+      message: "Are you sure you want to delete this quotation from the database? This action cannot be undone.",
+      confirmText: "Delete",
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const { error } = await supabase.from('quotations').delete().eq('id', id);
       if (error) throw error;
 
-      const updated = savedQuotes.filter(q => q.id !== id);
-      setSavedQuotes(updated);
-    } catch (err) {
-      console.error("Failed to delete quote:", err);
-      alert("Failed to delete quotation from database.");
-    }
+          const updated = savedQuotes.filter(q => q.id !== id);
+          setSavedQuotes(updated);
+        } catch (err) {
+          console.error("Failed to delete quote:", err);
+          alert("Failed to delete quotation from database.");
+        }
+      }
+    });
   };
 
   const handlePrintQuoteDirect = (quote: any) => {
@@ -833,6 +857,30 @@ export default function QuotationView() {
 
       {activeSubView === "history" ? (
         <div className="no-print bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
+          
+          <div className="flex gap-1 mb-6 bg-slate-100/80 p-1.5 rounded-xl w-fit">
+            <button
+              onClick={() => setHistoryTab("follow_up")}
+              className={`px-6 py-2 text-xs font-bold rounded-lg transition ${
+                historyTab === "follow_up"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+              }`}
+            >
+              Follow Up
+            </button>
+            <button
+              onClick={() => setHistoryTab("done")}
+              className={`px-6 py-2 text-xs font-bold rounded-lg transition ${
+                historyTab === "done"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+              }`}
+            >
+              Done
+            </button>
+          </div>
+
           <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
             <div>
               <h2 className="text-base font-black text-slate-800">Saved Quotations History</h2>
@@ -862,6 +910,7 @@ export default function QuotationView() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                   {savedQuotes
+                    .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
                     .filter((q) => {
                       const qNum = (q.quoteNumber || "").toLowerCase();
                       const client = (q.clientName || "").toLowerCase();
@@ -900,7 +949,7 @@ export default function QuotationView() {
                           }`}
                         >
                           {quote.isOrderDone ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                          {quote.isOrderDone ? "Done" : "Pending"}
+                          {quote.isOrderDone ? "Done" : "Follow Up"}
                         </button>
                       </td>
                       <td className="py-4 px-4">
@@ -2067,6 +2116,43 @@ export default function QuotationView() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* CONFIRM DIALOG MODAL */}
+    {confirmModal.isOpen && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+        <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xl animate-in zoom-in-95 duration-150">
+          <div className="flex items-start gap-4">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+              confirmModal.isDanger
+                ? "bg-red-50 border border-red-100 text-red-600"
+                : "bg-blue-50 border border-blue-100 text-blue-600"
+            }`}>
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <h3 className="text-sm font-black text-slate-800">{confirmModal.title}</h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">{confirmModal.message}</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2.5">
+            <button
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="px-4 py-2 border border-slate-200 bg-white text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmModal.onConfirm}
+              className={`px-4 py-2 text-white text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer ${
+                confirmModal.isDanger ? "bg-red-600 hover:bg-red-750" : "bg-blue-600 hover:bg-blue-750"
+              }`}
+            >
+              {confirmModal.confirmText}
+            </button>
           </div>
         </div>
       </div>

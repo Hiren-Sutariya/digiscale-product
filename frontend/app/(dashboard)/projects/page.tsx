@@ -1785,8 +1785,8 @@ ${rows}
           {/* Excel Import Result Banner */}
           {showImportResult && excelImportStatus && (
             <div className={`flex items-center justify-between gap-3 px-5 py-3 rounded-2xl text-xs font-semibold border animate-in fade-in slide-in-from-top-1 ${excelImportStatus.errors > 0
-                ? "bg-amber-50 border-amber-200 text-amber-800"
-                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+              ? "bg-amber-50 border-amber-200 text-amber-800"
+              : "bg-emerald-50 border-emerald-200 text-emerald-800"
               }`}>
               <span>
                 ✅ Successfully imported <strong>{excelImportStatus.count}</strong> product{excelImportStatus.count !== 1 ? "s" : ""}
@@ -1801,8 +1801,8 @@ ${rows}
             <button
               onClick={() => setActiveTab("products")}
               className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "products"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-405 hover:text-slate-700"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-405 hover:text-slate-700"
                 }`}
             >
               Products Catalog ({filteredProducts.length})
@@ -1810,8 +1810,8 @@ ${rows}
             <button
               onClick={() => setActiveTab("assets")}
               className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "assets"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-405 hover:text-slate-700"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-405 hover:text-slate-700"
                 }`}
             >
               Workspace Images ({detailImages.length})
@@ -1916,23 +1916,23 @@ ${rows}
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-wider text-slate-450">
-                          <th className="py-4 px-6 w-[80px]">Photo</th>
-                          <th className="py-4 px-6 min-w-[200px]">Product Details</th>
-                          <th className="py-4 px-6 min-w-[150px]">Description</th>
-                          <th className="py-4 px-6 min-w-[150px]">Per Carton</th>
-                          <th className="py-4 px-6 min-w-[120px] text-right">Price Code</th>
-                          <th className="py-4 px-6 min-w-[120px]">Color</th>
-                          <th className="py-4 px-6 min-w-[100px]">Length</th>
-                          <th className="py-4 px-6 min-w-[140px]">Warehouse</th>
-                          <th className="py-4 px-6 min-w-[120px]">Stock Status</th>
-                          <th className="py-4 px-6 min-w-[120px] text-right">Value</th>
+                          <th className="py-4 px-6 w-[80px] text-center">Photo</th>
+                          <th className="py-4 px-6 min-w-[200px] text-center">Product Name</th>
+                          <th className="py-4 px-6 min-w-[150px] text-center">Description</th>
+                          <th className="py-4 px-6 min-w-[150px] text-center">Per Carton</th>
+                          <th className="py-4 px-6 min-w-[120px] text-center">Price Code</th>
+                          <th className="py-4 px-6 min-w-[120px] text-center">Color</th>
+                          <th className="py-4 px-6 min-w-[100px] text-center">Length</th>
+                          <th className="py-4 px-6 min-w-[140px] text-center">Warehouse</th>
+                          <th className="py-4 px-6 min-w-[120px] text-center">Stock Status</th>
+                          <th className="py-4 px-6 min-w-[120px] text-center">Value</th>
                           <th className="py-4 px-6 w-[100px] text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 transition-colors">
                         {draftProducts.map((draft, idx) => (
                           <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400">
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
                                 <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
                                   const file = e.target.files?.[0];
@@ -1984,13 +1984,13 @@ ${rows}
                                 )}
                               </label>
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <input type="text" placeholder="Product Name" onKeyDown={handleEnterToNextField} className="w-full text-xs font-bold p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.name || ""} onChange={(e) => handleUpdateDraft(idx, "name", e.target.value)} />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <input type="text" placeholder="Description" onKeyDown={handleEnterToNextField} className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.description || ""} onChange={(e) => handleUpdateDraft(idx, "description", e.target.value)} />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <div className="flex items-center gap-1.5">
                                 <input type="number" placeholder="Carton Qty" onKeyDown={handleEnterToNextField} className="w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.cartonQty || ""} onChange={(e) => handleUpdateDraft(idx, "cartonQty", e.target.value)} />
                                 <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
@@ -1999,16 +1999,16 @@ ${rows}
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <input type="text" placeholder="Rate" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm font-semibold text-right" value={draft.rate || ""} onChange={(e) => handleUpdateDraft(idx, "rate", e.target.value)} />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <input type="text" placeholder="Color" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.color || ""} onChange={(e) => handleUpdateDraft(idx, "color", e.target.value)} />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.length || ""} onChange={(e) => handleUpdateDraft(idx, "length", e.target.value)} />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 text-center">
                               <button
                                 type="button"
                                 onClick={() => setOpenLocationPicker({ type: 'draft', idx })}
@@ -2019,11 +2019,18 @@ ${rows}
                                   : "Select Location..."}
                               </button>
                             </td>
-                            <td className="py-3 px-4">
-                              <input type="number" placeholder="Stock" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.stock || ""} onChange={(e) => handleUpdateDraft(idx, "stock", e.target.value)} />
+                            <td className="py-3 px-4 text-center">
+                              <input type="number" placeholder="Cartons" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.stock || ""} onChange={(e) => handleUpdateDraft(idx, "stock", e.target.value)} />
+                              {draft.stock && draft.cartonQty ? (
+                                <div className="text-[10px] text-slate-400 mt-1 font-medium text-center">
+                                  {(parseInt(draft.stock as any) * draft.cartonQty).toLocaleString()} pcs
+                                </div>
+                              ) : null}
                             </td>
-                            <td className="py-3 px-4 font-black text-right">—</td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-4 font-black text-center">
+                              ₹{((parseInt(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}
+                            </td>
+                            <td className="py-3 px-4 text-center">
                               <div className="flex gap-2 justify-center">
                                 <button onClick={() => handleSaveDraftRow(draft)} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Product"><Check className="h-4 w-4" /></button>
                                 <button onClick={() => setDraftProducts(prev => prev.filter((d) => d !== draft))} className="p-1.5 bg-red-50 text-red-500 rounded hover:bg-red-100 transition" title="Discard"><X className="h-4 w-4" /></button>
@@ -2032,12 +2039,12 @@ ${rows}
                           </tr>
                         ))}
                         {filteredProducts.map((prod) => {
-                          const cartonCount = prod.cartonQty > 0 ? Math.ceil(prod.stock / prod.cartonQty) : 0;
+                          const cartonCount = prod.stock || 0;
 
                           if (editingProductRowId === prod.id && editingProductState) {
                             return (
                               <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400">
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
                                     <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
                                       const file = e.target.files?.[0];
@@ -2086,10 +2093,13 @@ ${rows}
                                     )}
                                   </label>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <input type="text" placeholder="Product Name" onKeyDown={handleEnterToNextField} className="w-full text-xs font-bold p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.name || ""} onChange={(e) => handleUpdateEditState("name", e.target.value)} />
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
+                                  <input type="text" placeholder="Description" onKeyDown={handleEnterToNextField} className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.description || ""} onChange={(e) => handleUpdateEditState("description", e.target.value)} />
+                                </td>
+                                <td className="py-3 px-4 text-center">
                                   <div className="flex items-center gap-1.5">
                                     <input type="number" placeholder="Carton Qty" onKeyDown={handleEnterToNextField} className="w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.cartonQty || ""} onChange={(e) => handleUpdateEditState("cartonQty", e.target.value)} />
                                     <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
@@ -2098,16 +2108,16 @@ ${rows}
                                     </div>
                                   </div>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <input type="text" placeholder="Rate" className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm text-right font-semibold" value={editingProductState.rate || ""} onChange={(e) => handleUpdateEditState("rate", e.target.value)} />
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <input type="text" placeholder="Color" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.color || ""} onChange={(e) => handleUpdateEditState("color", e.target.value)} />
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <input type="text" placeholder="Length" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.length || ""} onChange={(e) => handleUpdateEditState("length", e.target.value)} />
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <button
                                     type="button"
                                     onClick={() => setOpenLocationPicker({ type: 'edit' })}
@@ -2118,13 +2128,18 @@ ${rows}
                                       : "Select Location..."}
                                   </button>
                                 </td>
-                                <td className="py-3 px-4">
-                                  <input type="number" placeholder="Stock" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.stock || ""} onChange={(e) => handleUpdateEditState("stock", e.target.value)} />
+                                <td className="py-3 px-4 text-center">
+                                  <input type="number" placeholder="Cartons" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.stock || ""} onChange={(e) => handleUpdateEditState("stock", e.target.value)} />
+                                  {editingProductState.stock && editingProductState.cartonQty ? (
+                                    <div className="text-[10px] text-slate-400 mt-1 font-medium text-center">
+                                      {(parseInt(editingProductState.stock as any) * editingProductState.cartonQty).toLocaleString()} pcs
+                                    </div>
+                                  ) : null}
                                 </td>
-                                <td className="py-3 px-4 font-black text-right">
-                                  ₹{((editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (parseFloat(editingProductState.rate || "0") || 0)).toLocaleString()}
+                                <td className="py-3 px-4 font-black text-center">
+                                  ₹{((editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (editingProductState.cartonQty || 0) * (parseFloat(editingProductState.rate || "0") || 0)).toLocaleString()}
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 text-center">
                                   <div className="flex gap-2 justify-center">
                                     <button onClick={handleSaveEditRow} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Changes"><Check className="h-4 w-4" /></button>
                                     <button onClick={() => { setEditingProductRowId(null); setEditingProductState(null); }} className="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200 transition" title="Cancel"><X className="h-4 w-4" /></button>
@@ -2136,7 +2151,7 @@ ${rows}
 
                           return (
                             <tr key={prod.id} className="text-xs text-slate-800 hover:bg-slate-50/40 transition">
-                              <td className="py-4 px-4">
+                              <td className="py-4 px-4 text-center">
                                 <div className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center p-1.5">
                                   {prod.photoUrl ? (
                                     <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain" />
@@ -2145,20 +2160,20 @@ ${rows}
                                   )}
                                 </div>
                               </td>
-                              <td className="py-4 px-4 font-bold">
+                              <td className="py-4 px-4 font-bold text-center">
                                 <p className="text-slate-900 font-extrabold text-sm">{prod.name}</p>
                               </td>
-                              <td className="py-4 px-4 font-semibold text-slate-600">
-                                {prod.description || "—"}
+                              <td className="py-4 px-4 font-semibold text-slate-600 text-center">
+                                {prod.description || "-"}
                               </td>
-                              <td className="py-4 px-4">
+                              <td className="py-4 px-4 text-center">
                                 <p className="font-bold text-slate-700">{prod.cartonQty} {prod.unit_type || "pcs"} / Carton</p>
                                 <p className="text-[10px] text-slate-400 font-medium">{cartonCount} boxes total</p>
                               </td>
-                              <td className="py-4 px-4 text-right font-extrabold text-slate-800">
-                                {prod.rate || "—"}
+                              <td className="py-4 px-4  font-extrabold text-slate-800 text-center">
+                                {prod.rate || "-"}
                               </td>
-                              <td className="py-4 px-4">
+                              <td className="py-4 px-4 text-center">
                                 {prod.color ? (
                                   <div className="flex flex-wrap gap-1">
                                     {prod.color.split(",").map((c, i) => (
@@ -2168,23 +2183,23 @@ ${rows}
                                     ))}
                                   </div>
                                 ) : (
-                                  <span className="text-slate-350 text-xs">—</span>
+                                  <span className="text-slate-350 text-xs">-</span>
                                 )}
                               </td>
-                              <td className="py-4 px-4 font-semibold text-slate-600">
-                                {prod.length || "—"}
+                              <td className="py-4 px-4 font-semibold text-slate-600 text-center">
+                                {prod.length ? `${prod.length} cm` : "-"}
                               </td>
-                              <td className="py-4 px-4 font-semibold text-slate-700">
-                                {prod.warehouse ? prod.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") : "—"}
+                              <td className="py-4 px-4 font-semibold text-slate-700 text-center">
+                                {prod.warehouse ? prod.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") : "-"}
                               </td>
-                              <td className="py-4 px-4">
-                                <p className="font-extrabold text-slate-800">{prod.stock} units</p>
-                                <p className="text-[10px] text-slate-400 font-medium">Available</p>
+                              <td className="py-4 px-4 text-center">
+                                <p className="font-extrabold text-slate-800">{prod.stock} Cartons</p>
+                                <p className="text-[10px] text-slate-400 font-medium">{(prod.stock * prod.cartonQty).toLocaleString()} pcs total</p>
                               </td>
-                              <td className="py-4 px-4 text-right font-black text-slate-900">
-                                ₹{(prod.stock * (parseFloat(prod.rate) || 0)).toLocaleString()}
+                              <td className="py-4 px-4  font-black text-slate-900 text-center">
+                                ₹{(prod.stock * prod.cartonQty * (parseFloat(prod.rate) || 0)).toLocaleString()}
                               </td>
-                              <td className="py-4 px-4">
+                              <td className="py-4 px-4 text-center">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
                                     onClick={() => handleEditProductClick(prod)}
@@ -2351,8 +2366,8 @@ ${rows}
                         <button
                           onClick={() => setViewMode("grid")}
                           className={`rounded-lg p-2.5 transition ${viewMode === "grid"
-                              ? "bg-slate-100 text-slate-900"
-                              : "text-slate-400 hover:text-slate-600"
+                            ? "bg-slate-100 text-slate-900"
+                            : "text-slate-400 hover:text-slate-600"
                             }`}
                         >
                           <Grid3X3 className="h-4 w-4" />
@@ -2361,8 +2376,8 @@ ${rows}
                         <button
                           onClick={() => setViewMode("list")}
                           className={`rounded-lg p-2.5 transition ${viewMode === "list"
-                              ? "bg-slate-100 text-slate-900"
-                              : "text-slate-400 hover:text-slate-600"
+                            ? "bg-slate-100 text-slate-900"
+                            : "text-slate-400 hover:text-slate-600"
                             }`}
                         >
                           <List className="h-4 w-4" />
@@ -2400,8 +2415,8 @@ ${rows}
                       ) : (
                         <div
                           className={`mt-6 ${viewMode === "grid"
-                              ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]"
-                              : "space-y-3"
+                            ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]"
+                            : "space-y-3"
                             }`}
                         >
                           {filteredCollections.map((col) => {
@@ -2595,8 +2610,8 @@ ${rows}
                             <div
                               key={row}
                               className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 ${isExpanded
-                                  ? "border-blue-200 shadow-md shadow-blue-50"
-                                  : "border-slate-200 shadow-sm hover:border-slate-300"
+                                ? "border-blue-200 shadow-md shadow-blue-50"
+                                : "border-slate-200 shadow-sm hover:border-slate-300"
                                 }`}
                             >
                               {/* Row Header */}
@@ -2606,8 +2621,8 @@ ${rows}
                               >
                                 <div className="flex items-center gap-4">
                                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition ${isExpanded
-                                      ? "bg-blue-600 text-white shadow-sm shadow-blue-200"
-                                      : "bg-blue-50 border border-blue-100 text-blue-600"
+                                    ? "bg-blue-600 text-white shadow-sm shadow-blue-200"
+                                    : "bg-blue-50 border border-blue-100 text-blue-600"
                                     }`}>
                                     {row}
                                   </div>
@@ -2669,18 +2684,18 @@ ${rows}
                                               }
                                             }}
                                             className={`w-full flex flex-col items-center justify-center py-4 px-1 rounded-xl border-2 text-center transition-all duration-150 active:scale-95 cursor-pointer ${isSelected
-                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
-                                                : isFilled
-                                                  ? "bg-emerald-50 border-emerald-200 text-emerald-800 hover:border-emerald-400"
-                                                  : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/30"
+                                              ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                                              : isFilled
+                                                ? "bg-emerald-50 border-emerald-200 text-emerald-800 hover:border-emerald-400"
+                                                : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50/30"
                                               }`}
                                           >
                                             <span className="text-[11px] font-black tracking-wide leading-none">{locationId}</span>
                                             <span className={`text-[8px] font-bold mt-2 px-1.5 py-0.5 rounded-full leading-none ${isSelected
-                                                ? "bg-white/20 text-white"
-                                                : isFilled
-                                                  ? "bg-emerald-100 text-emerald-700"
-                                                  : "bg-slate-100 text-slate-400"
+                                              ? "bg-white/20 text-white"
+                                              : isFilled
+                                                ? "bg-emerald-100 text-emerald-700"
+                                                : "bg-slate-100 text-slate-400"
                                               }`}>
                                               {isFilled ? `${itemCount} item${itemCount > 1 ? "s" : ""}` : "empty"}
                                             </span>
@@ -2741,8 +2756,8 @@ ${rows}
                                     <button
                                       onClick={() => setSelectedShelfZone("upper")}
                                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${selectedShelfZone === "upper"
-                                          ? "bg-white text-blue-600 shadow-sm"
-                                          : "text-slate-400 hover:text-slate-600"
+                                        ? "bg-white text-blue-600 shadow-sm"
+                                        : "text-slate-400 hover:text-slate-600"
                                         }`}
                                     >
                                       <ArrowUp className="h-3.5 w-3.5" />
@@ -2755,8 +2770,8 @@ ${rows}
                                     <button
                                       onClick={() => setSelectedShelfZone("lower")}
                                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${selectedShelfZone === "lower"
-                                          ? "bg-white text-blue-600 shadow-sm"
-                                          : "text-slate-400 hover:text-slate-600"
+                                        ? "bg-white text-blue-600 shadow-sm"
+                                        : "text-slate-400 hover:text-slate-600"
                                         }`}
                                     >
                                       <ArrowDown className="h-3.5 w-3.5" />
@@ -2805,7 +2820,7 @@ ${rows}
                                             <h5 className="font-bold text-slate-900 text-xs leading-tight truncate">{prod.name}</h5>
                                             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                               <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
-                                                {prod.stock} units
+                                                {prod.stock} Cartons
                                               </span>
                                               {prod.rate && (
                                                 <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
@@ -2950,8 +2965,8 @@ ${rows}
                           }
                         }}
                         className={`rounded-xl px-4 py-2 text-xs font-bold transition active:scale-95 duration-100 ${isAssigned
-                            ? "bg-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-100"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
+                          ? "bg-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-100"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
                           }`}
                       >
                         {isAssigned ? "Assigned (Remove)" : "Assign"}
@@ -3246,8 +3261,8 @@ ${rows}
                 type="button"
                 onClick={confirmModal.onConfirm}
                 className={`flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${confirmModal.isDanger
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-blue-600 hover:bg-blue-700"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-blue-600 hover:bg-blue-700"
                   }`}
               >
                 {confirmModal.confirmText || "Confirm"}
@@ -3483,8 +3498,8 @@ ${rows}
                                     setOpenLocationPicker(null);
                                   }}
                                   className={`text-xs font-bold py-1.5 px-2 rounded-md transition-all flex items-center justify-between group ${isSelected
-                                      ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
-                                      : "bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 shadow-sm"
+                                    ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
+                                    : "bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 shadow-sm"
                                     }`}
                                 >
                                   <span>{isUpper ? "Upper Shelf" : "Lower Shelf"}</span>

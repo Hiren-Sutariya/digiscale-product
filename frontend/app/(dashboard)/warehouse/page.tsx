@@ -66,6 +66,7 @@ export default function WarehousePage() {
 
   // Modals
   const [addRowModal, setAddRowModal] = useState<boolean>(false);
+  const [selectedProductDetails, setSelectedProductDetails] = useState<any | null>(null);
   const [addRowName, setAddRowName] = useState<string>("");
   const [addSlotModal, setAddSlotModal] = useState<{ open: boolean; row: string; defaultName: string }>({
     open: false,
@@ -946,7 +947,8 @@ export default function WarehousePage() {
                         {getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).map((p) => (
                           <div
                             key={p.id}
-                            className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-150 rounded-xl p-2.5"
+                            onClick={() => setSelectedProductDetails(p)}
+                            className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-150 rounded-xl p-2.5 cursor-pointer hover:bg-slate-100 hover:border-slate-200 transition group"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               {p.photoUrl ? (
@@ -971,9 +973,10 @@ export default function WarehousePage() {
                             </div>
 
                             <button
-                              onClick={() =>
-                                handleRemoveProductFromLocation(`${selectedLocation}-${selectedShelfZone}`, p.id)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveProductFromLocation(`${selectedLocation}-${selectedShelfZone}`, p.id);
+                              }}
                               className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition cursor-pointer"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -1167,6 +1170,61 @@ export default function WarehousePage() {
         </div>
       )}
 
+      {/* PRODUCT DETAILS MODAL */}
+      {selectedProductDetails && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 space-y-5 shadow-xl animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                {selectedProductDetails.photoUrl ? (
+                  <img
+                    src={selectedProductDetails.photoUrl}
+                    alt=""
+                    className="h-16 w-16 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-300">
+                    <Package className="h-6 w-6" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-lg font-black text-slate-800">{selectedProductDetails.name}</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{selectedProductDetails.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedProductDetails(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Color</p>
+                <p className="text-sm font-bold text-slate-700">{selectedProductDetails.color || "N/A"}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Price Code</p>
+                <p className="text-sm font-bold text-slate-700">{selectedProductDetails.rate || "N/A"}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Length</p>
+                <p className="text-sm font-bold text-slate-700">{selectedProductDetails.length ? `${selectedProductDetails.length} cm` : "N/A"}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Per Carton</p>
+                <p className="text-sm font-bold text-slate-700">{selectedProductDetails.perCarton ? `${selectedProductDetails.perCarton} PCS CTN` : "N/A"}</p>
+              </div>
+              <div className="col-span-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Description</p>
+                <p className="text-sm font-semibold text-slate-600">{selectedProductDetails.description || "No description provided."}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
