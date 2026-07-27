@@ -21,10 +21,10 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push("/dashboard");
+      // Use hard redirect for instant visual feedback and to avoid Next.js transition hangs
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Invalid email or password.");
-    } finally {
       setLoading(false);
     }
   };
