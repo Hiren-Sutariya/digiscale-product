@@ -427,17 +427,6 @@ export default function QuotationView() {
     }
   }, []);
 
-  // Auto-balance cash/bank when total changes
-  useEffect(() => {
-    if (cashAmount && !isNaN(Number(cashAmount))) {
-      const remaining = Math.max(0, total - Number(cashAmount));
-      setBankAmount(remaining > 0 ? remaining.toString() : "");
-    } else if (bankAmount && !isNaN(Number(bankAmount))) {
-      const remaining = Math.max(0, total - Number(bankAmount));
-      setCashAmount(remaining > 0 ? remaining.toString() : "");
-    }
-  }, [total, cashAmount, bankAmount]);
-
   const handleSaveQuotation = async () => {
     if (selectedItems.length === 0) return;
     if (!currentUserId) {
@@ -694,6 +683,17 @@ export default function QuotationView() {
   }
   
   const total = Math.max(0, subtotal + taxAmount);
+
+  // Auto-balance cash/bank when total changes
+  useEffect(() => {
+    if (cashAmount && !isNaN(Number(cashAmount))) {
+      const remaining = Math.max(0, total - Number(cashAmount));
+      setBankAmount(remaining > 0 ? remaining.toString() : "");
+    } else if (bankAmount && !isNaN(Number(bankAmount))) {
+      const remaining = Math.max(0, total - Number(bankAmount));
+      setCashAmount(remaining > 0 ? remaining.toString() : "");
+    }
+  }, [total, cashAmount, bankAmount]);
 
   // Print
   const handlePrint = () => {
