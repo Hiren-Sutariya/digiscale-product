@@ -1003,7 +1003,7 @@ export default function QuotationView() {
                       <td className="py-4 px-4">{quote.quoteDate ? formatDate(quote.quoteDate) : "—"}</td>
                       <td className="py-4 px-4 text-center">{quote.items?.length || 0}</td>
                       <td className="py-4 px-4 text-right font-black text-slate-900">
-                        ₹{(quote.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{(quote.total || 0).toLocaleString("en-IN")}
                       </td>
                       <td className="py-4 px-4 text-center">
                         <button
@@ -1506,8 +1506,9 @@ export default function QuotationView() {
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE CODE</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE</th>
                       <th className="py-2.5 px-3 text-right w-28">TOTAL</th>
                     </tr>
                   </thead>
@@ -1590,7 +1591,7 @@ export default function QuotationView() {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={applyEventMarkup ? (parseFloat(item.rate || "0") * (1 + eventMarkupPercent / 100)).toString() : (item.rate || "")}
+                            value={getItemRate(item.rate || "") || ""}
                             onChange={(e) => {
                               let val = e.target.value;
                               if (val !== "" && applyEventMarkup) {
@@ -1612,7 +1613,7 @@ export default function QuotationView() {
                         {/* TOTAL */}
                         <td className="py-3 px-3 align-middle text-right font-black text-slate-950">
                           <div className="flex items-center justify-end gap-2">
-                            <span>₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN")}</span>
                             <button
                               type="button"
                               onClick={() => setSelectedItems(selectedItems.filter((_, idx) => idx !== selectedItems.indexOf(item)))}
@@ -1701,7 +1702,7 @@ export default function QuotationView() {
                   {/* 1. Amount */}
                   <div className="flex justify-between font-bold text-slate-655">
                     <span>Amount</span>
-                    <span>₹{subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>₹{subtotal.toLocaleString("en-IN")}</span>
                   </div>
 
                   {/* 2. GST */}
@@ -1722,7 +1723,7 @@ export default function QuotationView() {
                       <span className="hidden print:inline">({taxInput})</span>
                     </span>
                     <span>
-                      ₹{taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{taxAmount.toLocaleString("en-IN")}
                     </span>
                   </div>
 
@@ -1731,7 +1732,7 @@ export default function QuotationView() {
                   {/* 4. Grand Total */}
                   <div className="flex justify-between text-base font-black text-slate-950 bg-slate-50 p-2 rounded-xl border border-slate-100">
                     <span>Grand Total</span>
-                    <span>₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>₹{total.toLocaleString("en-IN")}</span>
                   </div>
 
                   {/* Cash & Bank Inputs */}
@@ -1956,8 +1957,9 @@ export default function QuotationView() {
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE CODE</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE</th>
                       <th className="py-2.5 px-3 text-right w-28">TOTAL</th>
                     </tr>
                   </thead>
@@ -1994,7 +1996,7 @@ export default function QuotationView() {
                           {getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)}
                         </td>
                         <td className="py-3 px-3 align-middle text-right font-black text-slate-955">
-                          ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)).toLocaleString("en-IN")}
                         </td>
                       </tr>
                     ))}
@@ -2072,7 +2074,7 @@ export default function QuotationView() {
               <div className="w-full md:w-72 print:w-[35%] space-y-3 print:space-y-1.5 text-xs">
                 <div className="flex justify-between font-bold text-slate-655">
                   <span>Amount</span>
-                  <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>₹{selectedQuoteForPreview.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, selectedQuoteForPreview.applyEventMarkup, selectedQuoteForPreview.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN")}</span>
                 </div>
 
                 {selectedQuoteForPreview.taxInput && (
@@ -2091,7 +2093,7 @@ export default function QuotationView() {
                           }
                         }
                         return tAmt;
-                      })().toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      })().toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
@@ -2100,7 +2102,7 @@ export default function QuotationView() {
 
                 <div className="flex justify-between text-base font-black text-slate-950 bg-slate-50 p-2 rounded-xl border border-slate-100">
                   <span>Grand Total</span>
-                  <span>₹{(selectedQuoteForPreview.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>₹{(selectedQuoteForPreview.total || 0).toLocaleString("en-IN")}</span>
                 </div>
                 
                 {/* Modal Cash / Bank box */}
@@ -2185,7 +2187,7 @@ export default function QuotationView() {
               <th className="py-2 px-2 border-r border-slate-700">Description</th>
               <th className="py-2 px-2 text-center w-16 border-r border-slate-700">CTNS</th>
               <th className="py-2 px-2 text-center w-16 border-r border-slate-700">QTY</th>
-              <th className="py-2 px-2 text-right w-20 border-r border-slate-700">Rate</th>
+              <th className="py-2 px-2 text-right w-20 border-r border-slate-700">Price</th>
               <th className="py-2 px-2 text-right w-24">Total</th>
             </tr>
           </thead>
@@ -2205,7 +2207,7 @@ export default function QuotationView() {
                 <td className="py-2 px-2 text-center border-r border-slate-300">{item.quantity}</td>
                 <td className="py-2 px-2 text-right border-r border-slate-300">{getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)}</td>
                 <td className="py-2 px-2 text-right font-bold text-slate-900">
-                  ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN")}
                 </td>
               </tr>
             ))}
@@ -2254,7 +2256,7 @@ export default function QuotationView() {
           <div className="w-[40%] text-xs border-2 border-slate-900 overflow-hidden flex flex-col">
             <div className="flex justify-between items-center p-2 border-b border-slate-300 font-bold text-slate-700">
               <span className="uppercase text-[10px] tracking-wider font-black">Amount</span>
-              <span className="text-sm">₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-sm">₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN")}</span>
             </div>
             {printQuoteData.taxInput && (
               <div className="flex justify-between items-center p-2 border-b border-slate-300 font-bold text-slate-700">
@@ -2272,14 +2274,14 @@ export default function QuotationView() {
                       }
                     }
                     return tAmt;
-                  })().toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  })().toLocaleString("en-IN")}
                 </span>
               </div>
             )}
             
             <div className="flex justify-between items-center p-2.5 bg-slate-900 text-white font-black">
               <span className="uppercase text-[11px] tracking-widest">Grand Total</span>
-              <span className="text-base">₹{(printQuoteData.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-base">₹{(printQuoteData.total || 0).toLocaleString("en-IN")}</span>
             </div>
             
             {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
