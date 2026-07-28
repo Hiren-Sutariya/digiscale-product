@@ -85,7 +85,7 @@ interface Product {
   rate: string;      // rate/price code per unit
   length: string;
   color: string;
-  unit_type?: "pcs" | "dzn";
+  unit_type?: "pcs" | "dzn" | "kg";
   description?: string;
   warehouse?: string;
   createdAt: string;
@@ -1026,7 +1026,7 @@ ${rows}
           name,
           stock: stockIdx >= 0 ? (parseInt(cols[stockIdx]) || 0) : 0,
           cartonQty: cartonIdx >= 0 ? (parseInt(cols[cartonIdx]) || 1) : 1,
-          unit_type: parsedUnitType === "dzn" ? "dzn" : "pcs",
+          unit_type: parsedUnitType === "dzn" ? "dzn" : parsedUnitType === "kg" ? "kg" : "pcs",
           rate: rateIdx >= 0 ? (cols[rateIdx]?.trim() || "") : "",
           length: lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "") : "",
           color: colorIdx >= 0 ? (cols[colorIdx]?.trim() || "") : "",
@@ -1984,7 +1984,7 @@ ${rows}
                     const validUrls = urls.filter(u => u);
                     if (validUrls.length > 0) {
                       setDraftProducts(prev => {
-                        const newDrafts = validUrls.map(url => ({ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs" as "pcs" | "dzn", description: "", photoUrl: url, warehouse: "" }));
+                        const newDrafts = validUrls.map(url => ({ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs" as "pcs" | "dzn" | "kg", description: "", photoUrl: url, warehouse: "" }));
                         return [...newDrafts, ...prev];
                       });
                     }
@@ -2151,6 +2151,7 @@ ${rows}
                                 <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
                                   <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "pcs")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${draft.unit_type === 'pcs' || !draft.unit_type ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>pcs</button>
                                   <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "dzn")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${draft.unit_type === 'dzn' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>dzn</button>
+                                  <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "kg")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${draft.unit_type === 'kg' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>kg</button>
                                 </div>
                               </div>
                             </td>
@@ -2261,6 +2262,7 @@ ${rows}
                                     <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
                                       <button type="button" onClick={() => handleUpdateEditState("unit_type", "pcs")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${editingProductState.unit_type === 'pcs' || !editingProductState.unit_type ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>pcs</button>
                                       <button type="button" onClick={() => handleUpdateEditState("unit_type", "dzn")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${editingProductState.unit_type === 'dzn' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>dzn</button>
+                                      <button type="button" onClick={() => handleUpdateEditState("unit_type", "kg")} className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${editingProductState.unit_type === 'kg' ? 'bg-white text-slate-800 shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-700'}`}>kg</button>
                                     </div>
                                   </div>
                                 </td>
