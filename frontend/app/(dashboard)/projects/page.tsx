@@ -498,6 +498,7 @@ function CollectionsPageContent() {
       confirmText: "Delete",
       isDanger: true,
       onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         try {
           const { error } = await supabase.from('collections').delete().eq('id', colId);
           if (error) throw error;
@@ -509,7 +510,6 @@ function CollectionsPageContent() {
         }
 
         setActiveDropdownId(null);
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
       }
     });
   };
@@ -1338,6 +1338,7 @@ ${rows}
       confirmText: "Delete",
       isDanger: true,
       onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         try {
           const { error } = await supabase.from('products').delete().eq('id', productId);
           if (error) throw error;
@@ -1348,7 +1349,6 @@ ${rows}
           console.error("Failed to delete product from Supabase:", err);
           alert("Failed to delete product.");
         }
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
       }
     });
   };
@@ -1370,6 +1370,7 @@ ${rows}
       confirmText: "Delete All",
       isDanger: true,
       onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         try {
           const idArray = Array.from(selectedProductIds);
           const { error } = await supabase.from('products').delete().in('id', idArray);
@@ -1382,7 +1383,6 @@ ${rows}
           console.error("Failed to delete products from Supabase:", err);
           alert("Failed to delete products.");
         }
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
       }
     });
   };
