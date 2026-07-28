@@ -2051,7 +2051,7 @@ ${rows}
                                 className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
                               >
                                 {draft.warehouse
-                                  ? draft.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ")
+                                  ? draft.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)")
                                   : "Select Location..."}
                               </button>
                             </td>
@@ -2160,7 +2160,7 @@ ${rows}
                                     className="w-full min-w-[120px] text-xs p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left hover:bg-slate-50 truncate transition shadow-sm"
                                   >
                                     {editingProductState.warehouse
-                                      ? editingProductState.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ")
+                                      ? editingProductState.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)")
                                       : "Select Location..."}
                                   </button>
                                 </td>
@@ -2226,7 +2226,7 @@ ${rows}
                                 {prod.length ? `${prod.length} cm` : "-"}
                               </td>
                               <td className="py-4 px-4 font-semibold text-slate-700 text-center">
-                                {prod.warehouse ? prod.warehouse.replace("-upper", " (Upper)").replace("-lower", " (Lower)").replace("-", " - Slot ") : "-"}
+                                {prod.warehouse ? prod.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)") : "-"}
                               </td>
                               <td className="py-4 px-4 text-center">
                                 <p className="font-extrabold text-slate-800">{prod.stock} Cartons</p>
