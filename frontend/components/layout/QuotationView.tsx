@@ -1403,7 +1403,7 @@ export default function QuotationView() {
         {/* Right Side: Print Preview Container */}
         <div className="lg:col-span-8">
           
-          <div className="no-print mb-4 flex items-center justify-between">
+          <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               Document Preview
             </p>
@@ -1413,7 +1413,7 @@ export default function QuotationView() {
           </div>
 
           {/* The quotation design template */}
-          <div id="print-area" className="print-container w-full max-w-4xl mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto">
+          <div id="print-area" className="print-container w-full max-w-5xl mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto">
             
             {/* Invoice Header */}
             <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
