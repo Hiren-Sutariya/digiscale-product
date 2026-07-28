@@ -990,9 +990,9 @@ export default function QuotationView() {
                         <div className="font-black text-slate-900">{quote.quoteNumber}</div>
                         <div className="mt-1">
                           {quote.applyEventMarkup ? (
-                            <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">EVENT</span>
+                            <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
                           ) : (
-                            <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">STANDARD</span>
+                            <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
                           )}
                         </div>
                       </td>
@@ -1475,15 +1475,9 @@ export default function QuotationView() {
                 <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
                   <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                   <div className="mb-1.5">
-                    {applyEventMarkup ? (
-                      <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-purple-700 print:border-purple-300 print:text-purple-800">
-                        Event Quotation
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
-                        Standard Quotation
-                      </span>
-                    )}
+                    <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
+                      B2B Quotation
+                    </span>
                   </div>
                   {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
                   {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
@@ -1932,15 +1926,9 @@ export default function QuotationView() {
                   <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                     <div className="mb-1.5">
-                      {selectedQuoteForPreview.applyEventMarkup ? (
-                        <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-purple-700 print:border-purple-300 print:text-purple-800">
-                          Event Quotation
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
-                          Standard Quotation
-                        </span>
-                      )}
+                      <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
+                        B2B Quotation
+                      </span>
                     </div>
                     {selectedQuoteForPreview.quoteNumber && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{selectedQuoteForPreview.quoteNumber}</span></p>}
                     {selectedQuoteForPreview.quoteDate && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(selectedQuoteForPreview.quoteDate)}</span></p>}
@@ -2157,7 +2145,7 @@ export default function QuotationView() {
             )}
           </div>
           <div className="text-right">
-            <h2 className="text-xl font-black text-blue-600 uppercase tracking-wider mb-2">QUOTATION</h2>
+            <h2 className="text-xl font-black text-blue-600 uppercase tracking-wider mb-2">B2B QUOTATION</h2>
             <div className="inline-flex flex-col border border-slate-300 rounded p-2 bg-slate-50 text-left w-48">
               <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
                 <span>Quote No:</span>

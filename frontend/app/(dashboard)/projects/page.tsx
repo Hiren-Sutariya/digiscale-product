@@ -796,12 +796,12 @@ function CollectionsPageContent() {
         p.name || "",
         p.description || "",
         p.cartonQty || "",
-        p.unitType || "",
+        p.unit_type || "",
         p.rate || "",
         p.color || "",
         p.length || "",
         p.warehouse || "",
-        p.stockQuantity || "",
+        p.stock || "",
         p.photoUrl || "",
       ]);
     } else {
