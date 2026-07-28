@@ -227,7 +227,7 @@ export default function QuotationView() {
     if (applyEventMarkup) {
       const markupMultiplier = 1 + (eventMarkupPercent / 100);
       const markedUpPrice = numericRate * markupMultiplier;
-      return (Math.round(markedUpPrice * 100) / 100).toString();
+      return Math.round(markedUpPrice).toString();
     }
     return rate;
   };
@@ -237,7 +237,7 @@ export default function QuotationView() {
     if (applyMarkup) {
       const markupMultiplier = 1 + ((markupPercent ?? 25) / 100);
       const markedUpPrice = numericRate * markupMultiplier;
-      return (Math.round(markedUpPrice * 100) / 100).toString();
+      return Math.round(markedUpPrice).toString();
     }
     return rate;
   };
@@ -1635,10 +1635,10 @@ export default function QuotationView() {
               <div className="mt-6 flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start break-inside-avoid print:pt-4">
                 
                 {/* Stacked Vertical Bank Details & Terms & Conditions */}
-                <div className="w-full md:w-3/5 print:w-[60%] print:flex print:flex-row-reverse print:justify-end print:gap-4">
+                <div className="w-full md:w-3/5 print:w-[60%] flex flex-row items-start gap-4">
                   {/* QR Code */}
                   {showBankDetails && companyInfo && (companyInfo.qrCode || companyInfo.upiId || (companyInfo.accountNumber && companyInfo.ifsc)) && (
-                    <div className="hidden print:flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0 mr-4">
+                    <div className="flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0">
                       {companyInfo.qrCode ? (
                         <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
                       ) : companyInfo.upiId ? (
@@ -2212,10 +2212,32 @@ export default function QuotationView() {
           </tbody>
         </table>
         <div className="flex justify-between items-start break-inside-avoid pt-4">
-          <div className="w-[60%] flex flex-row-reverse justify-end gap-4">
+          <div className="w-[60%] flex flex-row items-start gap-4">
             {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
-                <div className="flex flex-row items-start gap-4">
-                  {/* Bank Details rendered first on the left */}
+                <>
+                  {/* QR Code rendered first on the left */}
+                  {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
+                    <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[80px] h-[80px]">
+                      {companyInfo.qrCode ? (
+                        <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
+                      ) : companyInfo.upiId ? (
+                        <QRCodeSVG
+                          value={companyInfo.upiId}
+                          size={60}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <QRCodeSVG
+                          value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                          size={60}
+                          className="w-full h-full"
+                        />
+                      )}
+                      {!companyInfo.qrCode && <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
+                    </div>
+                  )}
+
+                  {/* Bank Details rendered after QR code */}
                   {showBankDetails && companyInfo && (
                     <div className="flex-1">
                       <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider mb-1 bg-slate-100 py-0.5 px-2 inline-block rounded">BANK ACCOUNT DETAILS (FOR PAYMENTS)</p>
@@ -2226,18 +2248,7 @@ export default function QuotationView() {
                       </div>
                     </div>
                   )}
-
-                  {/* QR Code rendered after Bank Details */}
-                  {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                    <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0">
-                      <QRCodeSVG
-                        value={companyInfo.upiId || `upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
-                        size={60}
-                      />
-                      <span className="text-[7px] font-black text-slate-800 mt-1 uppercase tracking-widest">Scan to Pay</span>
-                    </div>
-                  )}
-                </div>
+                </>
             )}
           </div>
           <div className="w-[40%] text-xs border-2 border-slate-900 overflow-hidden flex flex-col">

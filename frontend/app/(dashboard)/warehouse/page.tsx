@@ -1010,29 +1010,37 @@ export default function WarehousePage() {
                           />
                         </div>
                         <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50 p-2 space-y-1 mt-2">
-                          {allProducts
-                            .filter((prod) => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase()))
-                            .map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  handleAssignProductToLocation(
-                                    `${selectedLocation}-${selectedShelfZone}`,
-                                    p.id,
-                                    p.collectionId || ""
-                                  );
-                                  setProductSearchQuery("");
-                                }}
-                                className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:shadow-sm transition border border-transparent hover:border-slate-200 flex items-center justify-between"
-                              >
-                                <span>{p.name}</span>
-                                <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
-                              </button>
-                            ))}
-                          {allProducts.filter(prod => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase())).length === 0 && (
+                          {productSearchQuery.trim() === "" ? (
                             <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
-                              No matching products found
+                              Type to search products
                             </div>
+                          ) : (
+                            <>
+                              {allProducts
+                                .filter((prod) => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase()))
+                                .map((p) => (
+                                  <button
+                                    key={p.id}
+                                    onClick={() => {
+                                      handleAssignProductToLocation(
+                                        `${selectedLocation}-${selectedShelfZone}`,
+                                        p.id,
+                                        p.collectionId || ""
+                                      );
+                                      setProductSearchQuery("");
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:shadow-sm transition border border-transparent hover:border-slate-200 flex items-center justify-between"
+                                  >
+                                    <span>{p.name}</span>
+                                    <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
+                                  </button>
+                                ))}
+                              {allProducts.filter(prod => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase())).length === 0 && (
+                                <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
+                                  No matching products found
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
