@@ -2126,81 +2126,146 @@ export default function QuotationView() {
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
     {printQuoteData && (
       <div id="print-area" className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-0">
-        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-              {companyInfo?.name || "COMPANY NAME"}
-            </h1>
-            <p className="text-sm font-semibold text-slate-600 mt-1 max-w-sm">
-              {companyInfo?.address || "Company Address"}
-            </p>
-            {companyInfo?.primaryPhone && (
-              <p className="text-xs font-bold text-slate-500 mt-1">Phone: {companyInfo.primaryPhone}</p>
-            )}
-            {companyInfo?.email && (
-              <p className="text-xs font-bold text-slate-500">Email: {companyInfo.email}</p>
-            )}
-            {companyInfo?.gst && (
-              <p className="text-xs font-black text-slate-800 mt-1 uppercase">GSTIN: {companyInfo.gst}</p>
+        <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
+          {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
+          <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+            {companyInfo?.logo ? (
+              <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <span className="text-lg font-black tracking-wider uppercase px-2 text-slate-850">
+                {companyInfo?.name?.substring(0, 8) || "DIGISCALE"}
+              </span>
             )}
           </div>
-          <div className="text-right">
-            <h2 className="text-xl font-black text-blue-600 uppercase tracking-wider mb-2">B2B QUOTATION</h2>
-            <div className="inline-flex flex-col border border-slate-300 rounded p-2 bg-slate-50 text-left w-48">
-              <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
-                <span>Quote No:</span>
-                <span className="text-slate-900">{printQuoteData.quoteNumber}</span>
-              </div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-500">
-                <span>Date:</span>
-                <span className="text-slate-900">
-                  {new Date(printQuoteData.quoteDate).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+
+          {/* Right Side: Contact Info dynamically called from company profile settings */}
+          <div className="flex-1 p-4 flex flex-col justify-center text-slate-800 text-xs font-semibold space-y-1">
+            <h2 className="text-sm font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
+            <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
+              <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+              <p>
+                <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
+              </p>
+              <p>
+                <span className="font-extrabold text-slate-955">EMAIL:</span> {companyInfo?.email || "-"}
+              </p>
+            </div>
+            {companyInfo?.gst && (
+              <p className="text-[10px] text-slate-655 uppercase font-bold">
+                <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* CLIENT NAME Banner */}
+        {printQuoteData.clientName ? (
+          <div className="w-full bg-slate-100 text-center py-2.5 border-y-2 border-slate-900 mt-4 mb-3">
+            <h3 className="text-sm font-black text-slate-955 tracking-widest uppercase">
+              {printQuoteData.clientName}
+            </h3>
+          </div>
+        ) : (
+          <div className="h-4"></div>
+        )}
+
+        {/* Billing Details & Quotation Info Metadata Block */}
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
+          {/* Left Side: Customer Billing Details */}
+          <div className="sm:w-1/2">
+            <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
+            <p className="text-slate-900 font-extrabold">{printQuoteData.clientCompany || "-"}</p>
+            <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress || "-"}</p>
+          </div>
+
+          {/* Right Side: Quotation Info Metadata */}
+          {(printQuoteData.quoteNumber || printQuoteData.quoteDate) && (
+            <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
+              <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
+              <div className="mb-1.5">
+                <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
+                  B2B Quotation
                 </span>
               </div>
+              {printQuoteData.quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{printQuoteData.quoteNumber}</span></p>}
+              {printQuoteData.quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(printQuoteData.quoteDate)}</span></p>}
             </div>
-          </div>
-        </div>
-        <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Quotation For:</p>
-          <p className="text-sm font-extrabold text-slate-900 uppercase">{printQuoteData.clientCompany}</p>
-          <p className="text-xs font-bold text-slate-700">{printQuoteData.clientName}</p>
-          {printQuoteData.clientAddress && (
-            <p className="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs">{printQuoteData.clientAddress}</p>
           )}
         </div>
-        <table className="w-full text-left text-xs mb-6 border border-slate-300">
-          <thead>
-            <tr className="bg-slate-900 text-white uppercase text-[9px] tracking-wider">
-              <th className="py-2 px-2 text-center w-10 border-r border-slate-700">SR</th>
-              <th className="py-2 px-2 border-r border-slate-700">Description</th>
-              <th className="py-2 px-2 text-center w-16 border-r border-slate-700">CTNS</th>
-              <th className="py-2 px-2 text-center w-16 border-r border-slate-700">QTY</th>
-              <th className="py-2 px-2 text-right w-20 border-r border-slate-700">Price</th>
-              <th className="py-2 px-2 text-right w-24">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {printQuoteData.items?.map((item: any, idx: number) => (
-              <tr key={item.id} className="border-b border-slate-300">
-                <td className="py-2 px-2 text-center border-r border-slate-300">{idx + 1}</td>
-                <td className="py-2 px-2 border-r border-slate-300">
-                  <p className="font-bold text-slate-900">{item.name}</p>
-                  {item.location && (
-                    <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-0.5 inline-block select-none">
-                      {item.location}
-                    </p>
-                  )}
-                </td>
-                <td className="py-2 px-2 text-center border-r border-slate-300">{item.cartons}</td>
-                <td className="py-2 px-2 text-center border-r border-slate-300">{item.quantity}</td>
-                <td className="py-2 px-2 text-right border-r border-slate-300">{getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)}</td>
-                <td className="py-2 px-2 text-right font-bold text-slate-900">
-                  ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        {/* Items Table */}
+        <div className="border border-slate-900 overflow-hidden rounded-lg mb-6">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE</th>
+                  <th className="py-2.5 px-3 text-right w-28">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
+                {printQuoteData.items?.map((item: any, idx: number) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 break-inside-avoid">
+                    {/* SR */}
+                    <td className="py-3 px-3 border-r border-slate-300 text-center text-slate-500 font-bold">
+                      {idx + 1}
+                    </td>
+
+                    {/* PRODUCT PHOTO */}
+                    <td className="p-1 border-r border-slate-300 align-middle">
+                      <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
+                        {item.photoUrl ? (
+                          <img src={item.photoUrl} alt="" className="h-full w-full object-contain p-0.5" />
+                        ) : (
+                          <FileImage className="h-5 w-5 text-slate-300" />
+                        )}
+                      </div>
+                    </td>
+
+                    {/* PRODUCT NAME */}
+                    <td className="py-3 px-3 border-r border-slate-300 align-middle">
+                      <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+                      {item.location && (
+                        <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block select-none">
+                          {item.location}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* CTNS */}
+                    <td className="py-2 px-2 border-r border-slate-300 align-middle text-center">
+                      <span className="w-8 text-center font-extrabold text-slate-900 text-xs select-none">
+                        {item.cartons}
+                      </span>
+                    </td>
+
+                    {/* QTY */}
+                    <td className="py-2 px-2 border-r border-slate-300 align-middle text-center">
+                      <span className="w-10 text-center font-extrabold text-slate-900 text-xs select-none">
+                        {item.quantity}
+                      </span>
+                    </td>
+
+                    {/* PRICE */}
+                    <td className="py-3 px-3 border-r border-slate-300 text-right align-middle font-bold text-slate-900">
+                      {getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)}
+                    </td>
+
+                    {/* TOTAL */}
+                    <td className="py-3 px-3 text-right align-middle font-black text-slate-900">
+                      ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+        </div>
         <div className="flex justify-between items-start break-inside-avoid pt-4">
           <div className="w-[60%] flex flex-row items-start gap-4">
             {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
