@@ -2357,8 +2357,17 @@ export default function QuotationView() {
                 <span className="text-sm">₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN")}</span>
               </div>
               {printQuoteData.taxInput && (
-                <div className="flex justify-between font-bold text-slate-500 px-1">
-                  <span className="text-[11px]">GST ({printQuoteData.taxInput})</span>
+                <div className="flex justify-between font-bold text-slate-500 px-1 items-center">
+                  <span className="flex items-center gap-1 text-[11px]">
+                    <span>GST</span>
+                    <span className="flex items-center gap-0.5">
+                      (
+                      <div className="min-w-[60px] text-center font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded py-0.5 px-1.5">
+                        {printQuoteData.taxInput}
+                      </div>
+                      )
+                    </span>
+                  </span>
                   <span className="text-sm">
                     ₹{(() => {
                       const sTotal = printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0);
@@ -2386,17 +2395,27 @@ export default function QuotationView() {
             </div>
             
             {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
-              <div className="pt-1 space-y-1.5 font-bold text-slate-600 px-1">
+              <div className="pt-2 space-y-2 font-bold text-slate-600 px-1">
                 {printQuoteData.cashAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Cash</span>
-                    <span className="text-xs">₹{parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span>₹</span>
+                      <div className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5">
+                        {parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}
+                      </div>
+                    </div>
                   </div>
                 )}
                 {printQuoteData.bankAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Bank</span>
-                    <span className="text-xs">₹{parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span>₹</span>
+                      <div className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5">
+                        {parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
