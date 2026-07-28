@@ -33,4 +33,4 @@ class UserSettings(Base):
     # Terms
     company_terms = Column(Text, nullable=True)
 
-    user = relationship("User", back_populates="settings")
+    user = relationship("app.models.user.User", back_populates="settings")

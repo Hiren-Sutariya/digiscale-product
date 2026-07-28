@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import QuotationView from "@/components/layout/QuotationView";
 
 const statusConfig = {
@@ -101,6 +101,7 @@ interface Collection {
 }
 
 function CollectionsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -371,10 +372,10 @@ function CollectionsPageContent() {
     const locParam = searchParams?.get("locId");
 
     if (tabParam === "quotation") {
-      window.location.href = "/quotation";
+      router.push("/quotation");
       return;
     } else if (tabParam === "warehouse") {
-      window.location.href = locParam ? `/warehouse?locId=${locParam}` : "/warehouse";
+      router.push(locParam ? `/warehouse?locId=${locParam}` : "/warehouse");
       return;
     } else {
       setCurrentTopTab("collections");

@@ -25,6 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import PageTitle from "@/components/ui/pageTitle";
+import { useRouter } from "next/navigation";
 
 interface Product {
   id: string;
@@ -44,6 +45,7 @@ interface Collection {
 }
 
 export default function WarehousePage() {
+  const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -687,7 +689,7 @@ export default function WarehousePage() {
 
                       <div className="flex flex-wrap items-center gap-2">
                         <button 
-                          onClick={() => window.location.href = `/projects?colId=${product.collectionId}`}
+                          onClick={() => router.push(`/projects?colId=${product.collectionId}`)}
                           className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 font-bold text-[10px] px-2.5 py-1.5 rounded-lg tracking-wider uppercase hover:bg-blue-100 transition cursor-pointer"
                         >
                           <Layers className="h-3 w-3" />
