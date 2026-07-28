@@ -152,6 +152,7 @@ function CollectionsPageContent() {
     title: string;
     message: string;
     onConfirm: () => void;
+    onCancel?: () => void;
     confirmText?: string;
     cancelText?: string;
     isDanger?: boolean;
@@ -1039,40 +1040,9 @@ ${rows}
     };
 
     const finish = async (result: { count: number; errors: number; importedProducts: Product[] }) => {
-      if (result.importedProducts.length > 0 && selectedCol) {
+      if (result.importedProducts.length === 0 || !selectedCol) return;
 
-        if (draftProducts.length > 0) {
-          if (window.confirm(`You have ${draftProducts.length} unsaved draft image(s).\n\nDo you want to merge the uploaded Excel data into these drafted images?\n(Click OK to merge, or Cancel to import them as new products)`)) {
-            setDraftProducts(prev => {
-              const updated = [...prev];
-              result.importedProducts.forEach((p, idx) => {
-                if (idx < updated.length) {
-                  updated[idx] = { 
-                    ...updated[idx], 
-                    name: p.name, 
-                    stock: p.stock, 
-                    cartonQty: p.cartonQty, 
-                    rate: p.rate, 
-                    length: p.length, 
-                    color: p.color, 
-                    description: p.description, 
-                    warehouse: p.warehouse, 
-                    unit_type: p.unit_type 
-                  };
-                } else {
-                  updated.push({ ...p, photoUrl: p.photoUrl || "" });
-                }
-              });
-              return updated;
-            });
-            setExcelImportStatus({ count: result.count, errors: result.errors });
-            setShowImportResult(true);
-            setTimeout(() => setShowImportResult(false), 6000);
-            if (excelImportRef.current) excelImportRef.current.value = "";
-            return; // Skip Supabase insert for now; user will save drafts manually
-          }
-        }
-
+      const doImportToSupabase = async () => {
         // Map products for Supabase schema
         const productPayloads = result.importedProducts.map(p => ({
           id: p.id,
@@ -1118,16 +1088,59 @@ ${rows}
           console.error("Failed to batch insert products into Supabase:", err);
           alert("Failed to import products to database.");
         }
-      }
 
-      setExcelImportStatus({ count: result.count, errors: result.errors });
-      setShowImportResult(true);
-      setTimeout(() => setShowImportResult(false), 6000);
-      e.target.value = "";
-      // Show photo assignment modal so user can add photos to imported products
-      if (result.importedProducts.length > 0) {
+        setExcelImportStatus({ count: result.count, errors: result.errors });
+        setShowImportResult(true);
+        setTimeout(() => setShowImportResult(false), 6000);
+        if (excelImportRef.current) excelImportRef.current.value = "";
+        // Show photo assignment modal so user can add photos to imported products
         setPhotoAssignProducts(result.importedProducts);
         setShowPhotoAssignModal(true);
+      };
+
+      if (draftProducts.length > 0) {
+        setConfirmModal({
+          isOpen: true,
+          title: "Merge with Draft Images?",
+          message: `You have ${draftProducts.length} unsaved draft image(s). Do you want to merge the uploaded Excel data into these drafted images?`,
+          confirmText: "Yes, Merge",
+          cancelText: "No, Import as New",
+          isDanger: false,
+          onConfirm: () => {
+            setDraftProducts(prev => {
+              const updated = [...prev];
+              result.importedProducts.forEach((p, idx) => {
+                if (idx < updated.length) {
+                  updated[idx] = { 
+                    ...updated[idx], 
+                    name: p.name, 
+                    stock: p.stock, 
+                    cartonQty: p.cartonQty, 
+                    rate: p.rate, 
+                    length: p.length, 
+                    color: p.color, 
+                    description: p.description, 
+                    warehouse: p.warehouse, 
+                    unit_type: p.unit_type 
+                  };
+                } else {
+                  updated.push({ ...p, photoUrl: p.photoUrl || "" });
+                }
+              });
+              return updated;
+            });
+            setExcelImportStatus({ count: result.count, errors: result.errors });
+            setShowImportResult(true);
+            setTimeout(() => setShowImportResult(false), 6000);
+            if (excelImportRef.current) excelImportRef.current.value = "";
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          },
+          onCancel: () => {
+            doImportToSupabase();
+          }
+        });
+      } else {
+        doImportToSupabase();
       }
     };
 
