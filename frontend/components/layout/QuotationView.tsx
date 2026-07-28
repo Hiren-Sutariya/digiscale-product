@@ -1455,11 +1455,61 @@ export default function QuotationView() {
           </div>
 
           {/* The quotation design template */}
-          <div id="print-area" className="print-container w-full max-w-5xl min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto">
-            
-            {/* Invoice Header */}
-            <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
-              {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
+          {(() => {
+            const chunkedPages = [];
+            let currentIndex = 0;
+            const totalItems = selectedItems.length;
+
+            if (totalItems === 0) {
+              chunkedPages.push({ items: [], startIndex: 0, isFirst: true, isLast: true });
+            } else {
+              let isFirst = true;
+              while (currentIndex < totalItems) {
+                const itemsLeft = totalItems - currentIndex;
+                let itemsForThisPage = 0;
+                let isLast = false;
+
+                if (isFirst) {
+                  if (itemsLeft <= 8) {
+                    itemsForThisPage = itemsLeft;
+                    isLast = true;
+                  } else {
+                    itemsForThisPage = 11;
+                  }
+                } else {
+                  if (itemsLeft <= 10) {
+                    itemsForThisPage = itemsLeft;
+                    isLast = true;
+                  } else {
+                    itemsForThisPage = 13;
+                  }
+                }
+
+                if (itemsForThisPage > itemsLeft) itemsForThisPage = itemsLeft;
+
+                chunkedPages.push({
+                  items: selectedItems.slice(currentIndex, currentIndex + itemsForThisPage),
+                  startIndex: currentIndex,
+                  isFirst: isFirst,
+                  isLast: isLast
+                });
+
+                currentIndex += itemsForThisPage;
+                isFirst = false;
+              }
+              if (chunkedPages.length > 0 && !chunkedPages[chunkedPages.length - 1].isLast) {
+                chunkedPages.push({ items: [], startIndex: totalItems, isFirst: false, isLast: true });
+              }
+            }
+
+            return (
+              <div id="print-area" className="flex flex-col gap-8 w-full max-w-5xl mx-auto">
+                {chunkedPages.map((page, pageIndex) => (
+                  <div key={pageIndex} className="print-container w-full min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto flex flex-col relative">
+                    
+                    {page.isFirst && (
+                      <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden shrink-0">
+                        {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
               <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
                 {companyInfo?.logo ? (
                   <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
@@ -1526,10 +1576,11 @@ export default function QuotationView() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Items Table */}
-            <div className="mb-6">
-              {selectedItems.length === 0 ? (
+            <div className={`mb-6 ${!page.isFirst ? 'mt-8' : 'mt-6'}`}>
+              {page.items.length === 0 && page.isFirst ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                   <FileText className="h-10 w-10 text-slate-200 mb-2" />
                   <p className="text-xs italic font-medium">No items selected.</p>
@@ -1549,11 +1600,13 @@ export default function QuotationView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
-                    {selectedItems.map((item, idx) => (
+                    {page.items.map((item, idx) => {
+                      const absoluteIndex = page.startIndex + idx + 1;
+                      return (
                       <tr key={item.id} className="hover:bg-slate-50/50">
                         {/* SR */}
                         <td className="py-3 px-3 border-r border-slate-300 text-center text-slate-500 font-bold">
-                          {idx + 1}
+                          {absoluteIndex}
                         </td>
 
                         {/* PRODUCT PHOTO */}
@@ -1661,15 +1714,19 @@ export default function QuotationView() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
-              )}
+              ) : null}
             </div>
 
+            {/* Fill space */}
+            <div className="flex-1" />
+
             {/* Calculations and Bank Info footer row */}
-            {selectedItems.length > 0 && (
-              <div className="mt-6 flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start break-inside-avoid print:pt-4">
+            {page.isLast && (
+              <div className="shrink-0 mt-auto flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start break-inside-avoid pt-6 border-t-2 border-slate-900">
                 
                 {/* Stacked Vertical Bank Details & Terms & Conditions */}
                 <div className="w-full md:w-3/5 print:w-[60%] flex flex-row items-start gap-4">
@@ -1775,7 +1832,7 @@ export default function QuotationView() {
                   <div className="no-print pt-2 space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Cash</span>
-                      <div className="flex items-center justify-end gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                      <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
                         <span className="text-slate-800 shrink-0">₹</span>
                         <input
                           type="number"
@@ -1798,7 +1855,7 @@ export default function QuotationView() {
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Bank</span>
-                      <div className="flex items-center justify-end gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                      <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
                         <span className="text-slate-800 shrink-0">₹</span>
                         <input
                           type="number"
@@ -1850,7 +1907,11 @@ export default function QuotationView() {
               </div>
             )}
 
-          </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
       </div>
@@ -2401,7 +2462,7 @@ export default function QuotationView() {
                 {printQuoteData.cashAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Cash</span>
-                    <div className="flex items-center justify-end gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
+                    <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
                       <span className="text-slate-800">₹</span>
                       <span className="font-bold text-slate-800">
                         {parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}
@@ -2412,7 +2473,7 @@ export default function QuotationView() {
                 {printQuoteData.bankAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Bank</span>
-                    <div className="flex items-center justify-end gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
+                    <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
                       <span className="text-slate-800">₹</span>
                       <span className="font-bold text-slate-800">
                         {parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}
