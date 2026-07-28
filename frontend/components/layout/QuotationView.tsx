@@ -1775,8 +1775,8 @@ export default function QuotationView() {
                   <div className="no-print pt-2 space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Cash</span>
-                      <div className="flex items-center gap-1">
-                        ₹
+                      <div className="flex items-center gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                        <span className="text-slate-800">₹</span>
                         <input
                           type="number"
                           placeholder="0"
@@ -1791,14 +1791,14 @@ export default function QuotationView() {
                               setBankAmount("");
                             }
                           }}
-                          className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5 outline-none focus:border-blue-500"
+                          className="flex-1 w-full text-right font-bold text-slate-800 bg-transparent outline-none"
                         />
                       </div>
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Bank</span>
-                      <div className="flex items-center gap-1">
-                        ₹
+                      <div className="flex items-center gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                        <span className="text-slate-800">₹</span>
                         <input
                           type="number"
                           placeholder="0"
@@ -1813,7 +1813,7 @@ export default function QuotationView() {
                               setCashAmount("");
                             }
                           }}
-                          className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5 outline-none focus:border-blue-500"
+                          className="flex-1 w-full text-right font-bold text-slate-800 bg-transparent outline-none"
                         />
                       </div>
                     </div>
@@ -2399,9 +2399,9 @@ export default function QuotationView() {
                 {printQuoteData.cashAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Cash</span>
-                    <div className="flex items-center gap-1 text-xs">
-                      <span>₹</span>
-                      <div className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5">
+                    <div className="flex items-center gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
+                      <span className="text-slate-800">₹</span>
+                      <div className="flex-1 text-right font-bold text-slate-800">
                         {parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}
                       </div>
                     </div>
@@ -2410,9 +2410,9 @@ export default function QuotationView() {
                 {printQuoteData.bankAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Bank</span>
-                    <div className="flex items-center gap-1 text-xs">
-                      <span>₹</span>
-                      <div className="w-20 text-right font-bold text-slate-800 bg-white border border-slate-300 rounded py-0.5 px-1.5">
+                    <div className="flex items-center gap-1 w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
+                      <span className="text-slate-800">₹</span>
+                      <div className="flex-1 text-right font-bold text-slate-800">
                         {parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}
                       </div>
                     </div>
