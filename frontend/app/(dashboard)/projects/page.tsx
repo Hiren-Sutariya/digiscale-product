@@ -1937,7 +1937,7 @@ ${rows}
                     const validUrls = urls.filter(u => u);
                     if (validUrls.length > 0) {
                       setDraftProducts(prev => {
-                        const newDrafts = validUrls.map(url => ({ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: url, warehouse: "" }));
+                        const newDrafts = validUrls.map(url => ({ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs" as "pcs" | "dzn", description: "", photoUrl: url, warehouse: "" }));
                         return [...newDrafts, ...prev];
                       });
                     }
