@@ -397,6 +397,16 @@ function CollectionsPageContent() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    // Scroll the main layout container to the top
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo(0, 0);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [selectedCol]);
+
 
 
   const findWarehouseLocation = (productId: string, collectionId: string) => {
