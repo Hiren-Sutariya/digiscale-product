@@ -1528,7 +1528,7 @@ export default function QuotationView() {
             </div>
 
             {/* Items Table */}
-            <div className="border border-slate-900 overflow-hidden rounded-lg">
+            <div className="mb-6">
               {selectedItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                   <FileText className="h-10 w-10 text-slate-200 mb-2" />
@@ -1536,7 +1536,7 @@ export default function QuotationView() {
                   <p className="text-[10px] mt-1 text-slate-400">Search and check boxes in the left list to add items.</p>
                 </div>
               ) : (
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse border-2 border-slate-900">
                   <thead>
                     <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
@@ -2240,8 +2240,8 @@ export default function QuotationView() {
         </div>
 
         {/* Items Table */}
-        <div className="border border-slate-900 mb-6">
-            <table className="w-full text-left border-collapse">
+        <div className="mb-6">
+            <table className="w-full text-left border-collapse border-2 border-slate-900">
               <thead>
                 <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
                   <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
@@ -2350,39 +2350,41 @@ export default function QuotationView() {
                 </>
             )}
           </div>
-          <div className="w-[40%] text-xs border-2 border-slate-900 overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center p-2 border-b border-slate-300 font-bold text-slate-700">
-              <span className="uppercase text-[10px] tracking-wider font-black">Amount</span>
-              <span className="text-sm">₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN")}</span>
-            </div>
-            {printQuoteData.taxInput && (
+          <div className="w-[40%] text-xs flex flex-col gap-3">
+            <div className="border-2 border-slate-900 overflow-hidden flex flex-col">
               <div className="flex justify-between items-center p-2 border-b border-slate-300 font-bold text-slate-700">
-                <span className="uppercase text-[10px] tracking-wider font-black">GST ({printQuoteData.taxInput})</span>
-                <span className="text-sm">
-                  ₹{(() => {
-                    const sTotal = printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0);
-                    let tAmt = 0;
-                    const rawTax = String(printQuoteData.taxInput).trim();
-                    if (rawTax) {
-                      if (rawTax.endsWith("%")) {
-                        tAmt = (sTotal * (parseFloat(rawTax.slice(0, -1)) || 0)) / 100;
-                      } else {
-                        tAmt = parseFloat(rawTax) || 0;
-                      }
-                    }
-                    return tAmt;
-                  })().toLocaleString("en-IN")}
-                </span>
+                <span className="uppercase text-[10px] tracking-wider font-black">Amount</span>
+                <span className="text-sm">₹{printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0).toLocaleString("en-IN")}</span>
               </div>
-            )}
-            
-            <div className="flex justify-between items-center p-2.5 bg-slate-900 text-white font-black">
-              <span className="uppercase text-[11px] tracking-widest">Grand Total</span>
-              <span className="text-base">₹{(printQuoteData.total || 0).toLocaleString("en-IN")}</span>
+              {printQuoteData.taxInput && (
+                <div className="flex justify-between items-center p-2 border-b border-slate-300 font-bold text-slate-700">
+                  <span className="uppercase text-[10px] tracking-wider font-black">GST ({printQuoteData.taxInput})</span>
+                  <span className="text-sm">
+                    ₹{(() => {
+                      const sTotal = printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0);
+                      let tAmt = 0;
+                      const rawTax = String(printQuoteData.taxInput).trim();
+                      if (rawTax) {
+                        if (rawTax.endsWith("%")) {
+                          tAmt = (sTotal * (parseFloat(rawTax.slice(0, -1)) || 0)) / 100;
+                        } else {
+                          tAmt = parseFloat(rawTax) || 0;
+                        }
+                      }
+                      return tAmt;
+                    })().toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center p-2.5 bg-slate-900 text-white font-black">
+                <span className="uppercase text-[11px] tracking-widest">Grand Total</span>
+                <span className="text-base">₹{(printQuoteData.total || 0).toLocaleString("en-IN")}</span>
+              </div>
             </div>
             
             {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
-              <div className="p-2 font-bold text-slate-900 text-[11px] flex-1 bg-slate-50 border-t-2 border-slate-900">
+              <div className="p-2 font-bold text-slate-900 text-[11px] bg-slate-50 border-2 border-slate-900 overflow-hidden">
                 <div className="flex justify-between border-b border-slate-300 pb-1.5 mb-1.5">
                   <span className="uppercase tracking-wider">BANK:</span>
                   <span>{printQuoteData.bankAmount ? `₹${parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}` : "-"}</span>
@@ -2395,7 +2397,7 @@ export default function QuotationView() {
             )}
             
             {showAuthSign && (
-              <div className="text-right p-4 pt-16 bg-white flex-1 border-t-2 border-slate-900">
+              <div className="text-right p-4 pt-16 bg-white border-2 border-slate-900 overflow-hidden mt-auto">
                 <div className="inline-block border-t-2 border-slate-900 w-32 pt-1 text-center text-[10px] font-black text-slate-800 uppercase tracking-widest">
                   Authorized Sign
                 </div>
