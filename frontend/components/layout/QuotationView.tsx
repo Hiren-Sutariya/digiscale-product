@@ -1413,7 +1413,7 @@ export default function QuotationView() {
           </div>
 
           {/* The quotation design template */}
-          <div id="print-area" className="print-container w-full rounded-3xl border border-slate-200 bg-white p-8 md:p-10 shadow-md">
+          <div id="print-area" className="print-container w-full max-w-[794px] min-h-[1123px] mx-auto rounded-sm border border-slate-200 bg-white p-8 md:p-10 shadow-md">
             
             {/* Invoice Header */}
             <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
@@ -2125,7 +2125,7 @@ export default function QuotationView() {
 
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
     {printQuoteData && (
-      <div id="print-area" className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-4 md:p-8">
+      <div id="print-area" className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-0">
         <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
