@@ -1040,6 +1040,39 @@ ${rows}
 
     const finish = async (result: { count: number; errors: number; importedProducts: Product[] }) => {
       if (result.importedProducts.length > 0 && selectedCol) {
+
+        if (draftProducts.length > 0) {
+          if (window.confirm(`You have ${draftProducts.length} unsaved draft image(s).\n\nDo you want to merge the uploaded Excel data into these drafted images?\n(Click OK to merge, or Cancel to import them as new products)`)) {
+            setDraftProducts(prev => {
+              const updated = [...prev];
+              result.importedProducts.forEach((p, idx) => {
+                if (idx < updated.length) {
+                  updated[idx] = { 
+                    ...updated[idx], 
+                    name: p.name, 
+                    stock: p.stock, 
+                    cartonQty: p.cartonQty, 
+                    rate: p.rate, 
+                    length: p.length, 
+                    color: p.color, 
+                    description: p.description, 
+                    warehouse: p.warehouse, 
+                    unit_type: p.unit_type 
+                  };
+                } else {
+                  updated.push({ ...p, photoUrl: p.photoUrl || "" });
+                }
+              });
+              return updated;
+            });
+            setExcelImportStatus({ count: result.count, errors: result.errors });
+            setShowImportResult(true);
+            setTimeout(() => setShowImportResult(false), 6000);
+            if (excelImportRef.current) excelImportRef.current.value = "";
+            return; // Skip Supabase insert for now; user will save drafts manually
+          }
+        }
+
         // Map products for Supabase schema
         const productPayloads = result.importedProducts.map(p => ({
           id: p.id,
@@ -1865,25 +1898,36 @@ ${rows}
                 const files = Array.from(ev.dataTransfer.files).filter(f => f.type.startsWith("image/"));
 
                 if (files.length > 0) {
-                  files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                      const src = e.target?.result as string;
-                      const img = new window.Image();
-                      img.onload = () => {
-                        const canvas = document.createElement("canvas");
-                        const maxDim = 800;
-                        let { width, height } = img;
-                        if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
-                        else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
-                        canvas.width = width; canvas.height = height;
-                        canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
-                        const url = canvas.toDataURL("image/jpeg", 0.7);
-                        setDraftProducts(prev => [{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: url, warehouse: "" }, ...prev]);
+                  Promise.all(files.map(file => {
+                    return new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        const src = e.target?.result as string;
+                        const img = new window.Image();
+                        img.onload = () => {
+                          const canvas = document.createElement("canvas");
+                          const maxDim = 800;
+                          let { width, height } = img;
+                          if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
+                          else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
+                          canvas.width = width; canvas.height = height;
+                          canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+                          resolve(canvas.toDataURL("image/jpeg", 0.7));
+                        };
+                        img.onerror = () => resolve("");
+                        img.src = src;
                       };
-                      img.src = src;
-                    };
-                    reader.readAsDataURL(file);
+                      reader.onerror = () => resolve("");
+                      reader.readAsDataURL(file);
+                    });
+                  })).then(urls => {
+                    const validUrls = urls.filter(u => u);
+                    if (validUrls.length > 0) {
+                      setDraftProducts(prev => {
+                        const newDrafts = validUrls.map(url => ({ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: url, warehouse: "" }));
+                        return [...newDrafts, ...prev];
+                      });
+                    }
                   });
                 } else {
                   // Try to get image from HTML (dragged from another tab)
