@@ -789,19 +789,19 @@ function CollectionsPageContent() {
       "Photo URL",                        // col J
     ];
 
-    let exportRows = [];
+    let exportRows: string[][] = [];
 
     if (products.length > 0) {
       exportRows = products.map((p) => [
         p.name || "",
         p.description || "",
-        p.cartonQty || "",
+        p.cartonQty ? String(p.cartonQty) : "",
         p.unit_type || "",
-        p.rate || "",
+        p.rate ? String(p.rate) : "",
         p.color || "",
         p.length || "",
         p.warehouse || "",
-        p.stock || "",
+        p.stock ? String(p.stock) : "",
         p.photoUrl || "",
       ]);
     } else {
