@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { 
   FileText, 
   Printer, 
@@ -785,16 +786,11 @@ export default function QuotationView() {
             overflow: visible !important;
           }
           /* Hide everything except the print area */
-          body * {
-            visibility: hidden !important;
-          }
-          #print-area, #print-area * {
-            visibility: visible !important;
+          body > *:not(#print-area) {
+            display: none !important;
           }
           #print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            display: block !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -802,7 +798,6 @@ export default function QuotationView() {
             border-radius: 0 !important;
             box-shadow: none !important;
             background: white !important;
-            min-height: auto !important;
           }
           /* Explicit rules to strip out inputs, edit controls and buttons in print mode */
           .no-print, .no-print *, button, input, textarea {
@@ -2120,8 +2115,8 @@ export default function QuotationView() {
     )}
 
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
-    {printQuoteData && (
-      <div id="print-area" className="hidden print:block absolute top-0 left-0 w-full bg-white text-black p-0">
+    {printQuoteData && typeof document !== "undefined" && createPortal(
+      <div id="print-area" className="hidden print:block w-full bg-white text-black p-0">
         <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
           {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
           <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
@@ -2355,7 +2350,8 @@ export default function QuotationView() {
             )}
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     {/* CONFIRM DIALOG MODAL */}
