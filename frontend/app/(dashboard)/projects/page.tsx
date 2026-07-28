@@ -121,6 +121,7 @@ function CollectionsPageContent() {
   // Products State
   const [products, setProducts] = useState<Product[]>([]);
   const [draftProducts, setDraftProducts] = useState<Partial<Product>[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [productSearch, setProductSearch] = useState("");
   const [editingProductRowId, setEditingProductRowId] = useState<string | null>(null);
   const [editingProductState, setEditingProductState] = useState<Partial<Product> | null>(null);
@@ -1352,6 +1353,40 @@ ${rows}
     });
   };
 
+  const toggleProductSelection = (id: string) => {
+    const newSet = new Set(selectedProductIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedProductIds(newSet);
+  };
+
+  const handleBulkDeleteProducts = () => {
+    if (!selectedCol || selectedProductIds.size === 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Selected Products",
+      message: `Are you sure you want to delete ${selectedProductIds.size} selected products from the catalog? This action cannot be undone.`,
+      confirmText: "Delete All",
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const idArray = Array.from(selectedProductIds);
+          const { error } = await supabase.from('products').delete().in('id', idArray);
+          if (error) throw error;
+
+          setProducts((prev) => prev.filter((p) => !selectedProductIds.has(p.id)));
+          setSelectedProductIds(new Set());
+          await refreshAllProducts(currentUserId || "");
+        } catch (err) {
+          console.error("Failed to delete products from Supabase:", err);
+          alert("Failed to delete products.");
+        }
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   const handleCreateProductFromAsset = (assetPath: string) => {
     setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: assetPath, warehouse: "" }, ...draftProducts]);
   };
@@ -1826,6 +1861,14 @@ ${rows}
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
+              {selectedProductIds.size > 0 && (
+                <button
+                  onClick={handleBulkDeleteProducts}
+                  className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                </button>
+              )}
               <button
                 onClick={() => {
                   setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
@@ -2013,6 +2056,20 @@ ${rows}
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-wider text-slate-450">
+                          <th className="py-4 px-6 w-[40px] text-center">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0}
+                              onChange={() => {
+                                if (selectedProductIds.size === filteredProducts.length) {
+                                  setSelectedProductIds(new Set());
+                                } else {
+                                  setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </th>
                           <th className="py-4 px-6 w-[80px] text-center">Photo</th>
                           <th className="py-4 px-6 min-w-[200px] text-center">Product Name</th>
                           <th className="py-4 px-6 min-w-[150px] text-center">Description</th>
@@ -2029,6 +2086,7 @@ ${rows}
                       <tbody className="divide-y divide-slate-100 transition-colors">
                         {draftProducts.map((draft, idx) => (
                           <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400">
+                            <td className="py-3 px-4 text-center"></td>
                             <td className="py-3 px-4 text-center">
                               <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
                                 <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
@@ -2141,6 +2199,7 @@ ${rows}
                           if (editingProductRowId === prod.id && editingProductState) {
                             return (
                               <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400">
+                                <td className="py-3 px-4 text-center"></td>
                                 <td className="py-3 px-4 text-center">
                                   <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
                                     <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
@@ -2248,6 +2307,14 @@ ${rows}
 
                           return (
                             <tr key={prod.id} className="text-xs text-slate-800 hover:bg-slate-50/40 transition">
+                              <td className="py-4 px-4 text-center">
+                                <input 
+                                  type="checkbox"
+                                  checked={selectedProductIds.has(prod.id)}
+                                  onChange={() => toggleProductSelection(prod.id)}
+                                  className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                />
+                              </td>
                               <td className="py-4 px-4 text-center">
                                 <div className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center p-1.5">
                                   {prod.photoUrl ? (
