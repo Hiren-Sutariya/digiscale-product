@@ -1508,6 +1508,7 @@ export default function QuotationView() {
                   <div key={pageIndex} className="print-container w-full min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto flex flex-col relative">
                     
                     {page.isFirst && (
+                      <>
                       <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden shrink-0">
                         {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
               <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
@@ -1576,6 +1577,7 @@ export default function QuotationView() {
                 </div>
               )}
             </div>
+            </>
             )}
 
             {/* Items Table */}
@@ -1718,7 +1720,7 @@ export default function QuotationView() {
                     })}
                   </tbody>
                 </table>
-              ) : null}
+              )}
             </div>
 
             {/* Fill space */}
