@@ -15,14 +15,7 @@ class User(Base):
     credits_limit = Column(Integer, default=30)
     credits_used = Column(Integer, default=0)
     
-    company_website = Column(String, nullable=True)
-    company_gst = Column(String, nullable=True)
-    company_bank_name = Column(String, nullable=True)
-    company_account_number = Column(String, nullable=True)
-    company_ifsc = Column(String, nullable=True)
-    company_terms = Column(String, nullable=True)
-    company_upi_id = Column(String, nullable=True)
-    
+
     created_at = Column(DateTime, default=datetime.utcnow)
     deletion_scheduled_at = Column(DateTime, nullable=True)
 
