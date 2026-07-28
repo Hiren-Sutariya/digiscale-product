@@ -173,6 +173,15 @@ export default function QuotationView() {
   }, [clientName, uniqueClients]);
 
   useEffect(() => {
+    if (printQuoteData) {
+      document.body.classList.add('is-printing-portal');
+    } else {
+      document.body.classList.remove('is-printing-portal');
+    }
+    return () => document.body.classList.remove('is-printing-portal');
+  }, [printQuoteData]);
+
+  useEffect(() => {
     if (selectedQuoteForPreview && zoomMode === "fit") {
       const updateScale = () => {
         const viewportHeight = window.innerHeight;
@@ -752,7 +761,26 @@ export default function QuotationView() {
 
   // Print
   const handlePrint = () => {
-    window.print();
+    const currentQuote = {
+      id: "preview",
+      quoteNumber,
+      clientName,
+      clientCompany,
+      clientAddress,
+      date: quoteDate,
+      items: selectedItems,
+      taxInput,
+      cashAmount,
+      bankAmount,
+      applyEventMarkup,
+      eventMarkupPercent,
+      total: total
+    };
+    setPrintQuoteData(currentQuote);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintQuoteData(null), 100);
+    }, 300);
   };
 
   if (loadingProfile) {
@@ -785,11 +813,11 @@ export default function QuotationView() {
             min-height: auto !important;
             overflow: visible !important;
           }
-          /* Hide everything except the print area */
-          body > *:not(#print-area) {
+          /* Hide everything except the print area when using Portal */
+          body.is-printing-portal > *:not(.print-portal) {
             display: none !important;
           }
-          #print-area {
+          body.is-printing-portal .print-portal {
             display: block !important;
             width: 100% !important;
             margin: 0 !important;
@@ -799,6 +827,29 @@ export default function QuotationView() {
             box-shadow: none !important;
             background: white !important;
           }
+
+          /* Fallback for standard Ctrl+P (hides everything except #print-area, but keeps position absolute) */
+          body:not(.is-printing-portal) * {
+            visibility: hidden !important;
+          }
+          body:not(.is-printing-portal) #print-area, 
+          body:not(.is-printing-portal) #print-area * {
+            visibility: visible !important;
+          }
+          body:not(.is-printing-portal) #print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+            min-height: auto !important;
+          }
+
           /* Explicit rules to strip out inputs, edit controls and buttons in print mode */
           .no-print, .no-print *, button, input, textarea {
             display: none !important;
@@ -1824,9 +1875,11 @@ export default function QuotationView() {
             {/* Print button */}
             <button
               onClick={() => {
+                setPrintQuoteData(selectedQuoteForPreview);
                 setTimeout(() => {
                   window.print();
-                }, 100);
+                  setTimeout(() => setPrintQuoteData(null), 100);
+                }, 300);
               }}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
             >
@@ -2116,7 +2169,7 @@ export default function QuotationView() {
 
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
     {printQuoteData && typeof document !== "undefined" && createPortal(
-      <div id="print-area" className="hidden print:block w-full bg-white text-black p-0">
+      <div id="print-area" className="print-portal hidden print:block w-full bg-white text-black p-0">
         <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
           {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
           <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
