@@ -772,7 +772,7 @@ export default function QuotationView() {
       <style jsx global>{`
         @media print {
           @page {
-            margin: 0 !important; /* Suppresses default browser header and footer */
+            margin: 20mm !important; /* Real margins on every page */
           }
           html, body {
             background-color: white !important;
@@ -799,14 +799,10 @@ export default function QuotationView() {
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
-            box-shadow: none !important;
-            min-height: auto !important;
-            margin: 0 !important;
-            padding: 1.2cm !important;
-            border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
             background: white !important;
+            min-height: auto !important;
           }
           /* Explicit rules to strip out inputs, edit controls and buttons in print mode */
           .no-print, .no-print *, button, input, textarea {
@@ -2196,7 +2192,7 @@ export default function QuotationView() {
         </div>
 
         {/* Items Table */}
-        <div className="border border-slate-900 overflow-hidden rounded-lg mb-6">
+        <div className="border border-slate-900 mb-6">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
