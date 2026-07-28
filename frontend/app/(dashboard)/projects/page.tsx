@@ -796,7 +796,7 @@ function CollectionsPageContent() {
       "Product Name",                     // col A
       "Description",                      // col B
       "Carton Packing",                   // col C
-      "Unit Type (pcs/dzn)",              // col D
+      "Unit Type (pcs/dzn/kg)",           // col D
       "Rate",                             // col E
       "Color",                            // col F
       "Length",                           // col G
@@ -1019,7 +1019,7 @@ ${rows}
       const descIdx = colIdx(["desc", "description", "note"]);
       const rateIdx = colIdx(["price", "rate", "code"]);
       const stockIdx = colIdx(["stock", "quantity"]);
-      const unitTypeIdx = colIdx(["unit type", "pcs", "dzn"]);
+      const unitTypeIdx = colIdx(["unit type", "pcs", "dzn", "kg"]);
       const imageIdx = colIdx(["image", "photo", "url", "picture"]);
       const warehouseIdx = colIdx(["warehouse", "location", "shelf"]);
 
