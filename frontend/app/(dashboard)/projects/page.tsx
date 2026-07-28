@@ -261,7 +261,11 @@ function CollectionsPageContent() {
           createdAt: p.created_at
         }));
         setAllProducts(mapped);
-        localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
+        try {
+          localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
+        } catch (e) {
+          console.warn("Could not save to localStorage, quota exceeded.");
+        }
       }
     } catch (err) {
       console.error("Failed to refresh products:", err);

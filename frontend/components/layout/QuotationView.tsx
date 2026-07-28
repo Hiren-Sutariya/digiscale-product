@@ -355,7 +355,11 @@ export default function QuotationView() {
           };
           setCache(cacheKey, payload);
           if (typeof window !== "undefined") {
-            localStorage.setItem(cacheKey, JSON.stringify(payload));
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(payload));
+            } catch (e) {
+              console.warn("Could not save to localStorage, quota exceeded.");
+            }
           }
         } else {
           setQuoteNumber("Q-1");
@@ -367,7 +371,11 @@ export default function QuotationView() {
           };
           setCache(cacheKey, payload);
           if (typeof window !== "undefined") {
-            localStorage.setItem(cacheKey, JSON.stringify(payload));
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(payload));
+            } catch (e) {
+              console.warn("Could not save to localStorage, quota exceeded.");
+            }
           }
         }
 
