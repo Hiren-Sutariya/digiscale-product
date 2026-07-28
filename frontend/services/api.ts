@@ -43,25 +43,11 @@ export function clearDigiscaleCache(): void {
 }
 
 export async function login(email: string, password: string): Promise<any> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-  let response;
-  try {
-    response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      signal: controller.signal
-    });
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      throw new Error("Connection to server timed out. Please check your firewall or network.");
-    }
-    throw new Error("Failed to connect to server. Ensure the backend is running and accessible.");
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
   if (!response.ok) {
     const err = await response.json();
