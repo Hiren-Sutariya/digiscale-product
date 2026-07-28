@@ -76,8 +76,9 @@ interface CompanyInfo {
   gst: string;
   bankName: string;
   accountNumber: string;
-  ifsc: string;
+  ifsc?: string;
   upiId?: string;
+  qrCode?: string;
   termsAndConditions?: string;
 }
 
@@ -110,7 +111,12 @@ export default function QuotationView() {
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   
   // Quotation Metadata (Clean empty strings by default on mount as requested!)
-  const [quoteDate, setQuoteDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const getLocalDateString = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+  };
+  const [quoteDate, setQuoteDate] = useState<string>(() => getLocalDateString());
   const [quoteNumber, setQuoteNumber] = useState("");
 
   // Selected Quotation Items
@@ -158,7 +164,11 @@ export default function QuotationView() {
 
   const filteredClientSuggestions = useMemo(() => {
     if (!clientName) return [];
-    return uniqueClients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase()));
+    const searchLower = clientName.toLowerCase();
+    return uniqueClients.filter(c => 
+      c.name.toLowerCase().includes(searchLower) || 
+      (c.company && c.company.toLowerCase().includes(searchLower))
+    );
   }, [clientName, uniqueClients]);
 
   useEffect(() => {
@@ -423,6 +433,7 @@ export default function QuotationView() {
             accountNumber: settingsData.company_account_number,
             ifsc: settingsData.company_ifsc,
             upiId: settingsData.company_upi_id,
+            qrCode: settingsData.company_qr_code,
             termsAndConditions: settingsData.company_terms,
           };
           
@@ -549,7 +560,7 @@ export default function QuotationView() {
     setClientName("");
     setClientCompany("");
     setClientAddress("");
-    setQuoteDate(() => new Date().toISOString().split('T')[0]);
+    setQuoteDate(() => getLocalDateString());
     setSelectedItems([]);
     setTaxInput("");
     setCashAmount("");
@@ -1221,7 +1232,7 @@ export default function QuotationView() {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. Rajesh Kumar"
+                        placeholder="Search by Customer or Company Name..."
                         value={clientName}
                         onChange={(e) => {
                           setClientName(e.target.value);
@@ -1625,6 +1636,28 @@ export default function QuotationView() {
                 
                 {/* Stacked Vertical Bank Details & Terms & Conditions */}
                 <div className="w-full md:w-3/5 print:w-[60%] print:flex print:flex-row-reverse print:justify-end print:gap-4">
+                  {/* QR Code */}
+                  {showBankDetails && companyInfo && (companyInfo.qrCode || companyInfo.upiId || (companyInfo.accountNumber && companyInfo.ifsc)) && (
+                    <div className="hidden print:flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0 mr-4">
+                      {companyInfo.qrCode ? (
+                        <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
+                      ) : companyInfo.upiId ? (
+                        <QRCodeSVG
+                          value={companyInfo.upiId}
+                          size={60}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <QRCodeSVG
+                          value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                          size={60}
+                          className="w-full h-full"
+                        />
+                      )}
+                      {!companyInfo.qrCode && <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
+                    </div>
+                  )}
+
                   <div className="space-y-3 print:space-y-0 print:flex-1">
                     {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) ? (
                       <div className="py-1">
@@ -1661,17 +1694,6 @@ export default function QuotationView() {
                       </div>
                     )}
                   </div>
-                  
-                  {/* QR Code only visible in print */}
-                  {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                    <div className="hidden print:flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0">
-                      <QRCodeSVG
-                        value={companyInfo.upiId || `upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
-                        size={60}
-                      />
-                      <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Reordered Totals Summary */}
@@ -1983,10 +2005,39 @@ export default function QuotationView() {
 
             {/* Calculations and Bank Info footer row */}
             <div className="mt-8 flex flex-col md:flex-row print:flex-row justify-between gap-6 items-start border-t border-slate-100 pt-6 break-inside-avoid print:pt-4">
-              <div className="w-full md:w-3/5 print:w-[60%] print:flex print:flex-row-reverse print:justify-end print:gap-4">
-                <div className="space-y-3 print:space-y-0 print:flex-1">
-                  {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
-                    <div>
+              <div className="w-full md:w-3/5 print:w-[60%]">
+                <div className="flex items-start">
+                  {/* QR Code */}
+                  {showBankDetails && companyInfo && (companyInfo.qrCode || companyInfo.upiId || (companyInfo.accountNumber && companyInfo.ifsc)) && (
+                    <div className="w-16 h-16 mr-3 shrink-0">
+                      {companyInfo.qrCode ? (
+                        <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
+                      ) : companyInfo.upiId ? (
+                        <QRCodeSVG
+                          value={companyInfo.upiId}
+                          size={64}
+                          level="M"
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <QRCodeSVG
+                          value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                          size={64}
+                          level="M"
+                          className="w-full h-full"
+                        />
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Vertical Divider */}
+                  {showBankDetails && companyInfo && (
+                    <div className="w-px bg-slate-200 mx-3 shrink-0 self-stretch"></div>
+                  )}
+
+                  {/* Bank Details */}
+                  {showBankDetails && companyInfo && (
+                    <div className="flex-1 min-w-0 pr-2">
                       <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
                         BANK ACCOUNT DETAILS (FOR PAYMENTS)
                       </p>
@@ -2006,25 +2057,14 @@ export default function QuotationView() {
                       </div>
                     </div>
                   )}
-
-                  {termsList.length > 0 && (
-                    <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
-                      <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
-                      {termsList.map((term, i) => (
-                        <p key={i}>{term}</p>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                
-                {/* QR Code */}
-                {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                  <div className="flex flex-col items-center justify-center p-1 border border-slate-200 rounded h-[100px] w-[100px] shrink-0">
-                    <QRCodeSVG
-                      value={companyInfo.upiId || `upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
-                      size={60}
-                    />
-                    <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>
+
+                {termsList.length > 0 && (
+                  <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-4 leading-relaxed">
+                    <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
+                    {termsList.map((term, i) => (
+                      <p key={i}>{term}</p>
+                    ))}
                   </div>
                 )}
               </div>

@@ -638,15 +638,20 @@ function CollectionsPageContent() {
       setDraftProducts(prev => prev.filter((d) => d !== draft));
 
       if (productPayload.warehouse) {
-        await supabase.from("warehouse_assignments").insert([{
-          location_key: productPayload.warehouse,
+        const locations = productPayload.warehouse.split(',').filter(Boolean);
+        const assignments = locations.map(loc => ({
+          location_key: loc,
           product_id: newId,
           collection_id: targetCollectionId,
           user_id: currentUserId
-        }]);
+        }));
+        await supabase.from("warehouse_assignments").insert(assignments);
         setWarehouseAssignments(prev => {
-          const newList = prev[productPayload.warehouse] || [];
-          return { ...prev, [productPayload.warehouse]: [...newList, { productId: newId, collectionId: targetCollectionId }] };
+          const next = { ...prev };
+          locations.forEach(loc => {
+            next[loc] = [...(next[loc] || []), { productId: newId, collectionId: targetCollectionId }];
+          });
+          return next;
         });
       }
 
@@ -714,20 +719,29 @@ function CollectionsPageContent() {
         if (oldWarehouse) {
           await supabase.from("warehouse_assignments").delete().eq("product_id", editingProductRowId);
           setWarehouseAssignments(prev => {
-            const oldList = prev[oldWarehouse] || [];
-            return { ...prev, [oldWarehouse]: oldList.filter(i => i.productId !== editingProductRowId) };
+            const next = { ...prev };
+            const oldLocs = oldWarehouse.split(',').filter(Boolean);
+            oldLocs.forEach(loc => {
+              if (next[loc]) next[loc] = next[loc].filter(i => i.productId !== editingProductRowId);
+            });
+            return next;
           });
         }
         if (productPayload.warehouse) {
-          await supabase.from("warehouse_assignments").insert([{
-            location_key: productPayload.warehouse,
+          const locations = productPayload.warehouse.split(',').filter(Boolean);
+          const assignments = locations.map(loc => ({
+            location_key: loc,
             product_id: editingProductRowId,
             collection_id: targetCollectionId,
             user_id: currentUserId
-          }]);
+          }));
+          await supabase.from("warehouse_assignments").insert(assignments);
           setWarehouseAssignments(prev => {
-            const newList = prev[productPayload.warehouse] || [];
-            return { ...prev, [productPayload.warehouse]: [...newList, { productId: editingProductRowId!, collectionId: targetCollectionId }] };
+            const next = { ...prev };
+            locations.forEach(loc => {
+              next[loc] = [...(next[loc] || []), { productId: editingProductRowId!, collectionId: targetCollectionId }];
+            });
+            return next;
           });
         }
       }
@@ -774,11 +788,28 @@ function CollectionsPageContent() {
       "Photo URL",                        // col J
     ];
 
-    const sampleRows = [
-      ["Silk Saree Premium", "Premium quality", "24", "pcs", "950", "Royal Blue, Navy", "5.5 cm", "A-1-upper", "120", "https://example.com/saree.jpg"],
-      ["Cotton Dupatta", "Lightweight", "12", "dzn", "200", "Red, Green, Yellow", "2.5 cm", "", "200", ""],
-      ["Embroidered Kurti", "", "6", "pcs", "1200", "Green", "3.0 cm", "B-2-lower", "50", "https://example.com/kurti.jpg"],
-    ];
+    let exportRows = [];
+
+    if (products.length > 0) {
+      exportRows = products.map((p) => [
+        p.name || "",
+        p.description || "",
+        p.cartonQty || "",
+        p.unitType || "",
+        p.rate || "",
+        p.color || "",
+        p.length || "",
+        p.warehouse || "",
+        p.stockQuantity || "",
+        p.photoUrl || "",
+      ]);
+    } else {
+      exportRows = [
+        ["Silk Saree Premium", "Premium quality", "24", "pcs", "950", "Royal Blue, Navy", "5.5 cm", "A-1-upper", "120", "https://example.com/saree.jpg"],
+        ["Cotton Dupatta", "Lightweight", "12", "dzn", "200", "Red, Green, Yellow", "2.5 cm", "", "200", ""],
+        ["Embroidered Kurti", "", "6", "pcs", "1200", "Green", "3.0 cm", "B-2-lower", "50", "https://example.com/kurti.jpg"],
+      ];
+    }
 
     // ── XML Escape helper ─────────────────────────────────────────────
     const esc = (v: string) =>
@@ -799,7 +830,7 @@ function CollectionsPageContent() {
 
     // Pre-register strings
     headers.forEach(strIndex);
-    sampleRows.forEach((row) => row.forEach(strIndex));
+    exportRows.forEach((row) => row.forEach(strIndex));
 
     const sharedStringsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${allStrings.length}" uniqueCount="${allStrings.length}">
@@ -823,7 +854,7 @@ ${allStrings.map((s) => `  <si><t xml:space="preserve">${esc(s)}</t></si>`).join
 
     const rows = [
       buildRow(1, headers, 1), // header row style=1
-      ...sampleRows.map((r, i) => buildRow(i + 2, r, 0)), // data rows style=0
+      ...exportRows.map((r, i) => buildRow(i + 2, r, 0)), // data rows style=0
     ].join("\n");
 
     // Column widths — 7 columns (no photo)
@@ -3491,15 +3522,18 @@ ${rows}
                           <p className="text-[10px] font-bold text-slate-500 mb-1.5 px-1">SLOT {slotNum}</p>
                           <div className="flex flex-col gap-1.5">
                             {slotLocs.map(loc => {
-                              const isSelected = (openLocationPicker.type === 'draft' ? draftProducts[openLocationPicker.idx!]?.warehouse : editingProductState?.warehouse) === loc;
+                              const currentWarehouse = (openLocationPicker.type === 'draft' ? draftProducts[openLocationPicker.idx!]?.warehouse : editingProductState?.warehouse) || "";
+                              const selectedList = currentWarehouse.split(',').filter(Boolean);
+                              const isSelected = selectedList.includes(loc);
                               const isUpper = loc.includes('upper');
                               return (
                                 <button
                                   key={loc}
                                   onClick={() => {
-                                    if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", loc);
-                                    else handleUpdateEditState("warehouse", loc);
-                                    setOpenLocationPicker(null);
+                                    const newList = isSelected ? selectedList.filter(l => l !== loc) : [...selectedList, loc];
+                                    const newWarehouse = newList.join(',');
+                                    if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", newWarehouse);
+                                    else handleUpdateEditState("warehouse", newWarehouse);
                                   }}
                                   className={`text-xs font-bold py-1.5 px-2 rounded-md transition-all flex items-center justify-between group ${isSelected
                                     ? "bg-blue-500 text-white shadow-md shadow-blue-500/20"
@@ -3519,16 +3553,21 @@ ${rows}
                 );
               })}
             </div>
-            <div className="p-4 border-t border-slate-100 bg-white flex justify-end">
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
               <button
                 onClick={() => {
                   if (openLocationPicker.type === 'draft') handleUpdateDraft(openLocationPicker.idx!, "warehouse", "");
                   else handleUpdateEditState("warehouse", "");
-                  setOpenLocationPicker(null);
                 }}
                 className="text-xs px-4 py-2 rounded-lg text-slate-500 font-bold hover:bg-slate-100 transition-colors"
               >
-                Clear Assignment
+                Clear Assignments
+              </button>
+              <button
+                onClick={() => setOpenLocationPicker(null)}
+                className="text-xs px-6 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Done
               </button>
             </div>
           </div>

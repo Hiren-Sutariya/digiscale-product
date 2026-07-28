@@ -911,6 +911,7 @@ function SecuritySection() {
 /* ============ Company Section ============ */
 function CompanySection() {
   const [logo, setLogo] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [primaryPhone, setPrimaryPhone] = useState("");
@@ -930,11 +931,13 @@ function CompanySection() {
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([getUserProfile(), getUserSettings()])
       .then(([profile, settingsData]) => {
         setLogo(settingsData.company_logo || null);
+        setQrCode(settingsData.company_qr_code || null);
         setName(settingsData.company_name || "");
         setEmail(settingsData.company_email || profile.email);
         setPrimaryPhone(settingsData.company_primary_phone || "");
@@ -976,6 +979,24 @@ function CompanySection() {
     }
   };
 
+  const handleQrCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        setStatusMsg({ type: "error", text: "QR Code size exceeds 2MB." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setQrCode(base64);
+        setStatusMsg({ type: "success", text: "QR Code selected! Click Save Changes to store." });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setStatusMsg(null);
@@ -994,6 +1015,7 @@ function CompanySection() {
         company_ifsc: ifsc,
         company_terms: termsAndConditions,
         company_upi_id: upiId,
+        company_qr_code: qrCode,
       });
 
       setStatusMsg({ type: "success", text: "Company profile updated successfully!" });
@@ -1062,6 +1084,34 @@ function CompanySection() {
             className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95"
           >
             Upload Company Logo
+          </button>
+          <p className="mt-2 text-xs text-slate-400">
+            Square PNG or JPG. Max 2MB
+          </p>
+        </div>
+
+        <input
+          type="file"
+          ref={qrInputRef}
+          onChange={handleQrCodeChange}
+          accept="image/*"
+          className="hidden"
+        />
+
+        <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-inner text-slate-400 ml-6">
+          {qrCode ? (
+            <img src={qrCode} alt="Custom QR Code" className="h-full w-full object-cover" />
+          ) : (
+            <QrCode className="h-10 w-10 text-slate-400" />
+          )}
+        </div>
+
+        <div>
+          <button
+            onClick={() => qrInputRef.current?.click()}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95"
+          >
+            Upload Custom QR
           </button>
           <p className="mt-2 text-xs text-slate-400">
             Square PNG or JPG. Max 2MB

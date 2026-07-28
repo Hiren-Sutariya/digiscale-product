@@ -27,6 +27,8 @@ class UserSettings(Base):
     company_bank_name = Column(String, nullable=True)
     company_account_number = Column(String, nullable=True)
     company_ifsc = Column(String, nullable=True)
+    company_upi_id = Column(String, nullable=True)
+    company_qr_code = Column(Text, nullable=True)
     
     # Terms
     company_terms = Column(Text, nullable=True)

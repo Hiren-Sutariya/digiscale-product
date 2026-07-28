@@ -18,6 +18,8 @@ class UserSettingsBase(BaseModel):
     company_bank_name: Optional[str] = None
     company_account_number: Optional[str] = None
     company_ifsc: Optional[str] = None
+    company_upi_id: Optional[str] = None
+    company_qr_code: Optional[str] = None
 
     company_terms: Optional[str] = None
 
