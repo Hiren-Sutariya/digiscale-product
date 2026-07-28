@@ -1987,14 +1987,14 @@ ${rows}
                                         canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
                                         const url = canvas.toDataURL("image/jpeg", 0.7);
                                         handleUpdateDraft(idx, "photoUrl", url);
-                                        setLoadingOcrId(`draft-${idx}`);
-                                        parseOCRText(url, draft).then(parsed => {
-                                          setDraftProducts(prev => {
-                                            const next = [...prev];
-                                            if (next[idx]) { next[idx] = { ...next[idx], ...parsed }; }
-                                            return next;
-                                          });
-                                        }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
+                                        // setLoadingOcrId(`draft-${idx}`);
+                                        // parseOCRText(url, draft).then(parsed => {
+                                        //   setDraftProducts(prev => {
+                                        //     const next = [...prev];
+                                        //     if (next[idx]) { next[idx] = { ...next[idx], ...parsed }; }
+                                        //     return next;
+                                        //   });
+                                        // }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
                                       };
                                       img.src = src;
                                     };
@@ -2099,10 +2099,10 @@ ${rows}
                                             canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
                                             const url = canvas.toDataURL("image/jpeg", 0.7);
                                             handleUpdateEditState("photoUrl", url);
-                                            setLoadingOcrId(`edit`);
-                                            parseOCRText(url, editingProductState).then(parsed => {
-                                              setEditingProductState(prev => prev ? { ...prev, ...parsed } : null);
-                                            }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
+                                            // setLoadingOcrId(`edit`);
+                                            // parseOCRText(url, editingProductState).then(parsed => {
+                                            //   setEditingProductState(prev => prev ? { ...prev, ...parsed } : null);
+                                            // }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
                                           };
                                           img.src = src;
                                         };
