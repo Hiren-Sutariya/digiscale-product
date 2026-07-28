@@ -997,7 +997,7 @@ ${rows}
       const colIdx = (keys: string[]) => headerRow.findIndex(h => keys.some(k => normalize(h).includes(normalize(k))));
 
       const nameIdx = colIdx(["name", "product"]);
-      const cartonIdx = colIdx(["carton", "ctn", "pack"]);
+      const cartonIdx = colIdx(["carton", "pack"]);
       const colorIdx = colIdx(["color", "colour"]);
       const lengthIdx = colIdx(["length", "dimension", "len", "dim"]);
       const descIdx = colIdx(["desc", "description", "note"]);
