@@ -98,7 +98,7 @@ export default function WarehousePage() {
     try {
       const [colsRes, prodsRes] = await Promise.all([
         supabase.from("collections").select("*").eq("user_id", userId),
-        supabase.from("products").select("*").eq("user_id", userId),
+        supabase.from("products").select("id, name, stock, rate, color, unit_type, collection_id").eq("user_id", userId),
       ]);
 
       let colsData: any[] = [];

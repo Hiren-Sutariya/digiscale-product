@@ -243,7 +243,7 @@ function CollectionsPageContent() {
     try {
       const [colsRes, prodsRes] = await Promise.all([
         supabase.from('collections').select('*').eq('user_id', userId),
-        supabase.from('products').select('*').eq('user_id', userId)
+        supabase.from('products').select('id, name, stock, cartonQty, rate, length, color, description, unit_type, collection_id, created_at').eq('user_id', userId)
       ]);
 
       if (prodsRes.data) {
@@ -268,15 +268,15 @@ function CollectionsPageContent() {
           createdAt: p.created_at
         }));
         setAllProducts(mapped);
-        try {
-          localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
-        } catch (e) {
-          console.warn("Could not save to localStorage, quota exceeded.");
+          try {
+            localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
+          } catch (e) {
+            console.warn("Could not save to localStorage, quota exceeded.");
+          }
         }
+      } catch (err) {
+        console.error("Failed to refresh products:", err);
       }
-    } catch (err) {
-      console.error("Failed to refresh products:", err);
-    }
   };
 
   const fetchWarehouseData = async (userId: string) => {
@@ -567,6 +567,22 @@ function CollectionsPageContent() {
 
   const fetchProductsForCollection = async (collectionId: string) => {
     try {
+      // OPTIMIZATION: Instant UI update from allProducts memory cache
+      if (allProducts.length > 0) {
+        const cachedProducts = allProducts.filter(p => p.collectionId === collectionId || (p as any).collection_id === collectionId);
+        if (cachedProducts.length > 0) {
+          const catalogProducts = cachedProducts.filter(p => !p.id.startsWith('AST-'));
+          const assetProducts = cachedProducts.filter(p => p.id.startsWith('AST-')).map(p => ({
+            id: p.id,
+            processed_path: p.photoUrl || "",
+            name: p.name,
+            created_at: p.createdAt || ""
+          }));
+          setProducts(catalogProducts as any);
+          setDetailImages(assetProducts);
+        }
+      }
+
       setLoadingDetail(true);
       const { data, error } = await supabase
         .from('products')
