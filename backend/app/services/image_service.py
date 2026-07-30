@@ -13,7 +13,7 @@ def get_session():
     global _rembg_session
     if _rembg_session is None:
         # Load the model name dynamically (defaults to normal 'u2net' locally)
-        model_name = os.getenv("BGD_MODEL_NAME", "u2net")
+        model_name = os.getenv("BGD_MODEL_NAME", "birefnet-general")
         print(f"Loading background removal model: {model_name}")
         _rembg_session = rembg.new_session(model_name)
     return _rembg_session
