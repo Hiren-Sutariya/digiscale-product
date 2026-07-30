@@ -13,6 +13,7 @@ from app.api.settings import router as settings_router
 # Import models to ensure they are registered with SQLAlchemy
 import app.models.user
 import app.models.user_settings
+import app.models.client
 
 # Create database tables at startup
 Base.metadata.create_all(bind=engine)

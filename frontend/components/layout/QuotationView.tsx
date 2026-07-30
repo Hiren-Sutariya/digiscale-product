@@ -163,6 +163,7 @@ export default function QuotationView() {
 
   // Saved Quotations & Subview History
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
+  const [clientsList, setClientsList] = useState<any[]>([]);
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
   const [historyTab, setHistoryTab] = useState<"follow_up" | "done">("follow_up");
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
@@ -182,17 +183,28 @@ export default function QuotationView() {
   // Derived unique clients from saved quotes for suggestions
   const uniqueClients = useMemo(() => {
     const clientsMap = new Map();
+    clientsList.forEach(c => {
+      if (c.name && !clientsMap.has(c.name.toLowerCase())) {
+        clientsMap.set(c.name.toLowerCase(), {
+          name: c.name,
+          company: c.company || "",
+          address: c.address || "",
+          contact: c.contact || ""
+        });
+      }
+    });
     savedQuotes.forEach(q => {
       if (q.clientName && !clientsMap.has(q.clientName.toLowerCase())) {
         clientsMap.set(q.clientName.toLowerCase(), {
           name: q.clientName,
           company: q.clientCompany || "",
-          address: q.clientAddress || ""
+          address: q.clientAddress || "",
+          contact: ""
         });
       }
     });
     return Array.from(clientsMap.values());
-  }, [savedQuotes]);
+  }, [savedQuotes, clientsList]);
 
   const filteredClientSuggestions = useMemo(() => {
     if (!clientName) return [];
@@ -294,6 +306,7 @@ export default function QuotationView() {
           setCollections(cachedData.collections);
           setProducts(cachedData.products);
           setSavedQuotes(cachedData.savedQuotes);
+          if (cachedData.clientsList) setClientsList(cachedData.clientsList);
           setQuoteNumber(cachedData.quoteNumber);
         }
 
@@ -302,18 +315,22 @@ export default function QuotationView() {
           { data: colsData, error: colsErr },
           { data: prodsData, error: prodsErr },
           { data: assignsData, error: assignsErr },
-          { data: quotesData, error: quotesErr }
+          { data: quotesData, error: quotesErr },
+          { data: clientsData, error: clientsErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false })
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
         if (colsErr) throw colsErr;
         if (prodsErr) throw prodsErr;
         if (assignsErr) throw assignsErr;
         if (quotesErr) throw quotesErr;
+        if (clientsErr) throw clientsErr;
+        setClientsList(clientsData || []);
 
         setCollections(colsData || []);
 
@@ -389,7 +406,8 @@ export default function QuotationView() {
             collections: colsData || [],
             products: mappedProds,
             savedQuotes: parsedQuotes,
-            quoteNumber: nextNum
+            quoteNumber: nextNum,
+            clientsList: clientsData || []
           };
           setCache(cacheKey, payload);
           if (typeof window !== "undefined") {
@@ -405,7 +423,8 @@ export default function QuotationView() {
             collections: colsData || [],
             products: mappedProds,
             savedQuotes: [],
-            quoteNumber: "Q-1"
+            quoteNumber: "Q-1",
+            clientsList: clientsData || []
           };
           setCache(cacheKey, payload);
           if (typeof window !== "undefined") {
@@ -577,7 +596,24 @@ export default function QuotationView() {
         created_at: existingIndex > -1 ? savedQuotes[existingIndex].createdAt : new Date().toISOString()
       }, { onConflict: 'id' });
 
+      
       if (error) throw error;
+
+      if (clientName) {
+        const clientExists = clientsList.some(c => c.name.toLowerCase() === clientName.toLowerCase());
+        if (!clientExists) {
+          const newClient = {
+            name: clientName,
+            company: clientCompany || null,
+            address: clientAddress || null,
+            user_id: currentUserId
+          };
+          const { error: clientError } = await supabase.from('clients').insert([newClient]);
+          if (!clientError) {
+            setClientsList([...clientsList, newClient]);
+          }
+        }
+      }
 
       setSavedQuotes(updatedQuotes);
       

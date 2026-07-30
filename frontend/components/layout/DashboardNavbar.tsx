@@ -15,6 +15,7 @@ import {
   Paintbrush,
   FolderOpen,
   User,
+  Users,
   CreditCard,
   LogOut,
   Zap,
@@ -24,9 +25,9 @@ import {
 } from "lucide-react";
 
 const navLinks = [
-
   { href: "/projects", label: "Collections", icon: FolderOpen },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse },
+  { href: "/clients", label: "Clients", icon: Users },
   { href: "/quotation", label: "Quotation", icon: FileText },
 ];
 
