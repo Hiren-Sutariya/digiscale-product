@@ -180,7 +180,7 @@ export default function QuotationView() {
     onConfirm: () => void;
   }>({ isOpen: false, title: "", message: "", confirmText: "", onConfirm: () => {} });
 
-  // Derived unique clients from saved quotes for suggestions
+  // Derived unique clients for suggestions (Only from Client Directory)
   const uniqueClients = useMemo(() => {
     const clientsMap = new Map();
     clientsList.forEach(c => {
@@ -193,18 +193,8 @@ export default function QuotationView() {
         });
       }
     });
-    savedQuotes.forEach(q => {
-      if (q.clientName && !clientsMap.has(q.clientName.toLowerCase())) {
-        clientsMap.set(q.clientName.toLowerCase(), {
-          name: q.clientName,
-          company: q.clientCompany || "",
-          address: q.clientAddress || "",
-          contact: ""
-        });
-      }
-    });
     return Array.from(clientsMap.values());
-  }, [savedQuotes, clientsList]);
+  }, [clientsList]);
 
   const filteredClientSuggestions = useMemo(() => {
     if (!clientName) return [];
