@@ -38,6 +38,7 @@ export default function SettingsPage() {
     { id: "company", label: "Company Profile", icon: Building },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
+    { id: "backup", label: "Data & Backup", icon: HardDrive },
   ];
 
   return (
@@ -94,6 +95,7 @@ export default function SettingsPage() {
           {activeTab === "company" && <CompanySection />}
           {activeTab === "notifications" && <NotificationsSection />}
           {activeTab === "security" && <SecuritySection />}
+          {activeTab === "backup" && <BackupSection />}
         </div>
 
       </div>
@@ -1407,6 +1409,154 @@ function CompanySection() {
       >
         {saving ? "Saving..." : "Save Company Profile"}
       </button>
+    </div>
+  );
+}
+
+/* ============ Backup Section ============ */
+function BackupSection() {
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownloadBackup = () => {
+    try {
+      const backupData: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("digiscale_")) {
+          backupData[key] = localStorage.getItem(key) || "";
+        }
+      }
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `digiscale_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setSuccessMsg("Backup downloaded successfully.");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err: any) {
+      setErrorMsg("Failed to download backup.");
+    }
+  };
+
+  const handleUploadBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const backupData = JSON.parse(content);
+        
+        if (typeof backupData !== "object" || backupData === null) {
+          throw new Error("Invalid backup format");
+        }
+        
+        let restoredCount = 0;
+        for (const [key, value] of Object.entries(backupData)) {
+          if (key.startsWith("digiscale_") && typeof value === "string") {
+            localStorage.setItem(key, value);
+            restoredCount++;
+          }
+        }
+        
+        setSuccessMsg(`Backup restored successfully (${restoredCount} items). Reloading page...`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } catch (err: any) {
+        setErrorMsg("Failed to restore backup. Invalid file format.");
+        setLoading(false);
+      }
+    };
+    reader.onerror = () => {
+      setErrorMsg("Error reading the file.");
+      setLoading(false);
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Data & Backup</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Export or import your local Digiscale application data.
+        </p>
+      </div>
+
+      {errorMsg && (
+        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          {errorMsg}
+        </div>
+      )}
+      {successMsg && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-600 border border-emerald-200">
+          {successMsg}
+        </div>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
+          <div>
+            <h3 className="font-semibold text-slate-900">Download Backup</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Save a copy of your collections, products, warehouse layouts, and quotations locally to a JSON file.
+            </p>
+          </div>
+          <button 
+            onClick={handleDownloadBackup}
+            className="mt-6 w-fit rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-sm"
+          >
+            Export Backup
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
+          <div>
+            <h3 className="font-semibold text-slate-900">Upload Backup</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Restore your data from a previously downloaded JSON backup file. This will overwrite existing local data.
+            </p>
+          </div>
+          <div className="mt-6">
+            <input 
+              type="file" 
+              accept=".json" 
+              className="hidden" 
+              ref={fileInputRef}
+              onChange={handleUploadBackup}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="w-fit rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-400 shadow-sm disabled:opacity-50"
+            >
+              {loading ? "Restoring..." : "Import Backup"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
