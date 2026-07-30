@@ -514,7 +514,7 @@ export default function WarehousePage() {
           <div className="absolute inset-0 rounded-full blur-xl bg-blue-500/20 animate-pulse"></div>
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 relative z-10" />
         </div>
-        <p className="mt-4 text-sm font-semibold text-slate-500 animate-pulse tracking-wide">Loading workspace...</p>
+        <p className="mt-4 text-sm font-semibold text-slate-500 animate-pulse tracking-wide">Loading warehouse...</p>
       </div>
     );
   }

@@ -86,7 +86,7 @@ const menus = [
       tag: "New",
       title: "AI Studio Scenes",
       desc: "Place your product on marble stands, wooden tables, or studio backdrops in one click.",
-      link: "/workspace",
+      link: "/dashboard",
       actionText: "Try Studio",
     }
   },
@@ -241,7 +241,7 @@ export default function LandingNavbar() {
                         return (
                           <Link
                             key={item.title}
-                            href={item.href || "/workspace"}
+                            href={item.href || "/dashboard"}
                             className="flex items-center gap-3.5 rounded-xl p-3 transition duration-200 hover:bg-slate-50 border border-transparent hover:border-slate-100"
                           >
                             <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600 shrink-0">

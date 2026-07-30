@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 const navLinks = [
-  { href: "/workspace", label: "Workspace", icon: Paintbrush },
+
   { href: "/projects", label: "Collections", icon: FolderOpen },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse },
   { href: "/quotation", label: "Quotation", icon: FileText },
@@ -133,7 +133,7 @@ export default function DashboardNavbar() {
         {/* Center — Navigation Links */}
         <nav className="flex-1 flex items-center justify-center gap-1">
           {navLinks
-            .filter((link) => isLoggedIn || link.href === "/workspace")
+            .filter((link) => isLoggedIn)
             .map((link) => {
               const isActive = pathname === link.href;
               const Icon = link.icon;

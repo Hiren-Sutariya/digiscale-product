@@ -69,7 +69,7 @@ function SignupForm() {
           <Info className="w-5 h-5 text-blue-600 mt-0.5" />
           <div>
             <h4 className="text-sm font-bold text-blue-900">You've been invited!</h4>
-            <p className="text-xs text-blue-700 mt-0.5">Create your account below to accept the invitation and join the workspace.</p>
+            <p className="text-xs text-blue-700 mt-0.5">Create your account below to accept the invitation and join the team.</p>
           </div>
         </div>
       )}

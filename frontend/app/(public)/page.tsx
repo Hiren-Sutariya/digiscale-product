@@ -201,8 +201,8 @@ export default function HomePage() {
         localStorage.setItem("digiscale_guest_count", String(nextCount));
         localStorage.setItem("digiscale_workspace_pending_file", "true");
         
-        // Redirect directly to the full workspace editor page
-        window.location.href = "/workspace";
+        // Redirect to dashboard
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
       setErrorMsg("Failed to store image locally. Please try again.");
@@ -715,10 +715,10 @@ export default function HomePage() {
               </div>
 
               <button
-                onClick={() => { setPaymentSuccess(null); window.location.href = "/workspace"; }}
+                onClick={() => { setPaymentSuccess(null); window.location.href = "/dashboard"; }}
                 className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white transition active:scale-95 shadow-md shadow-blue-600/10"
               >
-                Go to Workspace →
+                Go to Dashboard →
               </button>
             </div>
           </div>

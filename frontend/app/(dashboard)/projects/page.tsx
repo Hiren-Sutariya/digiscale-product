@@ -1912,12 +1912,6 @@ ${rows}
                 <Download className="h-4 w-4" /> Get Template
               </button>
 
-              <Link
-                href="/workspace"
-                className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95"
-              >
-                <Sparkles className="h-4 w-4 text-blue-500" /> Go to Workspace
-              </Link>
             </div>
           </div>
 

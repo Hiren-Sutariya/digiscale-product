@@ -283,10 +283,10 @@ export default function PricingPage() {
               </div>
 
               <button
-                onClick={() => { setPaymentSuccess(null); window.location.href = "/workspace"; }}
+                onClick={() => { setPaymentSuccess(null); window.location.href = "/dashboard"; }}
                 className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white transition active:scale-95 shadow-md shadow-blue-600/10"
               >
-                Go to Workspace →
+                Go to Dashboard →
               </button>
             </div>
           </div>
