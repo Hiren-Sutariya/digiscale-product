@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone } from "lucide-react";
-import { toast } from "react-hot-toast";
 
 interface Client {
   id: number;
@@ -47,7 +46,7 @@ export default function ClientsPage() {
       if (error) throw error;
       setClients(data || []);
     } catch (err: any) {
-      toast.error(err.message || "Failed to load clients");
+      alert(err.message || "Failed to load clients");
     } finally {
       setLoading(false);
     }
@@ -82,7 +81,7 @@ export default function ClientsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast.error("Name is required");
+      alert("Name is required");
       return;
     }
 
@@ -107,20 +106,20 @@ export default function ClientsPage() {
           .eq('user_id', user.id);
         
         if (error) throw error;
-        toast.success("Client updated successfully");
+        alert("Client updated successfully");
       } else {
         const { error } = await supabase
           .from('clients')
           .insert([clientData]);
         
         if (error) throw error;
-        toast.success("Client added successfully");
+        alert("Client added successfully");
       }
 
       closeModal();
       fetchClients();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save client");
+      alert(err.message || "Failed to save client");
     } finally {
       setSaving(false);
     }
@@ -140,10 +139,10 @@ export default function ClientsPage() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success("Client deleted successfully");
+      alert("Client deleted successfully");
       setClients(prev => prev.filter(c => c.id !== id));
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete client");
+      alert(err.message || "Failed to delete client");
     }
   };
 
