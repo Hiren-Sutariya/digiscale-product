@@ -705,20 +705,15 @@ export default function QuotationView() {
   };
 
   // Toggle item selection
-  const handleToggleProduct = async (product: Product) => {
-    const exists = selectedItems.find(item => item.id === product.id);
-    if (exists) {
-      setSelectedItems(selectedItems.filter(item => item.id !== product.id));
-    } else {
-      const cQty = product.cartonQty || 1;
-      
-      let photoUrl = product.photoUrl;
-      if (!photoUrl) {
-        const { data } = await supabase.from('products').select('photoUrl').eq('id', product.id).single();
-        if (data?.photoUrl) photoUrl = data.photoUrl;
+  const handleToggleProduct = (product: Product) => {
+    setSelectedItems(prev => {
+      const exists = prev.find(item => item.id === product.id);
+      if (exists) {
+        return prev.filter(item => item.id !== product.id);
       }
       
-      setSelectedItems(prev => [
+      const cQty = product.cartonQty || 1;
+      return [
         ...prev,
         {
           id: product.id,
@@ -729,13 +724,13 @@ export default function QuotationView() {
           rate: product.rate || "",
           color: product.color,
           length: product.length,
-          photoUrl: photoUrl,
+          photoUrl: product.photoUrl,
           collectionName: product.collectionName,
           description: product.description,
           location: product.location
         }
-      ]);
-    }
+      ];
+    });
   };
 
   // Update cartons (CTNS)
@@ -1901,8 +1896,8 @@ export default function QuotationView() {
                   <div className="no-print pt-2 space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Cash</span>
-                      <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
-                        <span className="text-slate-800 shrink-0">₹</span>
+                      <div className="flex items-center w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                        <span className="text-slate-800 shrink-0 mr-1">₹</span>
                         <input
                           type="number"
                           placeholder="0"
@@ -1917,15 +1912,14 @@ export default function QuotationView() {
                               setBankAmount("");
                             }
                           }}
-                          style={{ width: `${Math.max(1, String(cashAmount || "").length) + 0.5}ch` }}
-                          className="text-right font-bold text-slate-800 bg-transparent outline-none min-w-[20px]"
+                          className="w-full text-right font-bold text-slate-800 bg-transparent outline-none"
                         />
                       </div>
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Bank</span>
-                      <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
-                        <span className="text-slate-800 shrink-0">₹</span>
+                      <div className="flex items-center w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                        <span className="text-slate-800 shrink-0 mr-1">₹</span>
                         <input
                           type="number"
                           placeholder="0"
@@ -1940,8 +1934,7 @@ export default function QuotationView() {
                               setCashAmount("");
                             }
                           }}
-                          style={{ width: `${Math.max(1, String(bankAmount || "").length) + 0.5}ch` }}
-                          className="text-right font-bold text-slate-800 bg-transparent outline-none min-w-[20px]"
+                          className="w-full text-right font-bold text-slate-800 bg-transparent outline-none"
                         />
                       </div>
                     </div>
