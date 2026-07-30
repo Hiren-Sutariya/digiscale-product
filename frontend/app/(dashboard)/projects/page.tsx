@@ -10,6 +10,36 @@ import {
   getUserProfile,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
+// --- Sub-components for optimizations ---
+function GlobalSearchImage({ productId, productName, initialUrl }: { productId: string, productName: string, initialUrl?: string }) {
+  const [url, setUrl] = useState<string | null>(initialUrl || null);
+  
+  useEffect(() => {
+    if (url) return;
+    let mounted = true;
+    supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
+      if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+    });
+    return () => { mounted = false; };
+  }, [productId, url]);
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={productName}
+        className="h-12 w-12 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
+      />
+    );
+  }
+  
+  return (
+    <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-350">
+      <Box className="h-5 w-5" />
+    </div>
+  );
+}
+// ----------------------------------------
 import { API_BASE_URL } from "@/constants/api";
 import {
   Plus,
@@ -1770,22 +1800,12 @@ ${rows}
           </div>
         ) : (
           <div className="divide-y divide-slate-100 pr-1">
-            {filteredGlobalProducts.map((product) => {
+            {filteredGlobalProducts.slice(0, 100).map((product) => {
               const locations = findWarehouseLocation(product.id, product.collectionId);
               return (
                 <div key={`${product.collectionId}-${product.id}`} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 last:border-b-0">
                   <div className="flex items-center gap-3">
-                    {product.photoUrl ? (
-                      <img
-                        src={product.photoUrl}
-                        alt={product.name}
-                        className="h-12 w-12 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-350">
-                        <Box className="h-5 w-5" />
-                      </div>
-                    )}
+                    <GlobalSearchImage productId={product.id} productName={product.name} initialUrl={product.photoUrl} />
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-800">{product.name}</h4>
                       <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
