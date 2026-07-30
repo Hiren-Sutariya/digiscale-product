@@ -146,6 +146,13 @@ export async function getUserProfile(forceFetch: boolean = false): Promise<any> 
   
   const response = await authFetch(`${API_BASE_URL}/users/me`);
   if (!response.ok) {
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
+      return null;
+    }
     throw new Error("Failed to fetch user profile.");
   }
   const data = await response.json();
@@ -161,6 +168,9 @@ export async function getUserSettings(forceFetch: boolean = false): Promise<any>
 
   const response = await authFetch(`${API_BASE_URL}/settings/`);
   if (!response.ok) {
+    if (response.status === 401) {
+      return null;
+    }
     throw new Error("Failed to fetch user settings.");
   }
   const data = await response.json();

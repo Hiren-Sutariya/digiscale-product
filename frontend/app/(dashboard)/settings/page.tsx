@@ -136,14 +136,18 @@ function ProfileSection() {
 
     Promise.all([getUserProfile(), getUserSettings()])
       .then(([profileData, settingsData]) => {
-        setName(profileData.name);
-        setEmail(profileData.email);
-        setOriginalEmail(profileData.email);
+        if (profileData) {
+          setName(profileData.name || "");
+          setEmail(profileData.email || "");
+          setOriginalEmail(profileData.email || "");
+        }
         
-        setPhone(settingsData.phone || "");
-        setOriginalPhone(settingsData.phone || "");
-        setGender(settingsData.gender || "Male");
-        setAvatarUrl(settingsData.avatar_url || null);
+        if (settingsData) {
+          setPhone(settingsData.phone || "");
+          setOriginalPhone(settingsData.phone || "");
+          setGender(settingsData.gender || "Male");
+          setAvatarUrl(settingsData.avatar_url || null);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -542,13 +546,15 @@ function BillingSection() {
   useEffect(() => {
     getUserProfile()
       .then((data) => {
-        setUser(data);
-        if (data.plan === "Starter" && data.created_at) {
-          const created = new Date(data.created_at);
-          const expiry = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000);
-          const diffMs = expiry.getTime() - Date.now();
-          const days = Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
-          setDaysLeft(days);
+        if (data) {
+          setUser(data);
+          if (data.plan === "Starter" && data.created_at) {
+            const created = new Date(data.created_at);
+            const expiry = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const diffMs = expiry.getTime() - Date.now();
+            const days = Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+            setDaysLeft(days);
+          }
         }
         setLoading(false);
       })
@@ -935,21 +941,27 @@ function CompanySection() {
 
   useEffect(() => {
     Promise.all([getUserProfile(), getUserSettings()])
-      .then(([profile, settingsData]) => {
-        setLogo(settingsData.company_logo || null);
-        setQrCode(settingsData.company_qr_code || null);
-        setName(settingsData.company_name || "");
-        setEmail(settingsData.company_email || profile.email);
-        setPrimaryPhone(settingsData.company_primary_phone || "");
-        setSecondaryPhone(settingsData.company_secondary_phone || "");
-        setAddress(settingsData.company_address || "");
-        setWebsite(settingsData.company_website || "");
-        setGst(settingsData.company_gst || "");
-        setBankName(settingsData.company_bank_name || "");
-        setAccountNumber(settingsData.company_account_number || "");
-        setIfsc(settingsData.company_ifsc || "");
-        setTermsAndConditions(settingsData.company_terms || "");
-        setUpiId(settingsData.company_upi_id || "");
+      .then(([profileData, settingsData]) => {
+        if (profileData) {
+          setName(profileData.name || "");
+          setEmail(profileData.email || "");
+        }
+        if (settingsData) {
+          setLogo(settingsData.company_logo || null);
+          setName(settingsData.company_name || "");
+          setEmail(settingsData.company_email || "");
+          setPrimaryPhone(settingsData.company_primary_phone || "");
+          setSecondaryPhone(settingsData.company_secondary_phone || "");
+          setAddress(settingsData.company_address || "");
+          setWebsite(settingsData.company_website || "");
+          setGst(settingsData.company_gst || "");
+          setBankName(settingsData.company_bank_name || "");
+          setAccountNumber(settingsData.company_account_number || "");
+          setIfsc(settingsData.company_ifsc || "");
+          setUpiId(settingsData.company_upi_id || "");
+          setQrCode(settingsData.company_qr_code || null);
+          setTermsAndConditions(settingsData.company_terms || "");
+        }
         setLoading(false);
       })
       .catch(() => {
