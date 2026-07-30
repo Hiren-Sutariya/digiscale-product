@@ -1689,12 +1689,12 @@ ${rows}
   };
 
   const filteredCollections = collections.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+    (c.name?.toLowerCase() || "").includes(search.toLowerCase())
   );
 
   const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.color.toLowerCase().includes(productSearch.toLowerCase())
+    (p.name?.toLowerCase() || "").includes(productSearch.toLowerCase()) ||
+    (p.color?.toLowerCase() || "").includes(productSearch.toLowerCase())
   );
 
   // Statistics
@@ -1711,10 +1711,10 @@ ${rows}
   const filteredGlobalProducts = query
     ? globalProducts.filter((product) => {
       return (
-        product.name.toLowerCase().includes(query) ||
+        (product.name?.toLowerCase() || "").includes(query) ||
         (product.rate && String(product.rate).toLowerCase().includes(query)) ||
         (product.color && String(product.color).toLowerCase().includes(query)) ||
-        product.collectionName.toLowerCase().includes(query)
+        (product.collectionName?.toLowerCase() || "").includes(query)
       );
     })
     : [];

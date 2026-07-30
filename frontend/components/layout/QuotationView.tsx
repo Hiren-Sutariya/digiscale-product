@@ -167,8 +167,8 @@ export default function QuotationView() {
     if (!clientName) return [];
     const searchLower = clientName.toLowerCase();
     return uniqueClients.filter(c => 
-      c.name.toLowerCase().includes(searchLower) || 
-      (c.company && c.company.toLowerCase().includes(searchLower))
+      (c.name?.toLowerCase() || "").includes(searchLower) || 
+      (c.company?.toLowerCase() || "").includes(searchLower)
     );
   }, [clientName, uniqueClients]);
 
@@ -727,10 +727,10 @@ export default function QuotationView() {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return false; // Show nothing if query is empty
     return (
-      p.name?.toLowerCase().includes(q) ||
-      p.color?.toLowerCase().includes(q) ||
-      p.length?.toString().toLowerCase().includes(q) ||
-      p.collectionName?.toLowerCase().includes(q)
+      (p.name?.toLowerCase() || "").includes(q) ||
+      (p.color?.toLowerCase() || "").includes(q) ||
+      (p.length?.toString().toLowerCase() || "").includes(q) ||
+      (p.collectionName?.toLowerCase() || "").includes(q)
     );
   });
 

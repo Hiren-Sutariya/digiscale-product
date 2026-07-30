@@ -527,7 +527,7 @@ export default function WarehousePage() {
   const filteredGlobalProducts = query
     ? allProducts.filter((product) => {
         return (
-          product.name.toLowerCase().includes(query) ||
+          (product.name?.toLowerCase() || "").includes(query) ||
           (product.rate && String(product.rate).toLowerCase().includes(query)) ||
           (product.color && String(product.color).toLowerCase().includes(query)) ||
           (product.collectionName && product.collectionName.toLowerCase().includes(query))
@@ -1017,7 +1017,7 @@ export default function WarehousePage() {
                           ) : (
                             <>
                               {allProducts
-                                .filter((prod) => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase()))
+                                .filter((prod) => (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase()))
                                 .map((p) => (
                                   <button
                                     key={p.id}
@@ -1035,7 +1035,7 @@ export default function WarehousePage() {
                                     <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
                                   </button>
                                 ))}
-                              {allProducts.filter(prod => prod.name.toLowerCase().includes(productSearchQuery.toLowerCase())).length === 0 && (
+                              {allProducts.filter(prod => (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase())).length === 0 && (
                                 <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
                                   No matching products found
                                 </div>
