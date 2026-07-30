@@ -1448,8 +1448,17 @@ function BackupSection() {
       try {
         const colsStr = backupData["digiscale_cached_collections"];
         const cols = colsStr ? JSON.parse(colsStr) : [];
-        const wsCols = XLSX.utils.json_to_sheet(cols);
-        XLSX.utils.book_append_sheet(wb, wsCols, "Collections");
+        if (cols.length > 0) {
+          const flatCols = cols.map((c: any) => ({
+            "Collection ID": c.id,
+            "Collection Name": c.name,
+            "Type": c.type,
+            "Item Count": c.itemCount || 0,
+            "Total Value": c.totalValue || 0,
+          }));
+          const wsCols = XLSX.utils.json_to_sheet(flatCols);
+          XLSX.utils.book_append_sheet(wb, wsCols, "Collections");
+        }
       } catch (e) {}
 
       // Products (we have to look at digiscale_products_* keys and digiscale_cached_all_products)
@@ -1476,12 +1485,20 @@ function BackupSection() {
         const uniqueProducts = Array.from(new Map(allProducts.map(p => [p.id, p])).values());
 
         if (uniqueProducts.length > 0) {
-          // Flatten nested objects to make them Excel-friendly
+          // Flatten nested objects to make them Excel-friendly and explicitly map Image URL
           const flatProducts = uniqueProducts.map((p: any) => ({
-            ...p,
-            prices: JSON.stringify(p.prices || []),
-            images: JSON.stringify(p.images || []),
-            variants: JSON.stringify(p.variants || [])
+            "Product ID": p.id || "",
+            "Product Name": p.name || "",
+            "SKU": p.sku || "",
+            "Rate": p.rate || "",
+            "Stock": p.stock || 0,
+            "Carton Qty": p.cartonQty || 1,
+            "Unit Type": p.unit_type || "pcs",
+            "Color": p.color || "",
+            "Length": p.length || "",
+            "Warehouse/Rack": p.warehouse || "",
+            "Description": p.description || "",
+            "Image URL": p.photoUrl || "",
           }));
           const wsProds = XLSX.utils.json_to_sheet(flatProducts);
           XLSX.utils.book_append_sheet(wb, wsProds, "Products");
