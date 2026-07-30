@@ -36,7 +36,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "company", label: "Company Profile", icon: Building },
-    { id: "billing", label: "Plan & Billing", icon: CreditCard },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
   ];
@@ -73,7 +72,15 @@ export default function SettingsPage() {
 
           <hr className="my-3 border-slate-100" />
 
-          <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-650 transition hover:bg-red-55">
+          <button 
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("user_name");
+              localStorage.removeItem("user_email");
+              window.location.href = "/login";
+            }}
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-650 transition hover:bg-red-55"
+          >
             <LogOut className="h-5 w-5" />
             Sign Out
           </button>
@@ -83,7 +90,6 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
-          {activeTab === "billing" && <BillingSection />}
           {activeTab === "notifications" && <NotificationsSection />}
           {activeTab === "security" && <SecuritySection />}
         </div>
@@ -109,7 +115,7 @@ function ProfileSection() {
   // Verification states
   const [originalEmail, setOriginalEmail] = useState("");
   const [originalPhone, setOriginalPhone] = useState("");
-  const [verificationType, setVerificationType] = useState<"old_email" | "new_email" | "phone" | null>(null);
+  const [verificationType, setVerificationType] = useState<"new_email" | "phone" | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [userInputCode, setUserInputCode] = useState("");
   const [verificationError, setVerificationError] = useState("");
@@ -189,13 +195,13 @@ function ProfileSection() {
     setSaving(true);
     setStatusMsg(null);
     try {
-      await updateUserProfile(name, email);
-      
       await updateUserSettings({
         phone,
         gender,
         avatar_url: avatarUrl
       });
+      
+      await updateUserProfile(name, email);
       
       // Update global context for navbar sync
       localStorage.setItem("user_name", name);
@@ -223,7 +229,7 @@ function ProfileSection() {
     if (email !== originalEmail) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setVerificationCode(code);
-      setVerificationType("old_email");
+      setVerificationType("new_email");
       setUserInputCode("");
       setVerificationError("");
       return;
@@ -251,14 +257,8 @@ function ProfileSection() {
 
     setVerificationError("");
 
-    if (verificationType === "old_email") {
-      // Stage 1 verified! Now send code to new email address
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setVerificationCode(code);
-      setVerificationType("new_email");
-      setUserInputCode("");
-    } else if (verificationType === "new_email") {
-      // Stage 2 verified! Check if phone also changed
+    if (verificationType === "new_email") {
+      // Stage 1 verified! Check if phone also changed
       if (phone !== originalPhone) {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         setVerificationCode(code);
@@ -458,19 +458,10 @@ function ProfileSection() {
             </div>
 
             <div className="mt-4 space-y-4">
-              {verificationType === "old_email" && (
-                <div>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    To update your email, we must first verify your ownership of the current email address. A 6-digit verification code has been sent to:
-                  </p>
-                  <p className="mt-1 font-semibold text-slate-900 text-sm">{originalEmail}</p>
-                </div>
-              )}
-
               {verificationType === "new_email" && (
                 <div>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Now we must verify your new email address. A 6-digit verification code has been sent to:
+                    To update your email, we must verify your new email address. A 6-digit verification code has been sent to:
                   </p>
                   <p className="mt-1 font-semibold text-slate-900 text-sm">{email}</p>
                 </div>

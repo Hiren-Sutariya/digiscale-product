@@ -704,12 +704,21 @@ export default function QuotationView() {
     }, 300);
   };
 
-  // Toggle item selection
+  // Toggle item selection (now increments if already exists)
   const handleToggleProduct = (product: Product) => {
     setSelectedItems(prev => {
       const exists = prev.find(item => item.id === product.id);
       if (exists) {
-        return prev.filter(item => item.id !== product.id);
+        return prev.map(item => {
+          if (item.id === product.id) {
+            return {
+              ...item,
+              cartons: item.cartons + 1,
+              quantity: (item.cartons + 1) * item.cartonQty
+            };
+          }
+          return item;
+        });
       }
       
       const cQty = product.cartonQty || 1;
@@ -1896,7 +1905,7 @@ export default function QuotationView() {
                   <div className="no-print pt-2 space-y-2">
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Cash</span>
-                      <div className="flex items-center w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                      <div className="flex items-center w-40 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
                         <span className="text-slate-800 shrink-0 mr-1">₹</span>
                         <input
                           type="number"
@@ -1918,7 +1927,7 @@ export default function QuotationView() {
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-600 items-center">
                       <span>Paid via Bank</span>
-                      <div className="flex items-center w-28 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
+                      <div className="flex items-center w-40 bg-white border border-slate-300 rounded py-0.5 px-2 focus-within:border-blue-500 transition-colors">
                         <span className="text-slate-800 shrink-0 mr-1">₹</span>
                         <input
                           type="number"
