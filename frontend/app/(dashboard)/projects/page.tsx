@@ -3,10 +3,6 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import Tesseract from 'tesseract.js';
 import {
-  getProjects,
-  createProject,
-  getProject,
-  deleteProject,
   getUserProfile,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";

@@ -195,33 +195,6 @@ export async function updateUserSettings(data: any): Promise<any> {
   return result;
 }
 
-export async function getProjects(): Promise<any> {
-  const response = await authFetch(`${API_BASE_URL}/projects`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch projects.");
-  }
-  return response.json();
-}
-
-export async function createProject(name: string): Promise<any> {
-  const response = await authFetch(`${API_BASE_URL}/projects`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create project.");
-  }
-  return response.json();
-}
-
-export async function getProject(projectId: number): Promise<any> {
-  const response = await authFetch(`${API_BASE_URL}/projects/${projectId}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch project details.");
-  }
-  return response.json();
-}
 
 export async function updateUserProfile(name: string, email: string): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/users/me`, {
@@ -261,27 +234,6 @@ export async function changePassword(current_password: string, new_password: str
 }
 
 
-export async function deleteProject(projectId: number): Promise<any> {
-  const response = await authFetch(`${API_BASE_URL}/projects/${projectId}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete project.");
-  }
-  return response.json();
-}
-
-export async function renameProject(projectId: number, name: string): Promise<any> {
-  const response = await authFetch(`${API_BASE_URL}/projects/${projectId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to rename project.");
-  }
-  return response.json();
-}
 
 export function formatUserUuid(userId: any): string | null {
   if (!userId) return null;
