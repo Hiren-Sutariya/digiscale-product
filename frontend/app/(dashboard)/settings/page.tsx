@@ -29,9 +29,17 @@ import {
 import PageTitle from "@/components/ui/pageTitle";
 import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword } from "@/services/api";
 import { getCache } from "@/lib/cache";
+import { useSearchParams } from "next/navigation";
+import * as XLSX from "xlsx";
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
@@ -1423,26 +1431,78 @@ function BackupSection() {
   const handleDownloadBackup = () => {
     try {
       const backupData: Record<string, string> = {};
+      let totalBytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith("digiscale_")) {
-          backupData[key] = localStorage.getItem(key) || "";
+          const val = localStorage.getItem(key) || "";
+          backupData[key] = val;
+          totalBytes += key.length + val.length;
         }
       }
       
-      const dataStr = JSON.stringify(backupData, null, 2);
-      const blob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
+      // We will create two files: the Excel file and the raw JSON. Wait, no, we just download the Excel file.
+      const wb = XLSX.utils.book_new();
+
+      // Collections
+      try {
+        const colsStr = backupData["digiscale_cached_collections"];
+        const cols = colsStr ? JSON.parse(colsStr) : [];
+        const wsCols = XLSX.utils.json_to_sheet(cols);
+        XLSX.utils.book_append_sheet(wb, wsCols, "Collections");
+      } catch (e) {}
+
+      // Products (we have to look at digiscale_products_* keys)
+      try {
+        const allProducts = [];
+        for (const [key, val] of Object.entries(backupData)) {
+          if (key.startsWith("digiscale_products_")) {
+            const arr = JSON.parse(val);
+            if (Array.isArray(arr)) {
+              allProducts.push(...arr);
+            }
+          }
+        }
+        if (allProducts.length > 0) {
+          // Flatten nested objects to make them Excel-friendly
+          const flatProducts = allProducts.map(p => ({
+            ...p,
+            prices: JSON.stringify(p.prices || []),
+            images: JSON.stringify(p.images || []),
+            variants: JSON.stringify(p.variants || [])
+          }));
+          const wsProds = XLSX.utils.json_to_sheet(flatProducts);
+          XLSX.utils.book_append_sheet(wb, wsProds, "Products");
+        }
+      } catch (e) {}
+
+      // Warehouse
+      try {
+        const slotsStr = backupData["digiscale_warehouse_slots"] || backupData["digiscale_cached_warehouse_slots"];
+        if (slotsStr) {
+          const slotsMap = JSON.parse(slotsStr);
+          const slotsList = Object.values(slotsMap);
+          const wsSlots = XLSX.utils.json_to_sheet(slotsList);
+          XLSX.utils.book_append_sheet(wb, wsSlots, "Warehouse Slots");
+        }
+
+        const assignStr = backupData["digiscale_warehouse_assignments"] || backupData["digiscale_cached_warehouse_assignments"];
+        if (assignStr) {
+          const assignMap = JSON.parse(assignStr);
+          const assignList = Object.values(assignMap).flat();
+          const wsAssign = XLSX.utils.json_to_sheet(assignList);
+          XLSX.utils.book_append_sheet(wb, wsAssign, "Warehouse Assignments");
+        }
+      } catch (e) {}
+
+      // If workbook is empty, add a dummy sheet
+      if (wb.SheetNames.length === 0) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ message: "No data found" }]), "Empty");
+      }
+
+      XLSX.writeFile(wb, `Digiscale_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
       
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `digiscale_backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      setSuccessMsg("Backup downloaded successfully.");
+      setSuccessMsg("Backup downloaded successfully in Excel format.");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
       setErrorMsg("Failed to download backup.");
@@ -1496,12 +1556,28 @@ function BackupSection() {
     }
   };
 
+  const [storageSize, setStorageSize] = useState("0 MB");
+
+  useEffect(() => {
+    let bytes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("digiscale_")) {
+        bytes += key.length + (localStorage.getItem(key)?.length || 0);
+      }
+    }
+    setStorageSize((bytes / (1024 * 1024)).toFixed(2) + " MB");
+  }, []);
+
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Data & Backup</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Export or import your local Digiscale application data.
+          Export your local Digiscale application data to Excel.
+        </p>
+        <p className="mt-2 text-sm font-semibold text-blue-600">
+          Total Storage Used: {storageSize}
         </p>
       </div>
 
@@ -1519,24 +1595,24 @@ function BackupSection() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900">Download Backup</h3>
+            <h3 className="font-semibold text-slate-900">Download Excel Backup</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Save a copy of your collections, products, warehouse layouts, and quotations locally to a JSON file.
+              Save a copy of your collections, products, warehouse layouts, and quotations locally to an Excel file (.xlsx).
             </p>
           </div>
           <button 
             onClick={handleDownloadBackup}
             className="mt-6 w-fit rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-sm"
           >
-            Export Backup
+            Export Excel
           </button>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900">Upload Backup</h3>
+            <h3 className="font-semibold text-slate-900">Upload JSON System Backup</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Restore your data from a previously downloaded JSON backup file. This will overwrite existing local data.
+              Restore your data from a JSON backup file. (Note: You cannot restore from the Excel format, please use a JSON system backup if you have one).
             </p>
           </div>
           <div className="mt-6">

@@ -20,6 +20,7 @@ import {
   Zap,
   Warehouse,
   FileText,
+  HardDrive,
 } from "lucide-react";
 
 const navLinks = [
@@ -237,7 +238,7 @@ export default function DashboardNavbar() {
                     {/* Menu Items */}
                     <div className="p-2">
                       <Link
-                        href="/settings"
+                        href="/settings?tab=profile"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
                       >
@@ -248,18 +249,18 @@ export default function DashboardNavbar() {
                       </Link>
 
                       <Link
-                        href="/settings"
+                        href="/settings?tab=backup"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
                       >
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
-                          <CreditCard className="h-3.5 w-3.5 text-slate-500" />
+                          <HardDrive className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        Plan &amp; Billing
+                        Data & Backup
                       </Link>
 
                       <Link
-                        href="/settings"
+                        href="/settings?tab=company"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
                       >
