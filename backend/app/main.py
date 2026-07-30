@@ -7,7 +7,7 @@ from app.database import engine, Base
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
 from app.api.upload import router as upload_router
-from app.api.payments import router as payments_router
+
 from app.api.settings import router as settings_router
 
 # Import models to ensure they are registered with SQLAlchemy
@@ -47,7 +47,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(upload_router)
-app.include_router(payments_router)
 app.include_router(settings_router, prefix="/settings", tags=["settings"])
 
 
