@@ -691,17 +691,39 @@ export default function QuotationView() {
     });
   };
 
+  const executePrint = async (quoteData: any) => {
+    const items = [...(quoteData.items || [])];
+    
+    // Fetch missing photoUrls to ensure they are available synchronously when window.print() is called
+    await Promise.all(items.map(async (item) => {
+      if (!item.photoUrl) {
+        try {
+          const { data } = await supabase.from('products').select('photoUrl').eq('id', item.id).single();
+          if (data?.photoUrl) {
+            item.photoUrl = data.photoUrl;
+          }
+        } catch (e) {
+          console.error("Failed to fetch photo for print:", item.id);
+        }
+      }
+    }));
+    
+    setPrintQuoteData({ ...quoteData, items });
+    
+    // Wait for the DOM to paint the images before triggering the blocking print dialog
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintQuoteData(null), 200);
+    }, 500);
+  };
+
   const handlePrintQuoteDirect = async (quote: any) => {
     let itemsToLoad = quote.items;
     if (!itemsToLoad) {
       itemsToLoad = await fetchQuoteItems(quote.id);
       quote.items = itemsToLoad;
     }
-    setPrintQuoteData({ ...quote, items: itemsToLoad });
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setPrintQuoteData(null), 100);
-    }, 300);
+    await executePrint({ ...quote, items: itemsToLoad });
   };
 
   // Toggle item selection (now increments if already exists)
@@ -835,7 +857,7 @@ export default function QuotationView() {
   }, [total, cashAmount, bankAmount]);
 
   // Print
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const currentQuote = {
       id: "preview",
       quoteNumber,
@@ -851,11 +873,7 @@ export default function QuotationView() {
       eventMarkupPercent,
       total: total
     };
-    setPrintQuoteData(currentQuote);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setPrintQuoteData(null), 100);
-    }, 300);
+    await executePrint(currentQuote);
   };
 
   if (loadingProfile) {
@@ -2008,13 +2026,7 @@ export default function QuotationView() {
           <div className="flex items-center gap-2">
             {/* Print button */}
             <button
-              onClick={() => {
-                setPrintQuoteData(selectedQuoteForPreview);
-                setTimeout(() => {
-                  window.print();
-                  setTimeout(() => setPrintQuoteData(null), 100);
-                }, 300);
-              }}
+              onClick={() => executePrint(selectedQuoteForPreview)}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 shadow-sm"
             >
               <Printer className="h-3.5 w-3.5" />
