@@ -273,7 +273,7 @@ function CollectionsPageContent() {
     try {
       const [colsRes, prodsRes] = await Promise.all([
         supabase.from('collections').select('*').eq('user_id', userId),
-        supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId)
+        supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description, unit_type, created_at').eq('user_id', userId)
       ]);
 
       if (prodsRes.data) {

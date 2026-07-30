@@ -39,7 +39,6 @@ interface Product {
   collectionId?: string;
 }
 
-import { supabase } from "@/lib/supabase";
 
 function WarehouseProductImage({ productId, productName, initialUrl }: { productId: string, productName: string, initialUrl?: string }) {
   const [url, setUrl] = useState<string | null>(initialUrl || null);

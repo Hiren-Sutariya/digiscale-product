@@ -1685,7 +1685,7 @@ export default function QuotationView() {
                         {/* PRODUCT PHOTO */}
                         <td className="p-1 border-r border-slate-300 align-middle">
                           <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                              <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
+                              <AsyncProductImage productId={item.id} initialUrl={item.photoUrl} className="h-full w-full object-contain p-0.5" fallbackClassName="h-full w-full flex items-center justify-center bg-slate-50" iconClassName="h-5 w-5 text-slate-300" />
                           </div>
                         </td>
 
@@ -2135,7 +2135,7 @@ export default function QuotationView() {
                         </td>
                         <td className="p-1 border-r border-slate-300 align-middle">
                           <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                              <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
+                              <AsyncProductImage productId={item.id} initialUrl={item.photoUrl} className="h-full w-full object-contain p-0.5" fallbackClassName="h-full w-full flex items-center justify-center bg-slate-50" iconClassName="h-5 w-5 text-slate-300" />
                           </div>
                         </td>
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
@@ -2392,7 +2392,7 @@ export default function QuotationView() {
                     {/* PRODUCT PHOTO */}
                     <td className="p-1 border-r border-slate-300 align-middle">
                       <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                          <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
+                          <AsyncProductImage productId={item.id} initialUrl={item.photoUrl} className="h-full w-full object-contain p-0.5" fallbackClassName="h-full w-full flex items-center justify-center bg-slate-50" iconClassName="h-5 w-5 text-slate-300" />
                       </div>
                     </td>
 
