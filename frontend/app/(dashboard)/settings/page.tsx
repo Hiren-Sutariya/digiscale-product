@@ -1434,7 +1434,7 @@ function BackupSection() {
       let totalBytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith("digiscale_")) {
+        if (key && (key.startsWith("digiscale_") || key.startsWith("quotation_data_"))) {
           const val = localStorage.getItem(key) || "";
           backupData[key] = val;
           totalBytes += key.length + val.length;
@@ -1452,9 +1452,17 @@ function BackupSection() {
         XLSX.utils.book_append_sheet(wb, wsCols, "Collections");
       } catch (e) {}
 
-      // Products (we have to look at digiscale_products_* keys)
+      // Products (we have to look at digiscale_products_* keys and digiscale_cached_all_products)
       try {
         const allProducts = [];
+        
+        // Add cached all products
+        const allProdsStr = backupData["digiscale_cached_all_products"];
+        if (allProdsStr) {
+          const arr = JSON.parse(allProdsStr);
+          if (Array.isArray(arr)) allProducts.push(...arr);
+        }
+
         for (const [key, val] of Object.entries(backupData)) {
           if (key.startsWith("digiscale_products_")) {
             const arr = JSON.parse(val);
@@ -1463,9 +1471,13 @@ function BackupSection() {
             }
           }
         }
-        if (allProducts.length > 0) {
+        
+        // Deduplicate products by ID
+        const uniqueProducts = Array.from(new Map(allProducts.map(p => [p.id, p])).values());
+
+        if (uniqueProducts.length > 0) {
           // Flatten nested objects to make them Excel-friendly
-          const flatProducts = allProducts.map(p => ({
+          const flatProducts = uniqueProducts.map((p: any) => ({
             ...p,
             prices: JSON.stringify(p.prices || []),
             images: JSON.stringify(p.images || []),
@@ -1490,8 +1502,32 @@ function BackupSection() {
         if (assignStr) {
           const assignMap = JSON.parse(assignStr);
           const assignList = Object.values(assignMap).flat();
-          const wsAssign = XLSX.utils.json_to_sheet(assignList);
+          const wsAssign = XLSX.utils.json_to_sheet(assignList as any[]);
           XLSX.utils.book_append_sheet(wb, wsAssign, "Warehouse Assignments");
+        }
+      } catch (e) {}
+
+      // Quotations
+      try {
+        const allQuotations = [];
+        for (const [key, val] of Object.entries(backupData)) {
+          if (key.startsWith("quotation_data_")) {
+            const payload = JSON.parse(val);
+            // Payload is {quotations: [], currentQuotation: null}
+            if (payload && Array.isArray(payload.quotations)) {
+              allQuotations.push(...payload.quotations);
+            }
+          }
+        }
+
+        if (allQuotations.length > 0) {
+          // Flatten items
+          const flatQuotations = allQuotations.map((q: any) => ({
+            ...q,
+            items: JSON.stringify(q.items || [])
+          }));
+          const wsQuots = XLSX.utils.json_to_sheet(flatQuotations);
+          XLSX.utils.book_append_sheet(wb, wsQuots, "Quotations");
         }
       } catch (e) {}
 
@@ -1529,7 +1565,7 @@ function BackupSection() {
         
         let restoredCount = 0;
         for (const [key, value] of Object.entries(backupData)) {
-          if (key.startsWith("digiscale_") && typeof value === "string") {
+          if ((key.startsWith("digiscale_") || key.startsWith("quotation_data_")) && typeof value === "string") {
             localStorage.setItem(key, value);
             restoredCount++;
           }
@@ -1562,7 +1598,7 @@ function BackupSection() {
     let bytes = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("digiscale_")) {
+      if (key && (key.startsWith("digiscale_") || key.startsWith("quotation_data_"))) {
         bytes += key.length + (localStorage.getItem(key)?.length || 0);
       }
     }
