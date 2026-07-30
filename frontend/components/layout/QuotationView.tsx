@@ -307,7 +307,7 @@ export default function QuotationView() {
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collectionId, collectionName, description, location').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false })
         ]);
 
         if (colsErr) throw colsErr;
@@ -379,7 +379,7 @@ export default function QuotationView() {
             eventMarkupPercent: q.event_markup_percent,
             createdAt: q.created_at,
             isOrderDone: q.is_order_done || false,
-            items: typeof q.items === 'string' ? JSON.parse(q.items) : q.items
+            items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
           }));
           setSavedQuotes(parsedQuotes);
           const nextNum = getNextQuoteNumber(parsedQuotes);
@@ -596,13 +596,26 @@ export default function QuotationView() {
     }
   };
 
-  const handleLoadQuote = (quote: any) => {
+  const fetchQuoteItems = async (quoteId: string) => {
+    const { data } = await supabase.from('quotations').select('items').eq('id', quoteId).single();
+    if (data?.items) {
+      return typeof data.items === 'string' ? JSON.parse(data.items) : data.items;
+    }
+    return [];
+  };
+
+  const handleLoadQuote = async (quote: any) => {
+    let itemsToLoad = quote.items;
+    if (!itemsToLoad) {
+      itemsToLoad = await fetchQuoteItems(quote.id);
+      quote.items = itemsToLoad;
+    }
     setQuoteNumber(quote.quoteNumber || "");
     setClientName(quote.clientName || "");
     setClientCompany(quote.clientCompany || "");
     setClientAddress(quote.clientAddress || "");
     setQuoteDate(quote.quoteDate || "");
-    setSelectedItems(quote.items || []);
+    setSelectedItems(itemsToLoad || []);
     setTaxInput(quote.taxInput || "");
     setCashAmount(quote.cashAmount || "");
     setBankAmount(quote.bankAmount || "");
@@ -678,8 +691,13 @@ export default function QuotationView() {
     });
   };
 
-  const handlePrintQuoteDirect = (quote: any) => {
-    setPrintQuoteData(quote);
+  const handlePrintQuoteDirect = async (quote: any) => {
+    let itemsToLoad = quote.items;
+    if (!itemsToLoad) {
+      itemsToLoad = await fetchQuoteItems(quote.id);
+      quote.items = itemsToLoad;
+    }
+    setPrintQuoteData({ ...quote, items: itemsToLoad });
     setTimeout(() => {
       window.print();
       setTimeout(() => setPrintQuoteData(null), 100);
