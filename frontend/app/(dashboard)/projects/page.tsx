@@ -262,7 +262,7 @@ function CollectionsPageContent() {
           color: p.color,
           unit_type: p.unit_type || "pcs",
           description: p.description,
-          photoUrl: p.photoUrl,
+          photoUrl: "",
           collectionId: p.collection_id,
           collectionName: colsMap[p.collection_id] || "Unknown Collection",
           createdAt: p.created_at
