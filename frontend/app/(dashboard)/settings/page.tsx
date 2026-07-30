@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword } from "@/services/api";
 import { getCache } from "@/lib/cache";
 
 export default function SettingsPage() {
@@ -709,6 +709,45 @@ function SecuritySection() {
   const [errorMsg, setErrorMsg] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const handlePasswordChange = async () => {
+    setPwdError("");
+    setPwdSuccess(false);
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPwdError("All fields are required.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPwdError("New passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPwdError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    setPwdLoading(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setPwdSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (err: any) {
+      setPwdError(err.message || "Failed to update password.");
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
   const handleDeleteTrigger = () => {
     setShowConfirmModal(true);
     setDeleteStep(1);
@@ -763,26 +802,47 @@ function SecuritySection() {
           Update your password to keep your account secure.
         </p>
 
+        {pwdError && (
+          <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+            {pwdError}
+          </div>
+        )}
+        {pwdSuccess && (
+          <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-600 border border-emerald-200">
+            Password updated successfully.
+          </div>
+        )}
+
         <div className="mt-6 space-y-4">
           <input
             type="password"
             placeholder="Current Password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
             className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
           />
           <input
             type="password"
             placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
             className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
           />
           <input
             type="password"
             placeholder="Confirm New Password"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
             className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
           />
         </div>
 
-        <button className="mt-6 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">
-          Update Password
+        <button
+          onClick={handlePasswordChange}
+          disabled={pwdLoading}
+          className="mt-6 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+        >
+          {pwdLoading ? "Updating..." : "Update Password"}
         </button>
       </div>
 

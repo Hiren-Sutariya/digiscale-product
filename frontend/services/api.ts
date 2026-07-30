@@ -247,6 +247,19 @@ export async function deleteAccount(): Promise<any> {
   return response.json();
 }
 
+export async function changePassword(current_password: string, new_password: string): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/users/me/password`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ current_password, new_password }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.detail || "Failed to change password.");
+  }
+  return response.json();
+}
+
 
 export async function deleteProject(projectId: number): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/projects/${projectId}`, {

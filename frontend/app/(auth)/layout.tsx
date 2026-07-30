@@ -11,9 +11,6 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen w-full flex flex-col bg-gradient-to-br from-blue-50/50 via-slate-50 to-indigo-50/50 relative overflow-hidden">
       
-      {/* Navbar at the top */}
-      <LandingNavbar />
-
       {/* Main content body centered */}
       <div className="flex-1 w-full flex items-center justify-center p-6 my-12 relative">
         {/* Background subtle glowing accent blobs */}
@@ -25,9 +22,6 @@ export default function AuthLayout({
           {children}
         </div>
       </div>
-
-      {/* Footer at the bottom */}
-      <Footer />
 
     </div>
   );

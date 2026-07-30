@@ -4,6 +4,8 @@ from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.schemas.user import UserResponse, UserProfileUpdate
+from app.schemas.auth import ChangePasswordRequest
+from app.services.auth_service import hash_password, verify_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -22,6 +24,19 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+@router.put("/me/password")
+def change_password(
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 @router.post("/me/upgrade", response_model=UserResponse)
 def upgrade_plan(
