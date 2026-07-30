@@ -274,7 +274,7 @@ export default function QuotationView() {
           { data: quotesData, error: quotesErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('*, collection:collections(name)').eq('user_id', userId),
+          supabase.from('products').select('*').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('*').eq('user_id', userId).order('created_at', { ascending: false })
         ]);
@@ -309,6 +309,13 @@ export default function QuotationView() {
           });
         }
 
+        const colsMap: Record<string, string> = {};
+        if (colsData) {
+          colsData.forEach((c: any) => {
+            colsMap[c.id] = c.name;
+          });
+        }
+
         const mappedProds = (prodsData || []).map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -318,7 +325,7 @@ export default function QuotationView() {
           color: p.color,
           length: p.length?.toString(),
           photoUrl: p.photoUrl,
-          collectionName: p.collection?.name || '',
+          collectionName: colsMap[p.collection_id] || '',
           collectionId: p.collection_id,
           description: p.description,
           location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
@@ -379,8 +386,8 @@ export default function QuotationView() {
           }
         }
 
-      } catch (e) {
-        console.error("Failed to load data from Supabase:", e);
+      } catch (e: any) {
+        console.error("Failed to load data from Supabase:", e?.message || e);
       }
     }
 

@@ -98,7 +98,7 @@ export default function WarehousePage() {
     try {
       const [colsRes, prodsRes] = await Promise.all([
         supabase.from("collections").select("*").eq("user_id", userId),
-        supabase.from("products").select("*, collection:collections(name)").eq("user_id", userId),
+        supabase.from("products").select("*").eq("user_id", userId),
       ]);
 
       let colsData: any[] = [];
@@ -110,6 +110,9 @@ export default function WarehousePage() {
       }
 
       if (prodsRes.data) {
+        const colsMap: Record<string, string> = {};
+        colsData.forEach((c: any) => colsMap[c.id] = c.name);
+
         prodsData = prodsRes.data.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -118,7 +121,7 @@ export default function WarehousePage() {
           rate: p.rate || "",
           color: p.color || "",
           unit_type: p.unit_type || "pcs",
-          collectionName: p.collection?.name || "Unknown Collection",
+          collectionName: colsMap[p.collection_id] || "Unknown Collection",
           collectionId: p.collection_id,
         }));
         setAllProducts(prodsData);
