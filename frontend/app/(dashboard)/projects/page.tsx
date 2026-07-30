@@ -241,12 +241,18 @@ function CollectionsPageContent() {
 
   const refreshAllProducts = async (userId: string) => {
     try {
-      const { data } = await supabase
-        .from('products')
-        .select(`*, collection:collections(name)`)
-        .eq('user_id', userId);
-      if (data) {
-        const mapped = data.map(p => ({
+      const [colsRes, prodsRes] = await Promise.all([
+        supabase.from('collections').select('*').eq('user_id', userId),
+        supabase.from('products').select('*').eq('user_id', userId)
+      ]);
+
+      if (prodsRes.data) {
+        const colsMap: Record<string, string> = {};
+        if (colsRes.data) {
+          colsRes.data.forEach((c: any) => colsMap[c.id] = c.name);
+        }
+
+        const mapped = prodsRes.data.map(p => ({
           id: p.id,
           name: p.name,
           stock: p.stock,
@@ -258,7 +264,7 @@ function CollectionsPageContent() {
           description: p.description,
           photoUrl: p.photoUrl,
           collectionId: p.collection_id,
-          collectionName: p.collection?.name || "Unknown Collection",
+          collectionName: colsMap[p.collection_id] || "Unknown Collection",
           createdAt: p.created_at
         }));
         setAllProducts(mapped);

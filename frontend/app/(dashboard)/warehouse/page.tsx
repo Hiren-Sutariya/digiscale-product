@@ -96,25 +96,9 @@ export default function WarehousePage() {
   // Fetch Collections & Products
   const fetchCollectionsAndProducts = async (userId: string) => {
     try {
-      // Fetch all products in chunks to avoid timeout due to large base64 images
-      const fetchAllProducts = async () => {
-        const all = [];
-        let offset = 0;
-        const limit = 200;
-        while (true) {
-          const { data, error } = await supabase.from('products').select('*').eq('user_id', userId).range(offset, offset + limit - 1);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          all.push(...data);
-          if (data.length < limit) break;
-          offset += limit;
-        }
-        return { data: all, error: null };
-      };
-
       const [colsRes, prodsRes] = await Promise.all([
         supabase.from("collections").select("*").eq("user_id", userId),
-        fetchAllProducts().catch(err => ({ data: null, error: err })),
+        supabase.from("products").select("*").eq("user_id", userId),
       ]);
 
       let colsData: any[] = [];
