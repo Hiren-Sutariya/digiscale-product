@@ -305,7 +305,7 @@ export default function QuotationView() {
           { data: quotesData, error: quotesErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collectionId, collectionName, description, location').eq('user_id', userId),
+          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false })
         ]);
@@ -1685,11 +1685,7 @@ export default function QuotationView() {
                         {/* PRODUCT PHOTO */}
                         <td className="p-1 border-r border-slate-300 align-middle">
                           <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                            {item.photoUrl ? (
-                              <img src={item.photoUrl} alt="" className="h-full w-full object-contain p-0.5" />
-                            ) : (
-                              <FileImage className="h-5 w-5 text-slate-300" />
-                            )}
+                              <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
                           </div>
                         </td>
 
@@ -2139,11 +2135,7 @@ export default function QuotationView() {
                         </td>
                         <td className="p-1 border-r border-slate-300 align-middle">
                           <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                            {item.photoUrl ? (
-                              <img src={item.photoUrl} alt="" className="h-full w-full object-contain p-0.5" />
-                            ) : (
-                              <FileImage className="h-5 w-5 text-slate-300" />
-                            )}
+                              <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
                           </div>
                         </td>
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
@@ -2400,11 +2392,7 @@ export default function QuotationView() {
                     {/* PRODUCT PHOTO */}
                     <td className="p-1 border-r border-slate-300 align-middle">
                       <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                        {item.photoUrl ? (
-                          <img src={item.photoUrl} alt="" className="h-full w-full object-contain p-0.5" />
-                        ) : (
-                          <FileImage className="h-5 w-5 text-slate-300" />
-                        )}
+                          <QuotationProductImage productId={item.id} productName={item.name} initialUrl={item.photoUrl} />
                       </div>
                     </td>
 
