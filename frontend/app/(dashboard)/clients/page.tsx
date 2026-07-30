@@ -167,9 +167,6 @@ export default function ClientsPage() {
             <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               Client Directory
             </h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
-              Manage your customers for quick access in quotations
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3">
