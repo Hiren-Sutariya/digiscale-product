@@ -29,6 +29,37 @@ import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { getCache, setCache } from "@/lib/cache";
 
+// --- Sub-components for optimizations ---
+function AsyncProductImage({ productId, initialUrl, className, fallbackClassName, iconClassName }: { productId: string, initialUrl?: string, className: string, fallbackClassName: string, iconClassName: string }) {
+  const [url, setUrl] = useState<string | null>(initialUrl || null);
+  
+  useEffect(() => {
+    if (url) return;
+    let mounted = true;
+    supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
+      if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+    });
+    return () => { mounted = false; };
+  }, [productId, url]);
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className={className}
+      />
+    );
+  }
+  
+  return (
+    <div className={fallbackClassName}>
+      <FileImage className={iconClassName} />
+    </div>
+  );
+}
+// ----------------------------------------
+
 interface Collection {
   id: string;
   name: string;
@@ -274,7 +305,7 @@ export default function QuotationView() {
           { data: quotesData, error: quotesErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('*').eq('user_id', userId),
+          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collectionId, collectionName, description, location').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('*').eq('user_id', userId).order('created_at', { ascending: false })
         ]);
@@ -656,14 +687,21 @@ export default function QuotationView() {
   };
 
   // Toggle item selection
-  const handleToggleProduct = (product: Product) => {
+  const handleToggleProduct = async (product: Product) => {
     const exists = selectedItems.find(item => item.id === product.id);
     if (exists) {
       setSelectedItems(selectedItems.filter(item => item.id !== product.id));
     } else {
       const cQty = product.cartonQty || 1;
-      setSelectedItems([
-        ...selectedItems,
+      
+      let photoUrl = product.photoUrl;
+      if (!photoUrl) {
+        const { data } = await supabase.from('products').select('photoUrl').eq('id', product.id).single();
+        if (data?.photoUrl) photoUrl = data.photoUrl;
+      }
+      
+      setSelectedItems(prev => [
+        ...prev,
         {
           id: product.id,
           name: product.name,
@@ -673,7 +711,7 @@ export default function QuotationView() {
           rate: product.rate || "",
           color: product.color,
           length: product.length,
-          photoUrl: product.photoUrl,
+          photoUrl: photoUrl,
           collectionName: product.collectionName,
           description: product.description,
           location: product.location
@@ -1417,13 +1455,13 @@ export default function QuotationView() {
                           {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                         </div>
 
-                        {p.photoUrl ? (
-                          <img src={p.photoUrl} alt="" className="h-8 w-8 rounded object-cover border border-slate-200 shrink-0" />
-                        ) : (
-                          <div className="h-8 w-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
-                            <FileImage className="h-4 w-4" />
-                          </div>
-                        )}
+                        <AsyncProductImage 
+                          productId={p.id} 
+                          initialUrl={p.photoUrl} 
+                          className="h-8 w-8 rounded object-cover border border-slate-200 shrink-0" 
+                          fallbackClassName="h-8 w-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0" 
+                          iconClassName="h-4 w-4" 
+                        />
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
