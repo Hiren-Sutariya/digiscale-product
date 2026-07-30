@@ -11,8 +11,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     
-    plan = Column(String, default="Starter")  # Starter, Pro, Enterprise
-    credits_limit = Column(Integer, default=30)
+    plan = Column(String, default="Free")  # Free, Pro, Enterprise
+    credits_limit = Column(Integer, default=999999999)
     credits_used = Column(Integer, default=0)
     
 

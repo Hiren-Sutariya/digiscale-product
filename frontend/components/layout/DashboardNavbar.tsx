@@ -188,12 +188,8 @@ export default function DashboardNavbar() {
                         {user?.name || "User"}
                       </p>
                       <p className="text-[10px] mt-0.5 leading-none">
-                        <span 
-                          className={user?.plan === "Starter" ? "text-amber-500 font-semibold" : "text-blue-600 font-semibold"}
-                        >
-                          {user?.plan === "Starter" 
-                            ? `Trial${daysLeft !== null ? ` · ${daysLeft}d left` : ""}` 
-                            : (user?.plan || "Free")}
+                        <span className="text-blue-600 font-semibold">
+                          {user?.plan || "Free"}
                         </span>
                       </p>
                     </div>
@@ -231,28 +227,10 @@ export default function DashboardNavbar() {
 
                       {/* Plan badge */}
                       <div className="mt-3">
-                        {user?.plan === "Starter" ? (
-                          <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                            <div className="flex items-center gap-1.5">
-                              <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                              <span className="text-xs font-bold text-amber-700">
-                                Trial{daysLeft !== null ? ` · ${daysLeft} days left` : ""}
-                              </span>
-                            </div>
-                            <Link
-                              href="/settings"
-                              onClick={() => setProfileOpen(false)}
-                              className="text-[10px] font-bold text-amber-600 hover:text-amber-700 transition"
-                            >
-                              Upgrade →
-                            </Link>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-                            <Zap className="h-3.5 w-3.5 text-blue-500 fill-blue-500" />
-                            <span className="text-xs font-bold text-blue-700">{user?.plan || "Free"} Plan</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+                          <Zap className="h-3.5 w-3.5 text-blue-500 fill-blue-500" />
+                          <span className="text-xs font-bold text-blue-700">{user?.plan || "Free"} Plan</span>
+                        </div>
                       </div>
                     </div>
 

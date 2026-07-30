@@ -22,8 +22,8 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
         name=data.name,
         email=data.email,
         password_hash=hash_password(data.password),
-        plan="Starter",
-        credits_limit=30,
+        plan="Free",
+        credits_limit=999999999,
         credits_used=0
     )
     
