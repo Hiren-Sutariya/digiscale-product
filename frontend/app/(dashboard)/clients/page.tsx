@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { getUserProfile } from "@/services/api";
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone } from "lucide-react";
 
 interface Client {
@@ -34,13 +35,13 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profile = await getUserProfile();
+      if (!profile) return;
 
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', profile.id.toString())
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -87,15 +88,15 @@ export default function ClientsPage() {
 
     try {
       setSaving(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const profile = await getUserProfile();
+      if (!profile) throw new Error("Not authenticated");
 
       const clientData = {
         name: formData.name.trim(),
         company: formData.company.trim() || null,
         address: formData.address.trim() || null,
         contact: formData.contact.trim() || null,
-        user_id: user.id
+        user_id: profile.id.toString()
       };
 
       if (editingId) {
@@ -103,7 +104,7 @@ export default function ClientsPage() {
           .from('clients')
           .update(clientData)
           .eq('id', editingId)
-          .eq('user_id', user.id);
+          .eq('user_id', profile.id.toString());
         
         if (error) throw error;
         alert("Client updated successfully");
@@ -129,14 +130,14 @@ export default function ClientsPage() {
     if (!window.confirm(`Are you sure you want to delete client "${name}"?`)) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profile = await getUserProfile();
+      if (!profile) return;
 
       const { error } = await supabase
         .from('clients')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('user_id', profile.id.toString());
 
       if (error) throw error;
       alert("Client deleted successfully");
