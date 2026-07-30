@@ -20,6 +20,10 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState<string>("");
+  const [deleting, setDeleting] = useState(false);
+  
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -107,14 +111,12 @@ export default function ClientsPage() {
           .eq('user_id', profile.id.toString());
         
         if (error) throw error;
-        alert("Client updated successfully");
       } else {
         const { error } = await supabase
           .from('clients')
           .insert([clientData]);
         
         if (error) throw error;
-        alert("Client added successfully");
       }
 
       closeModal();
@@ -126,24 +128,32 @@ export default function ClientsPage() {
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete client "${name}"?`)) return;
+  const confirmDelete = (id: number, name: string) => {
+    setDeleteConfirmId(id);
+    setDeleteConfirmName(name);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirmId) return;
 
     try {
+      setDeleting(true);
       const profile = await getUserProfile();
       if (!profile) return;
 
       const { error } = await supabase
         .from('clients')
         .delete()
-        .eq('id', id)
+        .eq('id', deleteConfirmId)
         .eq('user_id', profile.id.toString());
 
       if (error) throw error;
-      alert("Client deleted successfully");
-      setClients(prev => prev.filter(c => c.id !== id));
+      setClients(prev => prev.filter(c => c.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
     } catch (err: any) {
       alert(err.message || "Failed to delete client");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -229,7 +239,7 @@ export default function ClientsPage() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button 
-                      onClick={() => handleDelete(client.id, client.name)}
+                      onClick={() => confirmDelete(client.id, client.name)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -337,6 +347,55 @@ export default function ClientsPage() {
                   </>
                 ) : (
                   'Save Client'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="font-bold text-slate-900 text-lg">
+                Delete Client
+              </h2>
+              <button 
+                onClick={() => setDeleteConfirmId(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to delete <span className="font-bold text-slate-900">{deleteConfirmName}</span>? This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeDelete}
+                disabled={deleting}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-500/20 active:scale-95 disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Client'
                 )}
               </button>
             </div>
