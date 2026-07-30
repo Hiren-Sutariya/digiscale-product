@@ -8,7 +8,6 @@ from app.database import get_db
 from app.config import settings
 from app.services.auth_service import decode_access_token
 from app.models.user import User
-from app.models.project import ProjectImage
 
 router = APIRouter(tags=["upload"])
 security = HTTPBearer(auto_error=False)
@@ -32,7 +31,7 @@ def get_optional_user(
 @router.post("/upload")
 async def upload_image(
     file: UploadFile = File(...),
-    project_id: Optional[int] = Form(None),
+    project_id: Optional[int] = Form(None), # Deprecated
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
@@ -62,19 +61,7 @@ async def upload_image(
         
     relative_original_path = f"uploads/originals/{original_filename}"
     
-    # Create DB record if project_id is provided
     image_id = None
-    if project_id:
-        db_image = ProjectImage(
-            project_id=project_id,
-            original_path=relative_original_path,
-            processed_path=relative_original_path, # No longer processing background
-            status="completed"
-        )
-        db.add(db_image)
-        db.commit()
-        db.refresh(db_image)
-        image_id = db_image.id
 
     return {
         "message": "Image uploaded successfully",
