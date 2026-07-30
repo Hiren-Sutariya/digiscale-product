@@ -266,6 +266,22 @@ export default function QuotationView() {
           setQuoteNumber(cachedData.quoteNumber);
         }
 
+        // Fetch all products in chunks to avoid timeout due to large base64 images
+        const fetchAllProducts = async () => {
+          const all = [];
+          let offset = 0;
+          const limit = 200;
+          while (true) {
+            const { data, error } = await supabase.from('products').select('*').eq('user_id', userId).range(offset, offset + limit - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            all.push(...data);
+            if (data.length < limit) break;
+            offset += limit;
+          }
+          return { data: all, error: null };
+        };
+
         // Fetch all data from Supabase concurrently for faster loading
         const [
           { data: colsData, error: colsErr },
@@ -274,7 +290,7 @@ export default function QuotationView() {
           { data: quotesData, error: quotesErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('*').eq('user_id', userId),
+          fetchAllProducts().catch(err => ({ data: null, error: err })),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('*').eq('user_id', userId).order('created_at', { ascending: false })
         ]);
@@ -736,7 +752,7 @@ export default function QuotationView() {
     return (
       (p.name?.toLowerCase() || "").includes(q) ||
       (p.color?.toLowerCase() || "").includes(q) ||
-      (p.length?.toString().toLowerCase() || "").includes(q) ||
+      (p.length?.toString() || "").toLowerCase().includes(q) ||
       (p.collectionName?.toLowerCase() || "").includes(q)
     );
   });
