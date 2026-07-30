@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import {
   User,
@@ -32,7 +32,7 @@ import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
 
@@ -1548,6 +1548,24 @@ function BackupSection() {
         }
       } catch (e) {}
 
+      // Add a hidden-like System_Data sheet to store exact state for reliable restoration
+      try {
+        const systemDataRows = [];
+        const MAX_CELL_CHARS = 30000;
+        for (const [k, v] of Object.entries(backupData)) {
+          if (v.length <= MAX_CELL_CHARS) {
+            systemDataRows.push({ Key: k, Chunk: 0, Value: v });
+          } else {
+            let chunkIdx = 0;
+            for (let i = 0; i < v.length; i += MAX_CELL_CHARS) {
+              systemDataRows.push({ Key: k, Chunk: chunkIdx++, Value: v.substring(i, i + MAX_CELL_CHARS) });
+            }
+          }
+        }
+        const wsSystem = XLSX.utils.json_to_sheet(systemDataRows);
+        XLSX.utils.book_append_sheet(wb, wsSystem, "System_Data");
+      } catch(e) {}
+
       // If workbook is empty, add a dummy sheet
       if (wb.SheetNames.length === 0) {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ message: "No data found" }]), "Empty");
@@ -1573,17 +1591,31 @@ function BackupSection() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const content = event.target?.result as string;
-        const backupData = JSON.parse(content);
-        
-        if (typeof backupData !== "object" || backupData === null) {
-          throw new Error("Invalid backup format");
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+
+        if (!wb.SheetNames.includes("System_Data")) {
+          throw new Error("Invalid backup format. Missing System_Data sheet.");
         }
-        
+
+        const systemSheet = wb.Sheets["System_Data"];
+        const systemRows: any[] = XLSX.utils.sheet_to_json(systemSheet);
+
+        // Group by Key and sort by Chunk
+        const dataMap: Record<string, {chunk: number, val: string}[]> = {};
+        for (const row of systemRows) {
+          if (row.Key !== undefined && row.Value !== undefined) {
+            if (!dataMap[row.Key]) dataMap[row.Key] = [];
+            dataMap[row.Key].push({ chunk: row.Chunk || 0, val: row.Value });
+          }
+        }
+
         let restoredCount = 0;
-        for (const [key, value] of Object.entries(backupData)) {
-          if ((key.startsWith("digiscale_") || key.startsWith("quotation_data_")) && typeof value === "string") {
-            localStorage.setItem(key, value);
+        for (const [key, chunks] of Object.entries(dataMap)) {
+          chunks.sort((a, b) => a.chunk - b.chunk);
+          const fullValue = chunks.map(c => c.val).join("");
+          if (key.startsWith("digiscale_") || key.startsWith("quotation_data_")) {
+            localStorage.setItem(key, fullValue);
             restoredCount++;
           }
         }
@@ -1593,7 +1625,7 @@ function BackupSection() {
           window.location.reload();
         }, 1500);
       } catch (err: any) {
-        setErrorMsg("Failed to restore backup. Invalid file format.");
+        setErrorMsg(err.message || "Failed to restore backup. Invalid file format.");
         setLoading(false);
       }
     };
@@ -1601,7 +1633,7 @@ function BackupSection() {
       setErrorMsg("Error reading the file.");
       setLoading(false);
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
     
     // Reset file input
     if (fileInputRef.current) {
@@ -1663,15 +1695,15 @@ function BackupSection() {
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900">Upload JSON System Backup</h3>
+            <h3 className="font-semibold text-slate-900">Upload Excel Backup</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Restore your data from a JSON backup file. (Note: You cannot restore from the Excel format, please use a JSON system backup if you have one).
+              Restore your data from a Digiscale Excel backup file (.xlsx). This will overwrite existing local data.
             </p>
           </div>
           <div className="mt-6">
             <input 
               type="file" 
-              accept=".json" 
+              accept=".xlsx" 
               className="hidden" 
               ref={fileInputRef}
               onChange={handleUploadBackup}
@@ -1687,5 +1719,13 @@ function BackupSection() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Loading settings...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }
