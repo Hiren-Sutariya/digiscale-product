@@ -55,12 +55,16 @@ function WarehouseProductImage({ productId, productName, initialUrl }: { product
       return;
     }
     let mounted = true;
-    supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
-      photoUrlCache.set(productId, data?.photoUrl || null);
-      if (mounted && data?.photoUrl) setUrl(data.photoUrl);
-    }).catch(() => {
-      photoUrlCache.set(productId, null);
-    });
+    const fetchPhoto = async () => {
+      try {
+        const { data } = await supabase.from('products').select('photoUrl').eq('id', productId).single();
+        photoUrlCache.set(productId, data?.photoUrl || null);
+        if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+      } catch (e) {
+        photoUrlCache.set(productId, null);
+      }
+    };
+    fetchPhoto();
     return () => { mounted = false; };
   }, [productId, url]);
 
@@ -753,7 +757,8 @@ export default function WarehousePage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                   {filteredGlobalProducts.length > 50 && (
                     <p className="text-center text-[10px] text-slate-400 font-semibold py-2 italic border-t border-slate-100">
                       Showing top 50 results. Please refine your search.
