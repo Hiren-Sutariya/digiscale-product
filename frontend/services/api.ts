@@ -60,6 +60,7 @@ export async function login(email: string, password: string): Promise<any> {
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
+    document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
   return data;
 }
@@ -82,6 +83,7 @@ export async function signup(name: string, email: string, password: string): Pro
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
+    document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
   return data;
 }
@@ -92,6 +94,7 @@ export function logout(): void {
     localStorage.removeItem("token");
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_email");
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }
 }
 
@@ -149,6 +152,7 @@ export async function getUserProfile(forceFetch: boolean = false): Promise<any> 
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
+        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         window.location.href = "/login";
       }
       return null;
