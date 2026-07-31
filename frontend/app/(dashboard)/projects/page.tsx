@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import Tesseract from 'tesseract.js';
 import {
   getUserProfile,
+  getUserSettings,
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 // --- Sub-components for optimizations ---
@@ -134,6 +135,7 @@ function CollectionsPageContent() {
   const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -385,8 +387,8 @@ function CollectionsPageContent() {
     }
 
     // Fetch the logged-in user profile from our python backend
-    getUserProfile()
-      .then((profile) => {
+    Promise.all([getUserProfile(), getUserSettings()])
+      .then(([profile, settingsData]) => {
         if (profile && profile.id) {
           setUserProfile(profile);
           const uId = profile.id.toString();
@@ -396,6 +398,18 @@ function CollectionsPageContent() {
           // Fetch fresh isolated data from Supabase using this user ID!
           fetchCollections(uId);
           fetchWarehouseData(uId);
+        }
+        // Set company info from settings (for PDF header)
+        if (settingsData) {
+          setCompanyInfo({
+            logo: settingsData.company_logo,
+            name: settingsData.company_name,
+            email: settingsData.company_email,
+            primaryPhone: settingsData.company_primary_phone,
+            secondaryPhone: settingsData.company_secondary_phone,
+            address: settingsData.company_address,
+            gst: settingsData.company_gst,
+          });
         }
       })
       .catch((err) => {
@@ -3757,136 +3771,140 @@ ${rows}
 
       {/* --- PRINT PORTAL FOR COLLECTION CATALOGUE --- */}
       {typeof document !== "undefined" && createPortal(
-        <div className="print-portal hidden">
+        <div className="print-portal hidden print:block w-full bg-white text-black p-0">
           {(() => {
-            if (!selectedCol) return null;
-          // Split products into pages of 9
-          const chunkedPages = [];
-          let currentIndex = 0;
-          const totalItems = products.length;
+            if (!selectedCol || products.length === 0) return null;
 
-          if (totalItems === 0) {
-            chunkedPages.push({ items: [] });
-          } else {
+            // Pagination: first page holds 8 items, continuation pages hold 11
+            const chunkedPages: { items: typeof products; startIndex: number }[] = [];
+            let currentIndex = 0;
+            const totalItems = products.length;
+            const FIRST_PAGE_ITEMS = 8;
+            const NEXT_PAGE_ITEMS = 11;
+
             while (currentIndex < totalItems) {
-              const chunk = products.slice(currentIndex, currentIndex + 9);
-              chunkedPages.push({ items: chunk });
-              currentIndex += 9;
+              const isFirstPage = currentIndex === 0;
+              const count = isFirstPage ? Math.min(FIRST_PAGE_ITEMS, totalItems) : Math.min(NEXT_PAGE_ITEMS, totalItems - currentIndex);
+              chunkedPages.push({ items: products.slice(currentIndex, currentIndex + count), startIndex: currentIndex });
+              currentIndex += count;
             }
-          }
 
-          return (
-            <div className="w-[1000px] bg-white mx-auto print:w-full print:m-0 print:bg-white text-black">
-              {chunkedPages.map((page, pageIndex) => (
-                <div key={pageIndex} className="print-page w-full h-[1414px] print:h-screen relative overflow-hidden bg-white px-10 py-12 flex flex-col page-break-after-always">
-                  
-                  {/* --- Header (matches Quotation) --- */}
-                  <div className="flex items-start justify-between border-b-2 border-black pb-4 mb-4">
-                    {/* Logo/Brand Name */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 bg-slate-100 border border-slate-300 flex items-center justify-center shrink-0">
-                        {userProfile?.business_logo_url ? (
-                          <img 
-                            src={userProfile.business_logo_url} 
-                            alt="Logo" 
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <span className="font-black text-xl text-slate-400">
-                            {userProfile?.business_name ? userProfile.business_name.substring(0, 2).toUpperCase() : "LOGO"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <h1 className="text-3xl font-black text-black uppercase tracking-tight">
-                          {userProfile?.business_name || "YOUR BUSINESS NAME"}
-                        </h1>
-                      </div>
-                    </div>
+            return chunkedPages.map((page, pageIndex) => (
+              <div key={pageIndex} className="w-full bg-white px-[15mm] py-[12mm] flex flex-col page-break-after-always" style={{ minHeight: '297mm' }}>
+                
+                {/* === HEADER (exact Quotation match) === */}
+                <div className="flex flex-row border-2 border-slate-900 overflow-hidden mb-4">
+                  {/* Left Side: Logo Block */}
+                  <div className="w-28 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+                    {companyInfo?.logo ? (
+                      <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-lg font-black tracking-wider uppercase px-2 text-slate-850">
+                        {companyInfo?.name?.substring(0, 8) || "DIGISCALE"}
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Business Details */}
-                    <div className="text-right flex flex-col items-end gap-1.5 max-w-[50%]">
-                      <p className="text-sm font-semibold leading-snug">
-                        {userProfile?.business_address || "Your Business Address here"}
+                  {/* Right Side: Contact Info */}
+                  <div className="flex-1 p-4 flex flex-col justify-center text-slate-800 text-xs font-semibold space-y-1">
+                    <h2 className="text-sm font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
+                    <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
+                      <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+                      <p>
+                        <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
                       </p>
-                      <div className="flex items-center gap-4 text-xs font-bold text-gray-700 mt-1">
-                        {userProfile?.business_mobile && (
-                          <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {userProfile.business_mobile}</span>
-                        )}
-                        {userProfile?.business_email && (
-                          <span className="flex items-center gap-1">@ {userProfile.business_email}</span>
-                        )}
-                      </div>
+                      <p>
+                        <span className="font-extrabold text-slate-955">EMAIL:</span> {companyInfo?.email || "-"}
+                      </p>
                     </div>
-                  </div>
-
-                  {/* --- Sub-header (Collection Name) --- */}
-                  <div className="flex items-center justify-center bg-gray-100 py-3 mb-6 border border-black font-black uppercase text-2xl tracking-wider">
-                    {selectedCol.name}
-                  </div>
-
-                  {/* --- Product Grid 3x3 --- */}
-                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-4">
-                    {page.items.map((prod, idx) => (
-                      <div key={idx} className="border-2 border-black flex flex-col h-full overflow-hidden">
-                        
-                        {/* Image Section */}
-                        <div className="flex-1 border-b-2 border-black p-2 flex items-center justify-center bg-gray-50 overflow-hidden relative min-h-[220px]">
-                          {prod.photoUrl ? (
-                            <img 
-                              src={prod.photoUrl} 
-                              alt={prod.name}
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300">
-                              <ImageIcon className="w-12 h-12" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Details Section */}
-                        <div className="bg-white">
-                          <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] divide-x-2 divide-black text-center text-xs font-black uppercase border-b-2 border-black">
-                            <div className="p-1 border-r border-black font-bold">Description</div>
-                            <div className="p-1 border-r border-black font-bold">CTNS</div>
-                            <div className="p-1 border-r border-black font-bold">QTY</div>
-                            <div className="p-1 font-bold">PRICE</div>
-                          </div>
-                          <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] divide-x-2 divide-black text-center font-bold text-xs h-16">
-                            <div className="p-1.5 flex items-center justify-center text-left leading-tight break-words border-r border-black font-bold">
-                              {prod.name}
-                            </div>
-                            <div className="p-1.5 flex items-center justify-center border-r border-black font-bold">
-                              {prod.cartonQty || "-"}
-                            </div>
-                            <div className="p-1.5 flex items-center justify-center border-r border-black font-bold">
-                              {prod.stock || "-"}
-                            </div>
-                            <div className="p-1.5 flex items-center justify-center text-sm font-bold">
-                              {prod.rate || "-"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Fill empty slots in the grid if less than 9 items on the last page */}
-                    {Array.from({ length: 9 - page.items.length }).map((_, idx) => (
-                      <div key={`empty-${idx}`} className="border-2 border-transparent"></div>
-                    ))}
-                  </div>
-
-                  {/* Page Indicator Footer */}
-                  <div className="mt-auto pt-4 text-center text-xs font-bold text-gray-500">
-                    Page {pageIndex + 1} of {chunkedPages.length}
+                    {companyInfo?.gst && (
+                      <p className="text-[10px] text-slate-655 uppercase font-bold">
+                        <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          );
-        })()}
-      </div>,
-      document.body
+
+                {/* === COLLECTION NAME BANNER === */}
+                <div className="w-full bg-slate-100 text-center py-2.5 border-y-2 border-slate-900 mb-5">
+                  <h3 className="text-sm font-black text-slate-955 tracking-widest uppercase">
+                    {selectedCol.name}
+                  </h3>
+                </div>
+
+                {/* === PRODUCT TABLE === */}
+                <div className="flex-1">
+                  <table className="w-full text-left border-collapse border-2 border-slate-900">
+                    <thead>
+                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
+                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
+                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
+                        <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
+                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
+                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
+                        <th className="py-2.5 px-3 text-right w-24">PRICE</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
+                      {page.items.map((prod, idx) => (
+                        <tr key={prod.id} className="break-inside-avoid">
+                          {/* SR */}
+                          <td className="py-3 px-3 border-r border-slate-300 text-center text-slate-500 font-bold">
+                            {page.startIndex + idx + 1}
+                          </td>
+
+                          {/* PRODUCT PHOTO */}
+                          <td className="p-1 border-r border-slate-300 align-middle">
+                            <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
+                              {prod.photoUrl ? (
+                                <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain p-0.5" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center bg-slate-50">
+                                  <ImageIcon className="h-5 w-5 text-slate-300" />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* DESCRIPTION */}
+                          <td className="py-3 px-3 border-r border-slate-300 align-middle">
+                            <p className="font-extrabold text-slate-955 leading-tight">{prod.name}</p>
+                            {prod.description && (
+                              <p className="text-[10px] text-slate-500 mt-0.5">{prod.description}</p>
+                            )}
+                          </td>
+
+                          {/* CTNS */}
+                          <td className="py-3 px-3 border-r border-slate-300 text-center font-bold">
+                            {prod.cartonQty || "-"}
+                          </td>
+
+                          {/* QTY */}
+                          <td className="py-3 px-3 border-r border-slate-300 text-center font-bold">
+                            {prod.stock || "-"}
+                          </td>
+
+                          {/* PRICE */}
+                          <td className="py-3 px-3 text-right font-bold">
+                            {prod.rate || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Page footer */}
+                <div className="mt-auto pt-4 text-center text-[9px] font-bold text-gray-400">
+                  Page {pageIndex + 1} of {chunkedPages.length}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>,
+        document.body
       )}
 
       {/* Global CSS for Print Portal */}
@@ -3910,6 +3928,11 @@ ${rows}
           }
           body.is-printing-portal .print-portal {
             display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: white !important;
           }
           .page-break-after-always {
             page-break-after: always;
