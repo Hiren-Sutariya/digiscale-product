@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText } from "lucide-react";
 
 interface Client {
   id: number;
@@ -15,6 +15,7 @@ interface Client {
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -42,14 +43,33 @@ export default function ClientsPage() {
       const profile = await getUserProfile();
       if (!profile) return;
 
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', profile.id.toString())
-        .order('name', { ascending: true });
+      const [clientsRes, quotesRes] = await Promise.all([
+        supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', profile.id.toString())
+          .order('name', { ascending: true }),
+        supabase
+          .from('quotations')
+          .select('client_name')
+          .eq('user_id', profile.id.toString())
+      ]);
 
-      if (error) throw error;
-      setClients(data || []);
+      if (clientsRes.error) throw clientsRes.error;
+      if (quotesRes.error) throw quotesRes.error;
+
+      const counts: Record<string, number> = {};
+      if (quotesRes.data) {
+        quotesRes.data.forEach(q => {
+          if (q.client_name) {
+            const name = q.client_name.toLowerCase();
+            counts[name] = (counts[name] || 0) + 1;
+          }
+        });
+      }
+      
+      setQuoteCounts(counts);
+      setClients(clientsRes.data || []);
     } catch (err: any) {
       alert(err.message || "Failed to load clients");
     } finally {
@@ -249,6 +269,12 @@ export default function ClientsPage() {
                   <div className="flex items-center gap-2 text-slate-600 text-sm">
                     <Phone className="w-4 h-4 text-slate-400 shrink-0" />
                     <span className="truncate">{client.contact || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-600 text-sm">
+                    <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                    <span className="truncate font-semibold text-blue-600">
+                      {quoteCounts[client.name?.toLowerCase()] || 0} Quotation(s) Sent
+                    </span>
                   </div>
                 </div>
               </div>
