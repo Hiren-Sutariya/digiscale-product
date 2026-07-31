@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -52,7 +52,7 @@ export default function ClientsPage() {
           .order('name', { ascending: true }),
         supabase
           .from('quotations')
-          .select('client_name, quote_number, quote_date, total_amount, created_at')
+          .select('client_name, quote_number, quote_date, total_amount, created_at, is_order_done')
           .eq('user_id', profile.id.toString())
           .order('created_at', { ascending: false })
       ]);
@@ -235,20 +235,32 @@ export default function ClientsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredClients.map((client) => (
+            {filteredClients.map((client) => {
+              const quotes = clientQuotes[client.name?.toLowerCase()] || [];
+              const doneQuotes = quotes.filter(q => q.is_order_done).length;
+              const isRegularClient = doneQuotes >= 10;
+              
+              return (
               <div 
                 key={client.id}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all group"
+                className={`bg-white rounded-2xl border ${isRegularClient ? 'border-amber-300 shadow-amber-100' : 'border-slate-200'} p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden`}
               >
+                {isRegularClient && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                    <Award className="w-3 h-3" />
+                    Regular Client
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div className={isRegularClient ? "pr-24" : ""}>
                     <h3 className="font-bold text-slate-900 text-lg truncate pr-4">{client.name}</h3>
                     <div className="flex items-center gap-1.5 text-slate-500 mt-1">
                       <Building className="w-3.5 h-3.5" />
                       <span className="text-xs font-medium truncate">{client.company || "No company specified"}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-10 bg-white/80 backdrop-blur-sm rounded-lg p-1">
                     <button 
                       onClick={() => openModal(client)}
                       className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -276,27 +288,39 @@ export default function ClientsPage() {
                 </div>
 
                 {/* Brief Quotation Details */}
-                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quotations</span>
+                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quotations</span>
+                    </div>
+                    
+                    {quotes.length > 0 ? (
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        View {quotes.length} Quote(s)
+                      </Link>
+                    ) : (
+                      <span className="text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
+                        0 Quotes
+                      </span>
+                    )}
                   </div>
                   
-                  {clientQuotes[client.name?.toLowerCase()]?.length > 0 ? (
-                    <Link
-                      href={`/clients/${client.id}`}
-                      className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-                    >
-                      View {clientQuotes[client.name?.toLowerCase()]?.length} Quote(s)
-                    </Link>
-                  ) : (
-                    <span className="text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
-                      0 Quotes
-                    </span>
+                  {quotes.length > 0 && (
+                    <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2 px-3 border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs font-semibold text-slate-600">Orders Done</span>
+                      </div>
+                      <span className="text-sm font-black text-emerald-600">{doneQuotes} <span className="text-xs text-slate-400 font-medium">/ {quotes.length}</span></span>
+                    </div>
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
 

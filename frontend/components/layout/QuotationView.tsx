@@ -2574,12 +2574,12 @@ export default function QuotationView() {
         </div>
         <div className="flex justify-between items-start break-inside-avoid pt-4">
           <div className="w-[60%]">
-            <div className="flex flex-row items-start gap-4">
+            <div className="flex flex-row items-center gap-2">
               {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
                   <>
                     {/* QR Code rendered first on the left */}
                     {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                      <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[100px] h-[100px]">
+                      <div className="flex flex-col items-center justify-center shrink-0 w-[90px] h-[90px]">
                         {companyInfo.qrCode ? (
                           <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
                         ) : companyInfo.upiId ? (
