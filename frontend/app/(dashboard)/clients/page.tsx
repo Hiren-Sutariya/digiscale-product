@@ -22,7 +22,8 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  const [regularThreshold, setRegularThreshold] = useState(10);
+  const [regularThreshold, setRegularThreshold] = useState<string>("");
+  const [savedThreshold, setSavedThreshold] = useState<string>("0");
   const [updatingThreshold, setUpdatingThreshold] = useState(false);
   
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -51,7 +52,9 @@ export default function ClientsPage() {
       if (!profile) return;
       
       if (settings) {
-        setRegularThreshold(settings.regular_client_threshold ?? 10);
+        const val = settings.regular_client_threshold ?? 0;
+        setRegularThreshold(val === 0 ? "" : val.toString());
+        setSavedThreshold(val.toString());
       }
 
       const [clientsRes, quotesRes] = await Promise.all([
@@ -91,9 +94,13 @@ export default function ClientsPage() {
   };
 
   const handleSaveThreshold = async () => {
+    const num = regularThreshold === "" ? 0 : parseInt(regularThreshold) || 0;
+    if (num < 0) return;
     setUpdatingThreshold(true);
     try {
-      await updateUserSettings({ regular_client_threshold: regularThreshold });
+      await updateUserSettings({ regular_client_threshold: num });
+      setSavedThreshold(num.toString());
+      setRegularThreshold(num === 0 ? "" : num.toString());
     } catch (e) {
       console.error("Failed to update regular client threshold", e);
     } finally {
@@ -226,20 +233,23 @@ export default function ClientsPage() {
               <input 
                 type="number" 
                 value={regularThreshold}
-                onChange={(e) => setRegularThreshold(parseInt(e.target.value) || 0)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveThreshold()}
-                className="w-10 text-center text-xs font-bold text-slate-800 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                min="1"
+                placeholder="0"
+                onChange={(e) => setRegularThreshold(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (regularThreshold === "" ? "0" : regularThreshold) !== savedThreshold && handleSaveThreshold()}
+                className="w-10 text-center text-xs font-bold text-slate-800 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent placeholder-slate-400"
+                min="0"
                 disabled={updatingThreshold}
               />
-              <button 
-                onClick={handleSaveThreshold}
-                disabled={updatingThreshold}
-                className="p-1 hover:bg-blue-50 text-blue-600 rounded-md transition"
-                title="Save"
-              >
-                <Check className="w-4 h-4" />
-              </button>
+              {(regularThreshold === "" ? "0" : regularThreshold) !== savedThreshold && (
+                <button 
+                  onClick={handleSaveThreshold}
+                  disabled={updatingThreshold}
+                  className="p-1 hover:bg-blue-50 text-blue-600 rounded-md transition"
+                  title="Save"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <button
               onClick={() => openModal()}
@@ -279,7 +289,7 @@ export default function ClientsPage() {
             {filteredClients.map((client) => {
               const quotes = clientQuotes[client.name?.toLowerCase()] || [];
               const doneQuotes = quotes.filter(q => q.is_order_done).length;
-              const isRegularClient = doneQuotes >= regularThreshold;
+              const isRegularClient = doneQuotes >= (parseInt(regularThreshold) || 0);
               
               return (
               <div 
@@ -295,11 +305,9 @@ export default function ClientsPage() {
                 
                 <div className="flex justify-between items-start mb-4">
                   <div className={isRegularClient ? "pr-24" : ""}>
-                    <h3 className="font-bold text-slate-900 text-lg truncate pr-4">{client.name}</h3>
-                    <div className="flex items-center gap-1.5 text-slate-500 mt-1">
-                      <Building className="w-3.5 h-3.5" />
-                      <span className="text-xs font-medium truncate">{client.company || "No company specified"}</span>
-                    </div>
+                    <h3 className="font-bold text-slate-900 text-lg pr-4 line-clamp-2">
+                      {client.company ? `${client.company} | ${client.name}` : client.name}
+                    </h3>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-10 bg-white/80 backdrop-blur-sm rounded-lg p-1">
                     <button 

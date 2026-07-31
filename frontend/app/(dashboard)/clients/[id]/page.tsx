@@ -100,82 +100,81 @@ export default function ClientDetailsPage() {
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-slate-50/50 relative">
       <div className="w-full space-y-6">
         
-        {/* Header / Back Button */}
-        <button 
-          onClick={() => router.back()}
-          className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-650 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 mb-4"
-        >
-          <ChevronLeft className="h-4 w-4 text-slate-400 group-hover:text-slate-650 transition-transform group-hover:-translate-x-0.5" />
-          Back to Clients
-        </button>
+        {/* Header / Back Button & Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+          <button 
+            onClick={() => router.back()}
+            className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-650 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 w-fit"
+          >
+            <ChevronLeft className="h-4 w-4 text-slate-400 group-hover:text-slate-650 transition-transform group-hover:-translate-x-0.5" />
+            Back to Clients
+          </button>
 
-        {/* Client Info Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/60 pb-6 mb-6">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-              <Building className="h-6 w-6 text-blue-600 fill-blue-50" />
-              {client.name}
-            </h2>
-            {client.company && (
-              <p className="mt-2 text-sm font-semibold text-slate-500 flex items-center gap-1.5">
-                <Building className="w-4 h-4" /> {client.company}
-              </p>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm w-full sm:w-44 justify-between"
+            >
+              <span>
+                {quoteFilter === "all" ? `All Orders (${quotations.length})` : 
+                 quoteFilter === "done" ? `Done (${quotations.filter(q => q.is_order_done).length})` : 
+                 `Follow Up (${quotations.filter(q => !q.is_order_done).length})`}
+              </span>
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsFilterOpen(false)} />
+                <div className="absolute right-0 sm:right-0 sm:left-auto top-full mt-2 w-full sm:w-44 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/50 p-1.5 z-20">
+                  <button 
+                    onClick={() => { setQuoteFilter("all"); setIsFilterOpen(false); }} 
+                    className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "all" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    All Orders ({quotations.length})
+                    {quoteFilter === "all" && <Check className="w-4 h-4" />}
+                  </button>
+                  <button 
+                    onClick={() => { setQuoteFilter("done"); setIsFilterOpen(false); }} 
+                    className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "done" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    Done ({quotations.filter(q => q.is_order_done).length})
+                    {quoteFilter === "done" && <Check className="w-4 h-4" />}
+                  </button>
+                  <button 
+                    onClick={() => { setQuoteFilter("followup"); setIsFilterOpen(false); }} 
+                    className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "followup" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    Follow Up ({quotations.filter(q => !q.is_order_done).length})
+                    {quoteFilter === "followup" && <Check className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
             )}
           </div>
-          
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex flex-col gap-1.5 min-w-[200px]">
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-xs font-medium">{client.address || "No address provided"}</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-xs font-bold">{client.contact || "No contact provided"}</span>
-              </div>
-            </div>
-            
-            <div className="pl-4 sm:border-l border-slate-200 relative">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm w-44 justify-between"
-              >
-                <span>
-                  {quoteFilter === "all" ? `All Orders (${quotations.length})` : 
-                   quoteFilter === "done" ? `Done (${quotations.filter(q => q.is_order_done).length})` : 
-                   `Follow Up (${quotations.filter(q => !q.is_order_done).length})`}
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
+        </div>
 
-              {isFilterOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setIsFilterOpen(false)} />
-                  <div className="absolute right-0 sm:left-4 top-full mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/50 p-1.5 z-20">
-                    <button 
-                      onClick={() => { setQuoteFilter("all"); setIsFilterOpen(false); }} 
-                      className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "all" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-                    >
-                      All Orders ({quotations.length})
-                      {quoteFilter === "all" && <Check className="w-4 h-4" />}
-                    </button>
-                    <button 
-                      onClick={() => { setQuoteFilter("done"); setIsFilterOpen(false); }} 
-                      className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "done" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-                    >
-                      Done ({quotations.filter(q => q.is_order_done).length})
-                      {quoteFilter === "done" && <Check className="w-4 h-4" />}
-                    </button>
-                    <button 
-                      onClick={() => { setQuoteFilter("followup"); setIsFilterOpen(false); }} 
-                      className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition ${quoteFilter === "followup" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-                    >
-                      Follow Up ({quotations.filter(q => !q.is_order_done).length})
-                      {quoteFilter === "followup" && <Check className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </>
-              )}
+        {/* Client Info Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 min-w-0 pr-4">
+            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-3 line-clamp-2">
+              <div className="w-8 h-8 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                <Building className="h-4 w-4 text-slate-500" />
+              </div>
+              <span className="line-clamp-2" title={client.company ? `${client.company} | ${client.name}` : client.name}>
+                {client.company ? `${client.company} | ${client.name}` : client.name}
+              </span>
+            </h2>
+          </div>
+          
+          <div className="flex flex-col gap-2 min-w-[200px] sm:max-w-[50%] shrink-0">
+            <div className="flex items-start gap-2 text-slate-800">
+              <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+              <span className="text-sm font-semibold line-clamp-2 text-left" title={client.address || ""}>{client.address || "No address provided"}</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-800">
+              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-sm font-semibold">{client.contact || "No contact provided"}</span>
             </div>
           </div>
         </div>
