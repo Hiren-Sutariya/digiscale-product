@@ -15,7 +15,7 @@ interface Client {
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>({});
+  const [clientQuotes, setClientQuotes] = useState<Record<string, any[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -51,24 +51,26 @@ export default function ClientsPage() {
           .order('name', { ascending: true }),
         supabase
           .from('quotations')
-          .select('client_name')
+          .select('client_name, quote_number, quote_date, total_amount, created_at')
           .eq('user_id', profile.id.toString())
+          .order('created_at', { ascending: false })
       ]);
 
       if (clientsRes.error) throw clientsRes.error;
       if (quotesRes.error) throw quotesRes.error;
 
-      const counts: Record<string, number> = {};
+      const quotesMap: Record<string, any[]> = {};
       if (quotesRes.data) {
         quotesRes.data.forEach(q => {
           if (q.client_name) {
             const name = q.client_name.toLowerCase();
-            counts[name] = (counts[name] || 0) + 1;
+            if (!quotesMap[name]) quotesMap[name] = [];
+            quotesMap[name].push(q);
           }
         });
       }
       
-      setQuoteCounts(counts);
+      setClientQuotes(quotesMap);
       setClients(clientsRes.data || []);
     } catch (err: any) {
       alert(err.message || "Failed to load clients");
@@ -270,12 +272,46 @@ export default function ClientsPage() {
                     <Phone className="w-4 h-4 text-slate-400 shrink-0" />
                     <span className="truncate">{client.contact || "—"}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-600 text-sm">
-                    <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="truncate font-semibold text-blue-600">
-                      {quoteCounts[client.name?.toLowerCase()] || 0} Quotation(s) Sent
+                </div>
+
+                {/* Brief Quotation Details */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quotations</span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                      {clientQuotes[client.name?.toLowerCase()]?.length || 0}
                     </span>
                   </div>
+                  
+                  {clientQuotes[client.name?.toLowerCase()]?.length > 0 ? (
+                    <div className="space-y-2">
+                      {clientQuotes[client.name?.toLowerCase()].slice(0, 3).map(q => (
+                        <div key={q.quote_number} className="flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700">{q.quote_number}</span>
+                            <span className="text-[9px] font-semibold text-slate-400">{new Date(q.quote_date).toLocaleDateString()}</span>
+                          </div>
+                          <span className="text-xs font-bold text-blue-600">
+                            ₹{q.total_amount?.toLocaleString() || 0}
+                          </span>
+                        </div>
+                      ))}
+                      {clientQuotes[client.name?.toLowerCase()]?.length > 3 && (
+                        <div className="text-center pt-1">
+                          <span className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
+                            +{clientQuotes[client.name?.toLowerCase()].length - 3} more quotations...
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                      <span className="text-xs font-medium text-slate-400">No quotations sent yet</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
