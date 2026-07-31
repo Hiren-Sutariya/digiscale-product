@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile, getUserSettings, updateUserSettings } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Check } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -90,12 +90,10 @@ export default function ClientsPage() {
     }
   };
 
-  const handleUpdateThreshold = async (val: string) => {
-    const num = parseInt(val) || 10;
-    setRegularThreshold(num);
+  const handleSaveThreshold = async () => {
     setUpdatingThreshold(true);
     try {
-      await updateUserSettings({ regular_client_threshold: num });
+      await updateUserSettings({ regular_client_threshold: regularThreshold });
     } catch (e) {
       console.error("Failed to update regular client threshold", e);
     } finally {
@@ -223,16 +221,25 @@ export default function ClientsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-white">
+            <div className="hidden sm:flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
               <span className="text-xs font-bold text-slate-600">Regular Threshold:</span>
               <input 
                 type="number" 
                 value={regularThreshold}
-                onChange={(e) => handleUpdateThreshold(e.target.value)}
-                className="w-12 text-center text-xs font-bold text-slate-800 outline-none"
+                onChange={(e) => setRegularThreshold(parseInt(e.target.value) || 0)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveThreshold()}
+                className="w-10 text-center text-xs font-bold text-slate-800 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min="1"
                 disabled={updatingThreshold}
               />
+              <button 
+                onClick={handleSaveThreshold}
+                disabled={updatingThreshold}
+                className="p-1 hover:bg-blue-50 text-blue-600 rounded-md transition"
+                title="Save"
+              >
+                <Check className="w-4 h-4" />
+              </button>
             </div>
             <button
               onClick={() => openModal()}
