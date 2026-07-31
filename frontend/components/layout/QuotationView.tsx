@@ -145,6 +145,8 @@ export default function QuotationView() {
   const [clientContact, setClientContact] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
   
   // Quotation Metadata (Clean empty strings by default on mount as requested!)
   const getLocalDateString = () => {
@@ -537,6 +539,7 @@ export default function QuotationView() {
       return;
     }
     
+    setIsSaving(true);
     const defaultQuoteNum = getNextQuoteNumber(savedQuotes);
     const finalQuoteNumber = quoteNumber.trim() || defaultQuoteNum;
 
@@ -618,10 +621,12 @@ export default function QuotationView() {
         const nextNum = getNextQuoteNumber(updatedQuotes);
         setQuoteNumber(nextNum);
       }
+      setShowSavePopup(true);
     } catch (err) {
       console.error("Failed to save quotation:", err);
       alert("Failed to save quotation to database.");
     } finally {
+      setIsSaving(false);
       setTimeout(() => setSaveSuccessMessage(null), 3000);
     }
   };
@@ -1031,11 +1036,15 @@ export default function QuotationView() {
           {activeSubView === "create" && (
             <button
               onClick={handleSaveQuotation}
-              disabled={selectedItems.length === 0}
+              disabled={selectedItems.length === 0 || isSaving}
               className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
             >
-              <Check className="h-4 w-4" />
-              Save Quotation
+              {isSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {isSaving ? "Saving..." : "Save Quotation"}
             </button>
           )}
 
@@ -1419,7 +1428,8 @@ export default function QuotationView() {
                               onClick={() => {
                                 setClientName(client.name);
                                 setClientCompany(client.company);
-                                setClientAddress(client.address);
+                                setClientAddress(client.address || "");
+                                setClientContact(client.contact || "");
                                 setShowClientSuggestions(false);
                               }}
                             >
@@ -1714,9 +1724,8 @@ export default function QuotationView() {
               <div className="sm:w-1/2">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
                 <p className="text-slate-900 font-extrabold">{clientCompany || "-"}</p>
-                {clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress}</p>}
-                {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
-                {(!clientCompany && !clientAddress && !clientContact) && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">-</p>}
+                <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress || "-"}</p>
+                <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `Contact: ${clientContact}` : "-"}</p>
               </div>
 
               {/* Right Side: Quotation Info Metadata */}
@@ -2173,17 +2182,12 @@ export default function QuotationView() {
 
               {/* Billing Details & Quotation Info Metadata Block */}
               <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
-                {(selectedQuoteForPreview.clientCompany || selectedQuoteForPreview.clientAddress) ? (
                   <div className="sm:w-1/2">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
-                    {selectedQuoteForPreview.clientCompany && <p className="text-slate-900 font-extrabold">{selectedQuoteForPreview.clientCompany}</p>}
-                    {selectedQuoteForPreview.clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{selectedQuoteForPreview.clientAddress}</p>}
-                    {/* Assuming you will pass clientContact later, we'll fall back to state variable if it matches */}
-                    {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
+                    <p className="text-slate-900 font-extrabold">{selectedQuoteForPreview.clientCompany || "-"}</p>
+                    <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{selectedQuoteForPreview.clientAddress || "-"}</p>
+                    <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `Contact: ${clientContact}` : "-"}</p>
                   </div>
-                ) : (
-                  <div className="sm:w-1/2"></div>
-                )}
 
                 {(selectedQuoteForPreview.quoteNumber || selectedQuoteForPreview.quoteDate) && (
                   <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
@@ -2444,9 +2448,8 @@ export default function QuotationView() {
           <div className="sm:w-1/2">
             <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
             <p className="text-slate-900 font-extrabold">{printQuoteData.clientCompany || "-"}</p>
-            {printQuoteData.clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress}</p>}
-            {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
-            {(!printQuoteData.clientCompany && !printQuoteData.clientAddress && !clientContact) && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">-</p>}
+            <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress || "-"}</p>
+            <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `Contact: ${clientContact}` : "-"}</p>
           </div>
 
           {/* Right Side: Quotation Info Metadata */}
@@ -2532,43 +2535,62 @@ export default function QuotationView() {
             </table>
         </div>
         <div className="flex justify-between items-start break-inside-avoid pt-4">
-          <div className="w-[60%] flex flex-row items-start gap-4">
-            {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
-                <>
-                  {/* QR Code rendered first on the left */}
-                  {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                    <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[80px] h-[80px]">
-                      {companyInfo.qrCode ? (
-                        <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
-                      ) : companyInfo.upiId ? (
-                        <QRCodeSVG
-                          value={companyInfo.upiId}
-                          size={60}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <QRCodeSVG
-                          value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
-                          size={60}
-                          className="w-full h-full"
-                        />
-                      )}
-                      {!companyInfo.qrCode && <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
-                    </div>
-                  )}
-
-                  {/* Bank Details rendered after QR code */}
-                  {showBankDetails && companyInfo && (
-                    <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider mb-1 bg-slate-100 py-0.5 px-2 inline-block rounded">BANK ACCOUNT DETAILS (FOR PAYMENTS)</p>
-                      <div className="mt-1 space-y-0.5 px-1">
-                        <p className="text-[11px] font-extrabold text-slate-900 uppercase">{companyInfo.bankName}</p>
-                        <p className="text-[10px] font-bold text-slate-700">A/C: <span className="font-extrabold text-slate-900">{companyInfo.accountNumber}</span></p>
-                        {companyInfo.ifsc && <p className="text-[10px] font-bold text-slate-700">IFSC: <span className="font-extrabold text-slate-900">{companyInfo.ifsc}</span></p>}
+          <div className="w-[60%]">
+            <div className="flex flex-row items-start gap-4">
+              {showBankDetails && companyInfo && (companyInfo.bankName || companyInfo.accountNumber) && (
+                  <>
+                    {/* QR Code rendered first on the left */}
+                    {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
+                      <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[80px] h-[80px]">
+                        {companyInfo.qrCode ? (
+                          <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
+                        ) : companyInfo.upiId ? (
+                          <QRCodeSVG
+                            value={companyInfo.upiId}
+                            size={60}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <QRCodeSVG
+                            value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
+                            size={60}
+                            className="w-full h-full"
+                          />
+                        )}
+                        {!companyInfo.qrCode && <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
                       </div>
-                    </div>
-                  )}
-                </>
+                    )}
+
+                    {/* Bank Details rendered after QR code */}
+                    {showBankDetails && companyInfo && (
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider mb-1 bg-slate-100 py-0.5 px-2 inline-block rounded">BANK ACCOUNT DETAILS (FOR PAYMENTS)</p>
+                        <div className="mt-1 space-y-0.5 px-1">
+                          <p className="text-[11px] font-extrabold text-slate-900 uppercase">{companyInfo.bankName}</p>
+                          <p className="text-[10px] font-bold text-slate-700">A/C: <span className="font-extrabold text-slate-900">{companyInfo.accountNumber}</span></p>
+                          {companyInfo.ifsc && <p className="text-[10px] font-bold text-slate-700">IFSC: <span className="font-extrabold text-slate-900">{companyInfo.ifsc}</span></p>}
+                        </div>
+                      </div>
+                    )}
+                  </>
+              )}
+            </div>
+
+            {/* Additional Notes */}
+            {additionalNotes && (
+              <div className="text-[9px] text-slate-600 font-medium space-y-1 pt-4 leading-relaxed whitespace-pre-wrap">
+                <p className="uppercase text-slate-700 font-black mb-1">Additional Notes:</p>
+                <p>{additionalNotes}</p>
+              </div>
+            )}
+
+            {termsList.length > 0 && (
+              <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-4 leading-relaxed">
+                <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
+                {termsList.map((term, i) => (
+                  <p key={i}>{term}</p>
+                ))}
+              </div>
             )}
           </div>
           <div className="w-[40%] text-xs flex flex-col gap-3 pt-2">
@@ -2686,6 +2708,48 @@ export default function QuotationView() {
               }`}
             >
               {confirmModal.confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Save Success Popup */}
+    {showSavePopup && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+        <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 mb-4">
+            <Check className="h-6 w-6 text-emerald-600" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Quotation Saved!</h3>
+          <p className="text-sm text-slate-500 mb-6">Your quotation has been successfully saved to the database.</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setShowSavePopup(false);
+                setActiveSubView("list");
+                
+                // Clear the form fields for next use
+                setClientName("");
+                setClientCompany("");
+                setClientAddress("");
+                setClientContact("");
+                setSelectedItems([]);
+                setTaxInput("");
+                setAdditionalNotes("");
+                setCashAmount("");
+                setBankAmount("");
+                
+              }}
+              className="w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition active:scale-95"
+            >
+              Save & Close
+            </button>
+            <button
+              onClick={() => setShowSavePopup(false)}
+              className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition active:scale-95"
+            >
+              Keep Editing
             </button>
           </div>
         </div>
