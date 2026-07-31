@@ -1049,10 +1049,16 @@ ${rows}
   };
 
   const handlePrintCollection = () => {
+    // Set document title to collection name so PDF save dialog suggests this filename
+    const originalTitle = document.title;
+    if (selectedCol?.name) {
+      document.title = selectedCol.name;
+    }
     document.body.classList.add("is-printing-portal");
     setTimeout(() => {
       window.print();
       document.body.classList.remove("is-printing-portal");
+      document.title = originalTitle;
     }, 300);
   };
 
@@ -3775,43 +3781,40 @@ ${rows}
           {(() => {
             if (!selectedCol || products.length === 0) return null;
 
-            // Pagination: first page holds 8 items, continuation pages hold 11
-            const chunkedPages: { items: typeof products; startIndex: number }[] = [];
+            // 9 products per page (3x3 grid)
+            const ITEMS_PER_PAGE = 9;
+            const chunkedPages: { items: typeof products }[] = [];
             let currentIndex = 0;
             const totalItems = products.length;
-            const FIRST_PAGE_ITEMS = 8;
-            const NEXT_PAGE_ITEMS = 11;
 
             while (currentIndex < totalItems) {
-              const isFirstPage = currentIndex === 0;
-              const count = isFirstPage ? Math.min(FIRST_PAGE_ITEMS, totalItems) : Math.min(NEXT_PAGE_ITEMS, totalItems - currentIndex);
-              chunkedPages.push({ items: products.slice(currentIndex, currentIndex + count), startIndex: currentIndex });
-              currentIndex += count;
+              chunkedPages.push({ items: products.slice(currentIndex, currentIndex + ITEMS_PER_PAGE) });
+              currentIndex += ITEMS_PER_PAGE;
             }
 
             return chunkedPages.map((page, pageIndex) => (
-              <div key={pageIndex} className="w-full bg-white px-[15mm] py-[12mm] flex flex-col page-break-after-always" style={{ minHeight: '297mm' }}>
+              <div key={pageIndex} className="w-full bg-white px-[12mm] py-[10mm] flex flex-col page-break-after-always" style={{ minHeight: '297mm' }}>
                 
                 {/* === HEADER (exact Quotation match) === */}
-                <div className="flex flex-row border-2 border-slate-900 overflow-hidden mb-4">
+                <div className="flex flex-row border-2 border-slate-900 overflow-hidden mb-3">
                   {/* Left Side: Logo Block */}
-                  <div className="w-28 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+                  <div className="w-24 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[80px] shrink-0 overflow-hidden relative">
                     {companyInfo?.logo ? (
                       <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
                     ) : (
-                      <span className="text-lg font-black tracking-wider uppercase px-2 text-slate-850">
+                      <span className="text-base font-black tracking-wider uppercase px-2 text-slate-850">
                         {companyInfo?.name?.substring(0, 8) || "DIGISCALE"}
                       </span>
                     )}
                   </div>
 
                   {/* Right Side: Contact Info */}
-                  <div className="flex-1 p-4 flex flex-col justify-center text-slate-800 text-xs font-semibold space-y-1">
-                    <h2 className="text-sm font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
-                    <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
-                      <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
+                  <div className="flex-1 p-3 flex flex-col justify-center text-slate-800 text-[9px] font-semibold space-y-0.5">
+                    <h2 className="text-xs font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
+                    <p className="text-[9px] leading-relaxed text-slate-655 uppercase">
+                      <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "-"}
                     </p>
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-0 text-[9px] text-slate-655 uppercase">
                       <p>
                         <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
                       </p>
@@ -3820,7 +3823,7 @@ ${rows}
                       </p>
                     </div>
                     {companyInfo?.gst && (
-                      <p className="text-[10px] text-slate-655 uppercase font-bold">
+                      <p className="text-[9px] text-slate-655 uppercase font-bold">
                         <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
                       </p>
                     )}
@@ -3828,76 +3831,67 @@ ${rows}
                 </div>
 
                 {/* === COLLECTION NAME BANNER === */}
-                <div className="w-full bg-slate-100 text-center py-2.5 border-y-2 border-slate-900 mb-5">
-                  <h3 className="text-sm font-black text-slate-955 tracking-widest uppercase">
+                <div className="w-full bg-slate-100 text-center py-2 border-y-2 border-slate-900 mb-3">
+                  <h3 className="text-xs font-black text-slate-955 tracking-widest uppercase">
                     {selectedCol.name}
                   </h3>
                 </div>
 
-                {/* === PRODUCT TABLE === */}
-                <div className="flex-1">
-                  <table className="w-full text-left border-collapse border-2 border-slate-900">
-                    <thead>
-                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
-                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
-                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
-                        <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
-                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
-                        <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
-                        <th className="py-2.5 px-3 text-right w-24">PRICE</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
-                      {page.items.map((prod, idx) => (
-                        <tr key={prod.id} className="break-inside-avoid">
-                          {/* SR */}
-                          <td className="py-3 px-3 border-r border-slate-300 text-center text-slate-500 font-bold">
-                            {page.startIndex + idx + 1}
-                          </td>
+                {/* === PRODUCT GRID 3x3 === */}
+                <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
+                  {page.items.map((prod, idx) => (
+                    <div key={prod.id || idx} className="border border-slate-900 flex flex-col overflow-hidden">
+                      
+                      {/* Image Section */}
+                      <div className="flex-1 border-b border-slate-900 flex items-center justify-center bg-white overflow-hidden p-1" style={{ minHeight: '140px' }}>
+                        {prod.photoUrl ? (
+                          <img 
+                            src={prod.photoUrl} 
+                            alt={prod.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center text-slate-300">
+                            <ImageIcon className="w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
 
-                          {/* PRODUCT PHOTO */}
-                          <td className="p-1 border-r border-slate-300 align-middle">
-                            <div className="h-20 w-24 bg-white overflow-hidden flex items-center justify-center relative mx-auto shrink-0">
-                              {prod.photoUrl ? (
-                                <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain p-0.5" />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center bg-slate-50">
-                                  <ImageIcon className="h-5 w-5 text-slate-300" />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* DESCRIPTION */}
-                          <td className="py-3 px-3 border-r border-slate-300 align-middle">
-                            <p className="font-extrabold text-slate-955 leading-tight">{prod.name}</p>
-                            {prod.description && (
-                              <p className="text-[10px] text-slate-500 mt-0.5">{prod.description}</p>
-                            )}
-                          </td>
-
-                          {/* CTNS */}
-                          <td className="py-3 px-3 border-r border-slate-300 text-center font-bold">
+                      {/* Details Section */}
+                      <div className="bg-white">
+                        {/* Header Row */}
+                        <div className="grid grid-cols-4 border-b border-slate-900 text-[7px] font-black text-slate-955 uppercase text-center">
+                          <div className="py-1 px-0.5 border-r border-slate-900">Description</div>
+                          <div className="py-1 px-0.5 border-r border-slate-900">CTNS</div>
+                          <div className="py-1 px-0.5 border-r border-slate-900">QTY</div>
+                          <div className="py-1 px-0.5">PRICE</div>
+                        </div>
+                        {/* Data Row */}
+                        <div className="grid grid-cols-4 text-[8px] font-bold text-slate-900 text-center">
+                          <div className="py-1.5 px-1 border-r border-slate-900 leading-tight break-words">
+                            {prod.name}
+                          </div>
+                          <div className="py-1.5 px-0.5 border-r border-slate-900">
                             {prod.cartonQty || "-"}
-                          </td>
-
-                          {/* QTY */}
-                          <td className="py-3 px-3 border-r border-slate-300 text-center font-bold">
+                          </div>
+                          <div className="py-1.5 px-0.5 border-r border-slate-900">
                             {prod.stock || "-"}
-                          </td>
-
-                          {/* PRICE */}
-                          <td className="py-3 px-3 text-right font-bold">
+                          </div>
+                          <div className="py-1.5 px-0.5">
                             {prod.rate || "-"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Fill empty slots */}
+                  {Array.from({ length: ITEMS_PER_PAGE - page.items.length }).map((_, idx) => (
+                    <div key={`empty-${idx}`} />
+                  ))}
                 </div>
 
                 {/* Page footer */}
-                <div className="mt-auto pt-4 text-center text-[9px] font-bold text-gray-400">
+                <div className="mt-auto pt-2 text-center text-[8px] font-bold text-gray-400">
                   Page {pageIndex + 1} of {chunkedPages.length}
                 </div>
               </div>
