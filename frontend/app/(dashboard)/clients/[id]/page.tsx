@@ -167,7 +167,7 @@ export default function ClientDetailsPage() {
             </h2>
           </div>
           
-          <div className="flex flex-col gap-2 min-w-[200px] sm:max-w-[50%] shrink-0">
+          <div className="flex flex-col gap-2 min-w-[200px] sm:max-w-[350px] shrink-0">
             <div className="flex items-start gap-2 text-slate-800">
               <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <span className="text-sm font-semibold line-clamp-2 text-left" title={client.address || ""}>{client.address || "No address provided"}</span>
