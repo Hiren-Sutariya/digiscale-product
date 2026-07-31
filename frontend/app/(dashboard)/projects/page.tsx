@@ -5,6 +5,7 @@ import Tesseract from 'tesseract.js';
 import {
   getUserProfile,
   getUserSettings,
+} from "@/services/api";
 import { supabase } from "@/lib/supabase";
 
 // Global cache to prevent re-fetching the same empty photoUrl across components
