@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile, getUserSettings, updateUserSettings } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Check } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Check, Star } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -25,6 +25,7 @@ export default function ClientsPage() {
   const [regularThreshold, setRegularThreshold] = useState<string>("");
   const [savedThreshold, setSavedThreshold] = useState<string>("0");
   const [updatingThreshold, setUpdatingThreshold] = useState(false);
+  const [thresholdConfirmValue, setThresholdConfirmValue] = useState<number | null>(null);
   
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState<string>("");
@@ -65,7 +66,7 @@ export default function ClientsPage() {
           .order('name', { ascending: true }),
         supabase
           .from('quotations')
-          .select('client_name, quote_number, quote_date, total_amount, created_at, is_order_done')
+          .select('id, client_name, quote_number, quote_date, total_amount, created_at, is_order_done')
           .eq('user_id', profile.id.toString())
           .order('created_at', { ascending: false })
       ]);
@@ -86,6 +87,11 @@ export default function ClientsPage() {
       
       setClientQuotes(quotesMap);
       setClients(clientsRes.data || []);
+      
+      try {
+        sessionStorage.setItem("digiscale_clients", JSON.stringify(clientsRes.data || []));
+        sessionStorage.setItem("digiscale_client_quotes", JSON.stringify(quotesMap));
+      } catch (e) {}
     } catch (err: any) {
       alert(err.message || "Failed to load clients");
     } finally {
@@ -93,14 +99,20 @@ export default function ClientsPage() {
     }
   };
 
-  const handleSaveThreshold = async () => {
+  const handleSaveThresholdClick = () => {
     const num = regularThreshold === "" ? 0 : parseInt(regularThreshold) || 0;
     if (num < 0) return;
+    setThresholdConfirmValue(num);
+  };
+
+  const executeSaveThreshold = async () => {
+    if (thresholdConfirmValue === null) return;
     setUpdatingThreshold(true);
     try {
-      await updateUserSettings({ regular_client_threshold: num });
-      setSavedThreshold(num.toString());
-      setRegularThreshold(num === 0 ? "" : num.toString());
+      await updateUserSettings({ regular_client_threshold: thresholdConfirmValue });
+      setSavedThreshold(thresholdConfirmValue.toString());
+      setRegularThreshold(thresholdConfirmValue === 0 ? "" : thresholdConfirmValue.toString());
+      setThresholdConfirmValue(null);
     } catch (e) {
       console.error("Failed to update regular client threshold", e);
     } finally {
@@ -228,26 +240,30 @@ export default function ClientsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
-              <span className="text-xs font-bold text-slate-600">Regular Threshold:</span>
-              <input 
-                type="number" 
-                value={regularThreshold}
-                placeholder="0"
-                onChange={(e) => setRegularThreshold(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (regularThreshold === "" ? "0" : regularThreshold) !== savedThreshold && handleSaveThreshold()}
-                className="w-10 text-center text-xs font-bold text-slate-800 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent placeholder-slate-400"
-                min="0"
-                disabled={updatingThreshold}
-              />
+            <div className="hidden sm:flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition group">
+              <Star className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+              <span className="text-xs font-bold text-slate-700">Regular Client:</span>
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-sm group-focus-within:border-blue-200 transition-colors">
+                <input 
+                  type="number" 
+                  value={regularThreshold}
+                  placeholder="0"
+                  onChange={(e) => setRegularThreshold(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (regularThreshold === "" ? "0" : regularThreshold) !== savedThreshold && handleSaveThresholdClick()}
+                  className="w-6 text-center text-xs font-bold text-slate-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent placeholder-slate-400"
+                  min="0"
+                  disabled={updatingThreshold}
+                />
+                <span className="text-[10px] font-bold text-slate-400">Orders</span>
+              </div>
               {(regularThreshold === "" ? "0" : regularThreshold) !== savedThreshold && (
                 <button 
-                  onClick={handleSaveThreshold}
+                  onClick={handleSaveThresholdClick}
                   disabled={updatingThreshold}
-                  className="p-1 hover:bg-blue-50 text-blue-600 rounded-md transition"
+                  className="p-1 ml-1 hover:bg-blue-50 text-blue-600 rounded-md transition bg-blue-50/50"
                   title="Save"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -289,7 +305,8 @@ export default function ClientsPage() {
             {filteredClients.map((client) => {
               const quotes = clientQuotes[client.name?.toLowerCase()] || [];
               const doneQuotes = quotes.filter(q => q.is_order_done).length;
-              const isRegularClient = doneQuotes >= (parseInt(regularThreshold) || 0);
+              const savedNum = parseInt(savedThreshold) || 0;
+              const isRegularClient = savedNum > 0 && doneQuotes >= savedNum;
               
               return (
               <div 
@@ -507,6 +524,61 @@ export default function ClientsPage() {
                   </>
                 ) : (
                   'Delete Client'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Threshold Confirmation Modal */}
+      {thresholdConfirmValue !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setThresholdConfirmValue(null)} />
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-400 fill-amber-400/20" />
+                Change Regular Client Setup
+              </h2>
+              <button 
+                onClick={() => setThresholdConfirmValue(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to set the requirement for Regular Clients to <span className="font-bold text-slate-900">{thresholdConfirmValue} order{thresholdConfirmValue === 1 ? '' : 's'}</span>?
+              </p>
+              {thresholdConfirmValue === 0 && (
+                <p className="text-amber-600 text-sm mt-3 font-medium bg-amber-50 p-3 rounded-lg border border-amber-200/50">
+                  Setting this to 0 means <span className="font-bold">nobody</span> will be marked as a Regular Client.
+                </p>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setThresholdConfirmValue(null)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeSaveThreshold}
+                disabled={updatingThreshold}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-blue-500/20 active:scale-95 disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2"
+              >
+                {updatingThreshold ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Confirm Change'
                 )}
               </button>
             </div>

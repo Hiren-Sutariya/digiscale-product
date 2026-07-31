@@ -23,7 +23,7 @@ class UserSettingsBase(BaseModel):
 
     company_terms: Optional[str] = None
 
-    regular_client_threshold: Optional[int] = 10
+    regular_client_threshold: Optional[int] = 0
     vip_client_threshold: Optional[int] = 25
 
 class UserSettingsUpdate(UserSettingsBase):
