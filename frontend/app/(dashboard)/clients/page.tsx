@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
 import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText } from "lucide-react";
+import Link from "next/link";
 
 interface Client {
   id: number;
@@ -275,42 +276,23 @@ export default function ClientsPage() {
                 </div>
 
                 {/* Brief Quotation Details */}
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quotations</span>
-                    </div>
-                    <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                      {clientQuotes[client.name?.toLowerCase()]?.length || 0}
-                    </span>
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quotations</span>
                   </div>
                   
                   {clientQuotes[client.name?.toLowerCase()]?.length > 0 ? (
-                    <div className="space-y-2">
-                      {clientQuotes[client.name?.toLowerCase()].slice(0, 3).map(q => (
-                        <div key={q.quote_number} className="flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700">{q.quote_number}</span>
-                            <span className="text-[9px] font-semibold text-slate-400">{new Date(q.quote_date).toLocaleDateString()}</span>
-                          </div>
-                          <span className="text-xs font-bold text-blue-600">
-                            ₹{q.total_amount?.toLocaleString() || 0}
-                          </span>
-                        </div>
-                      ))}
-                      {clientQuotes[client.name?.toLowerCase()]?.length > 3 && (
-                        <div className="text-center pt-1">
-                          <span className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-                            +{clientQuotes[client.name?.toLowerCase()].length - 3} more quotations...
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    <Link
+                      href={`/clients/${client.id}`}
+                      className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                      View {clientQuotes[client.name?.toLowerCase()]?.length} Quote(s)
+                    </Link>
                   ) : (
-                    <div className="text-center py-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                      <span className="text-xs font-medium text-slate-400">No quotations sent yet</span>
-                    </div>
+                    <span className="text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg">
+                      0 Quotes
+                    </span>
                   )}
                 </div>
               </div>
