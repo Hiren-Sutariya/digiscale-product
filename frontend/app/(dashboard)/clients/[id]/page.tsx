@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
-import { ArrowLeft, Building, MapPin, Phone, FileText, Calendar, IndianRupee, ExternalLink } from "lucide-react";
+import { ArrowLeft, Building, MapPin, Phone, FileText, Calendar, IndianRupee, ExternalLink, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -96,72 +96,60 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-slate-50/50 relative animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-slate-50/50 relative">
       <div className="w-full space-y-6">
         
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <button 
-            onClick={() => router.back()}
-            className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-600"
-            title="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Client Details</h1>
-        </div>
+        {/* Header / Back Button */}
+        <button 
+          onClick={() => router.back()}
+          className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-650 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 mb-4"
+        >
+          <ChevronLeft className="h-4 w-4 text-slate-400 group-hover:text-slate-650 transition-transform group-hover:-translate-x-0.5" />
+          Back to Clients
+        </button>
 
-      {/* Client Info Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+        {/* Client Info Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/60 pb-6 mb-6">
           <div>
-            <h2 className="text-xl font-black text-slate-900 mb-1.5">{client.name}</h2>
+            <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+              <Building className="h-6 w-6 text-blue-600 fill-blue-50" />
+              {client.name}
+            </h2>
             {client.company && (
-              <div className="flex items-center gap-1.5 text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-md inline-flex mb-2">
-                <Building className="w-3.5 h-3.5" />
-                <span className="text-sm">{client.company}</span>
-              </div>
+              <p className="mt-2 text-sm font-semibold text-slate-500 flex items-center gap-1.5">
+                <Building className="w-4 h-4" /> {client.company}
+              </p>
             )}
           </div>
           
-          <div className="flex flex-col gap-2 min-w-[200px]">
-            <div className="flex items-start gap-2.5 text-slate-600">
-              <MapPin className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
-              <span className="text-sm font-medium leading-relaxed">{client.address || "No address provided"}</span>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col gap-1.5 min-w-[200px]">
+              <div className="flex items-center gap-2 text-slate-600">
+                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-xs font-medium">{client.address || "No address provided"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-xs font-bold">{client.contact || "No contact provided"}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2.5 text-slate-600">
-              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-sm font-bold">{client.contact || "No contact provided"}</span>
+            
+            <div className="pl-4 sm:border-l border-slate-200">
+              <select
+                value={quoteFilter}
+                onChange={(e) => setQuoteFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 bg-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition"
+              >
+                <option value="all">All Orders ({quotations.length})</option>
+                <option value="done">Done ({quotations.filter(q => q.is_order_done).length})</option>
+                <option value="followup">Follow Up ({quotations.filter(q => !q.is_order_done).length})</option>
+              </select>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Quotations List */}
       <div>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-slate-900">Client Orders</h3>
-            </div>
-          </div>
-          <div>
-            <select
-              value={quoteFilter}
-              onChange={(e) => setQuoteFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 bg-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition"
-            >
-              <option value="all">All Orders ({quotations.length})</option>
-              <option value="done">Done ({quotations.filter(q => q.is_order_done).length})</option>
-              <option value="followup">Follow Up ({quotations.filter(q => !q.is_order_done).length})</option>
-            </select>
-          </div>
-        </div>
 
         {quotations.length === 0 ? (
           <div className="bg-white rounded-xl border border-dashed border-slate-300 p-8 flex flex-col items-center justify-center text-center">
