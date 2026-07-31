@@ -4015,10 +4015,10 @@ ${rows}
                               {prod.name}
                             </div>
                             <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
-                              {prod.cartonQty || "-"}
+                              1
                             </div>
                             <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
-                              {prod.stock || "-"}
+                              {prod.cartonQty || "-"}
                             </div>
                             <div style={{ padding: '3px 1px' }}>
                               {(() => {
