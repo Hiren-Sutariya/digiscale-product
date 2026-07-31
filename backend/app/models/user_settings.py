@@ -33,4 +33,8 @@ class UserSettings(Base):
     # Terms
     company_terms = Column(Text, nullable=True)
 
+    # Client Thresholds
+    regular_client_threshold = Column(Integer, default=10, nullable=True)
+    vip_client_threshold = Column(Integer, default=25, nullable=True)
+
     user = relationship("app.models.user.User", back_populates="settings")

@@ -996,6 +996,8 @@ function CompanySection() {
 
   const [termsAndConditions, setTermsAndConditions] = useState("");
   const [upiId, setUpiId] = useState("");
+  const [regularClientThreshold, setRegularClientThreshold] = useState("10");
+  const [vipClientThreshold, setVipClientThreshold] = useState("25");
   const [loading, setLoading] = useState(!(getCache("profile") && getCache("settings")));
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -1024,6 +1026,12 @@ function CompanySection() {
           setUpiId(settingsData.company_upi_id || "");
           setQrCode(settingsData.company_qr_code || null);
           setTermsAndConditions(settingsData.company_terms || "");
+          if (settingsData.regular_client_threshold !== undefined) {
+            setRegularClientThreshold(String(settingsData.regular_client_threshold));
+          }
+          if (settingsData.vip_client_threshold !== undefined) {
+            setVipClientThreshold(String(settingsData.vip_client_threshold));
+          }
         }
         setLoading(false);
       })
@@ -1091,6 +1099,8 @@ function CompanySection() {
         company_terms: termsAndConditions,
         company_upi_id: upiId,
         company_qr_code: qrCode,
+        regular_client_threshold: parseInt(regularClientThreshold) || 10,
+        vip_client_threshold: parseInt(vipClientThreshold) || 25,
       });
 
       setStatusMsg({ type: "success", text: "Company profile updated successfully!" });
@@ -1386,6 +1396,55 @@ function CompanySection() {
                 className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      <hr className="border-slate-200" />
+
+      {/* Client Preferences */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-450">
+          Client Preferences
+        </h3>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              Regular Client Threshold (Orders Done)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                placeholder="10"
+                value={regularClientThreshold}
+                onChange={(e) => setRegularClientThreshold(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Number of completed orders required for a client to be marked as a Regular Client.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">
+              VIP Client Threshold (Orders Done)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                placeholder="25"
+                value={vipClientThreshold}
+                onChange={(e) => setVipClientThreshold(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Number of completed orders required for a client to be marked as a VIP Client.
+            </p>
           </div>
         </div>
       </div>

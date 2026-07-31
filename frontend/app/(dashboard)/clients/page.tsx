@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { getUserProfile } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2 } from "lucide-react";
+import { getUserProfile, getUserSettings } from "@/services/api";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Crown } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -21,6 +21,9 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  const [regularThreshold, setRegularThreshold] = useState(10);
+  const [vipThreshold, setVipThreshold] = useState(25);
   
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState<string>("");
@@ -41,8 +44,13 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const profile = await getUserProfile();
+      const [profile, settings] = await Promise.all([getUserProfile(), getUserSettings()]);
       if (!profile) return;
+      
+      if (settings) {
+        setRegularThreshold(settings.regular_client_threshold ?? 10);
+        setVipThreshold(settings.vip_client_threshold ?? 25);
+      }
 
       const [clientsRes, quotesRes] = await Promise.all([
         supabase
@@ -238,22 +246,28 @@ export default function ClientsPage() {
             {filteredClients.map((client) => {
               const quotes = clientQuotes[client.name?.toLowerCase()] || [];
               const doneQuotes = quotes.filter(q => q.is_order_done).length;
-              const isRegularClient = doneQuotes >= 10;
+              const isVipClient = doneQuotes >= vipThreshold;
+              const isRegularClient = doneQuotes >= regularThreshold && !isVipClient;
               
               return (
               <div 
                 key={client.id}
-                className={`bg-white rounded-2xl border ${isRegularClient ? 'border-amber-300 shadow-amber-100' : 'border-slate-200'} p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden`}
+                className={`bg-white rounded-2xl border ${isVipClient ? 'border-purple-300 shadow-purple-100' : isRegularClient ? 'border-amber-300 shadow-amber-100' : 'border-slate-200'} p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden`}
               >
-                {isRegularClient && (
+                {isVipClient ? (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                    <Crown className="w-3 h-3" />
+                    VIP Client
+                  </div>
+                ) : isRegularClient ? (
                   <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
                     <Award className="w-3 h-3" />
                     Regular Client
                   </div>
-                )}
+                ) : null}
                 
                 <div className="flex justify-between items-start mb-4">
-                  <div className={isRegularClient ? "pr-24" : ""}>
+                  <div className={(isRegularClient || isVipClient) ? "pr-24" : ""}>
                     <h3 className="font-bold text-slate-900 text-lg truncate pr-4">{client.name}</h3>
                     <div className="flex items-center gap-1.5 text-slate-500 mt-1">
                       <Building className="w-3.5 h-3.5" />

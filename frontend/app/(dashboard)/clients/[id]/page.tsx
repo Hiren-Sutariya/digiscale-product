@@ -22,6 +22,7 @@ export default function ClientDetailsPage() {
 
   const [client, setClient] = useState<Client | null>(null);
   const [quotations, setQuotations] = useState<any[]>([]);
+  const [quoteFilter, setQuoteFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -146,11 +147,19 @@ export default function ClientDetailsPage() {
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900">Sent Quotations</h3>
-              <p className="text-xs font-semibold text-slate-500">
-                Total {quotations.length} quotation{quotations.length !== 1 ? 's' : ''} sent to this client
-              </p>
+              <h3 className="text-base font-black text-slate-900">Client Orders</h3>
             </div>
+          </div>
+          <div>
+            <select
+              value={quoteFilter}
+              onChange={(e) => setQuoteFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 bg-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition"
+            >
+              <option value="all">All Orders ({quotations.length})</option>
+              <option value="done">Done ({quotations.filter(q => q.is_order_done).length})</option>
+              <option value="followup">Follow Up ({quotations.filter(q => !q.is_order_done).length})</option>
+            </select>
           </div>
         </div>
 
@@ -164,7 +173,12 @@ export default function ClientDetailsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quotations.map((quote) => (
+            {quotations.filter(q => {
+              if (quoteFilter === "all") return true;
+              if (quoteFilter === "done") return q.is_order_done;
+              if (quoteFilter === "followup") return !q.is_order_done;
+              return true;
+            }).map((quote) => (
               <div 
                 key={quote.id} 
                 className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow hover:border-blue-200 transition-all group"
