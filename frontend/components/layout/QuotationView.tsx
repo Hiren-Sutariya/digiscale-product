@@ -2763,7 +2763,7 @@ export default function QuotationView() {
             <button
               onClick={() => {
                 setShowSavePopup(false);
-                setActiveSubView("list");
+                setActiveSubView("history");
                 
                 // Clear the form fields for next use
                 setClientName("");
