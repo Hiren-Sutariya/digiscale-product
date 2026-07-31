@@ -1600,7 +1600,7 @@ export default function QuotationView() {
                   No products found matching your search.
                 </p>
               ) : (
-                <div className="max-h-80 overflow-y-auto space-y-2 pr-1 animate-in fade-in duration-100">
+                <div className="space-y-2 pr-1 animate-in fade-in duration-100">
                   {filteredProducts.slice(0, 50).map(p => {
                     const isSelected = !!selectedItems.find(item => item.id === p.id);
                     return (

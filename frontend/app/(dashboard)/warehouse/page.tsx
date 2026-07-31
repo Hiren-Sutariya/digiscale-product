@@ -711,7 +711,7 @@ export default function WarehousePage() {
                   <p className="text-xs font-semibold">No items match this query.</p>
                 </div>
               ) : (
-                <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2">
+                <>
                   {filteredGlobalProducts.slice(0, 50).map((product) => {
                     const locations = findWarehouseLocation(product.id);
                   return (
@@ -760,11 +760,11 @@ export default function WarehousePage() {
                   );
                 })}
                   {filteredGlobalProducts.length > 50 && (
-                    <p className="text-center text-[10px] text-slate-400 font-semibold py-2 italic border-t border-slate-100">
+                    <p className="text-center text-[10px] text-slate-400 font-semibold py-4 italic border-t border-slate-100">
                       Showing top 50 results. Please refine your search.
                     </p>
                   )}
-                </div>
+                </>
               )}
             </div>
           </div>
