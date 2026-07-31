@@ -6,6 +6,10 @@ import {
 } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { getCache, setCache } from "@/lib/cache";
+
+// Global cache to prevent re-fetching the same empty photoUrl across components
+const photoUrlCache = new Map<string, string | null>();
+
 import {
   Plus,
   Search,
@@ -45,9 +49,17 @@ function WarehouseProductImage({ productId, productName, initialUrl }: { product
   
   useEffect(() => {
     if (url) return;
+    if (photoUrlCache.has(productId)) {
+      const cached = photoUrlCache.get(productId);
+      if (cached) setUrl(cached);
+      return;
+    }
     let mounted = true;
     supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
+      photoUrlCache.set(productId, data?.photoUrl || null);
       if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+    }).catch(() => {
+      photoUrlCache.set(productId, null);
     });
     return () => { mounted = false; };
   }, [productId, url]);
@@ -695,8 +707,9 @@ export default function WarehousePage() {
                   <p className="text-xs font-semibold">No items match this query.</p>
                 </div>
               ) : (
-                filteredGlobalProducts.map((product) => {
-                  const locations = findWarehouseLocation(product.id);
+                <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2">
+                  {filteredGlobalProducts.slice(0, 50).map((product) => {
+                    const locations = findWarehouseLocation(product.id);
                   return (
                     <div key={product.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 last:border-b-0">
                       <div className="flex items-center gap-3">
@@ -740,8 +753,13 @@ export default function WarehousePage() {
                         )}
                       </div>
                     </div>
-                  );
-                })
+                  ))}
+                  {filteredGlobalProducts.length > 50 && (
+                    <p className="text-center text-[10px] text-slate-400 font-semibold py-2 italic border-t border-slate-100">
+                      Showing top 50 results. Please refine your search.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

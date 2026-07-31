@@ -5,17 +5,28 @@ import Tesseract from 'tesseract.js';
 import {
   getUserProfile,
   getUserSettings,
-} from "@/services/api";
 import { supabase } from "@/lib/supabase";
+
+// Global cache to prevent re-fetching the same empty photoUrl across components
+const photoUrlCache = new Map<string, string | null>();
+
 // --- Sub-components for optimizations ---
 function GlobalSearchImage({ productId, productName, initialUrl }: { productId: string, productName: string, initialUrl?: string }) {
   const [url, setUrl] = useState<string | null>(initialUrl || null);
   
   useEffect(() => {
     if (url) return;
+    if (photoUrlCache.has(productId)) {
+      const cached = photoUrlCache.get(productId);
+      if (cached) setUrl(cached);
+      return;
+    }
     let mounted = true;
     supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
+      photoUrlCache.set(productId, data?.photoUrl || null);
       if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+    }).catch(() => {
+      photoUrlCache.set(productId, null);
     });
     return () => { mounted = false; };
   }, [productId, url]);

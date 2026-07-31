@@ -31,15 +31,26 @@ import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { getCache, setCache } from "@/lib/cache";
 
+// Global cache to prevent re-fetching the same empty photoUrl across components
+const photoUrlCache = new Map<string, string | null>();
+
 // --- Sub-components for optimizations ---
 function AsyncProductImage({ productId, initialUrl, className, fallbackClassName, iconClassName }: { productId: string, initialUrl?: string, className: string, fallbackClassName: string, iconClassName: string }) {
   const [url, setUrl] = useState<string | null>(initialUrl || null);
   
   useEffect(() => {
     if (url) return;
+    if (photoUrlCache.has(productId)) {
+      const cached = photoUrlCache.get(productId);
+      if (cached) setUrl(cached);
+      return;
+    }
     let mounted = true;
     supabase.from('products').select('photoUrl').eq('id', productId).single().then(({ data }) => {
+      photoUrlCache.set(productId, data?.photoUrl || null);
       if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+    }).catch(() => {
+      photoUrlCache.set(productId, null);
     });
     return () => { mounted = false; };
   }, [productId, url]);
