@@ -748,9 +748,16 @@ export default function QuotationView() {
     
     setPrintQuoteData({ ...quoteData, items });
     
+    // Set document title so PDF save dialog suggests this filename
+    const originalTitle = document.title;
+    if (quoteData.quote_number) {
+      document.title = quoteData.quote_number;
+    }
+    
     // Wait for the DOM to paint the images before triggering the blocking print dialog
     setTimeout(() => {
       window.print();
+      document.title = originalTitle;
       setTimeout(() => setPrintQuoteData(null), 200);
     }, 500);
   };
