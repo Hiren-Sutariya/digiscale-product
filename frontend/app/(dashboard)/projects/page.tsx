@@ -67,6 +67,8 @@ import {
   Eye,
   ChevronDown,
   Minus,
+  Printer,
+  Phone,
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
@@ -130,6 +132,7 @@ function CollectionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -384,6 +387,7 @@ function CollectionsPageContent() {
     getUserProfile()
       .then((profile) => {
         if (profile && profile.id) {
+          setUserProfile(profile);
           const uId = profile.id.toString();
           setCurrentUserId(uId);
           localStorage.setItem("digiscale_cached_user_id", uId);
@@ -1027,6 +1031,14 @@ ${rows}
     a.download = "Digiscale_Product_Import_Template.xlsx";
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handlePrintCollection = () => {
+    document.body.classList.add("is-printing-portal");
+    setTimeout(() => {
+      window.print();
+      document.body.classList.remove("is-printing-portal");
+    }, 300);
   };
 
   // ── Excel / CSV Upload & Parse (supports .xlsx and .csv) ───────────
@@ -1926,6 +1938,13 @@ ${rows}
                 <Plus className="h-4 w-4" /> Add Product
               </button>
 
+              <button
+                onClick={handlePrintCollection}
+                className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+              >
+                <Printer className="h-4 w-4" /> Download PDF
+              </button>
+
               {/* Excel Import */}
               <button
                 onClick={() => excelImportRef.current?.click()}
@@ -2148,14 +2167,6 @@ ${rows}
                                         canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
                                         const url = canvas.toDataURL("image/jpeg", 0.7);
                                         handleUpdateDraft(idx, "photoUrl", url);
-                                        // setLoadingOcrId(`draft-${idx}`);
-                                        // parseOCRText(url, draft).then(parsed => {
-                                        //   setDraftProducts(prev => {
-                                        //     const next = [...prev];
-                                        //     if (next[idx]) { next[idx] = { ...next[idx], ...parsed }; }
-                                        //     return next;
-                                        //   });
-                                        // }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
                                       };
                                       img.src = src;
                                     };
@@ -2262,10 +2273,6 @@ ${rows}
                                             canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
                                             const url = canvas.toDataURL("image/jpeg", 0.7);
                                             handleUpdateEditState("photoUrl", url);
-                                            // setLoadingOcrId(`edit`);
-                                            // parseOCRText(url, editingProductState).then(parsed => {
-                                            //   setEditingProductState(prev => prev ? { ...prev, ...parsed } : null);
-                                            // }).catch(err => console.error(err)).finally(() => setLoadingOcrId(null));
                                           };
                                           img.src = src;
                                         };
@@ -3747,6 +3754,165 @@ ${rows}
         </div>
       )}
 
+      {/* --- PRINT PORTAL FOR COLLECTION CATALOGUE --- */}
+      <div className="print-portal hidden">
+        {(() => {
+          if (!selectedCol) return null;
+          // Split products into pages of 9
+          const chunkedPages = [];
+          let currentIndex = 0;
+          const totalItems = products.length;
+
+          if (totalItems === 0) {
+            chunkedPages.push({ items: [] });
+          } else {
+            while (currentIndex < totalItems) {
+              const chunk = products.slice(currentIndex, currentIndex + 9);
+              chunkedPages.push({ items: chunk });
+              currentIndex += 9;
+            }
+          }
+
+          return (
+            <div className="w-[1000px] bg-white mx-auto print:w-full print:m-0 print:bg-white text-black">
+              {chunkedPages.map((page, pageIndex) => (
+                <div key={pageIndex} className="print-page w-full h-[1414px] print:h-screen relative overflow-hidden bg-white px-10 py-12 flex flex-col page-break-after-always">
+                  
+                  {/* --- Header (matches Quotation) --- */}
+                  <div className="flex items-start justify-between border-b-2 border-black pb-4 mb-4">
+                    {/* Logo/Brand Name */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 bg-slate-100 border border-slate-300 flex items-center justify-center shrink-0">
+                        {userProfile?.business_logo_url ? (
+                          <img 
+                            src={userProfile.business_logo_url} 
+                            alt="Logo" 
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="font-black text-xl text-slate-400">
+                            {userProfile?.business_name ? userProfile.business_name.substring(0, 2).toUpperCase() : "LOGO"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <h1 className="text-3xl font-black text-black uppercase tracking-tight">
+                          {userProfile?.business_name || "YOUR BUSINESS NAME"}
+                        </h1>
+                      </div>
+                    </div>
+
+                    {/* Business Details */}
+                    <div className="text-right flex flex-col items-end gap-1.5 max-w-[50%]">
+                      <p className="text-sm font-semibold leading-snug">
+                        {userProfile?.business_address || "Your Business Address here"}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs font-bold text-gray-700 mt-1">
+                        {userProfile?.business_mobile && (
+                          <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {userProfile.business_mobile}</span>
+                        )}
+                        {userProfile?.business_email && (
+                          <span className="flex items-center gap-1">@ {userProfile.business_email}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* --- Sub-header (Collection Name) --- */}
+                  <div className="flex items-center justify-center bg-gray-100 py-3 mb-6 border border-black font-black uppercase text-2xl tracking-wider">
+                    {selectedCol.name}
+                  </div>
+
+                  {/* --- Product Grid 3x3 --- */}
+                  <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-4">
+                    {page.items.map((prod, idx) => (
+                      <div key={idx} className="border-2 border-black flex flex-col h-full overflow-hidden">
+                        
+                        {/* Image Section */}
+                        <div className="flex-1 border-b-2 border-black p-2 flex items-center justify-center bg-gray-50 overflow-hidden relative min-h-[220px]">
+                          {prod.photoUrl ? (
+                            <img 
+                              src={prod.photoUrl} 
+                              alt={prod.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <ImageIcon className="w-12 h-12" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Details Section */}
+                        <div className="bg-white">
+                          <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] divide-x-2 divide-black text-center text-xs font-black uppercase border-b-2 border-black">
+                            <div className="p-1 border-r border-black font-bold">Description</div>
+                            <div className="p-1 border-r border-black font-bold">CTNS</div>
+                            <div className="p-1 border-r border-black font-bold">QTY</div>
+                            <div className="p-1 font-bold">PRICE</div>
+                          </div>
+                          <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] divide-x-2 divide-black text-center font-bold text-xs h-16">
+                            <div className="p-1.5 flex items-center justify-center text-left leading-tight break-words border-r border-black font-bold">
+                              {prod.name}
+                            </div>
+                            <div className="p-1.5 flex items-center justify-center border-r border-black font-bold">
+                              {prod.cartonQty || "-"}
+                            </div>
+                            <div className="p-1.5 flex items-center justify-center border-r border-black font-bold">
+                              {prod.stock || "-"}
+                            </div>
+                            <div className="p-1.5 flex items-center justify-center text-sm font-bold">
+                              {prod.rate || "-"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Fill empty slots in the grid if less than 9 items on the last page */}
+                    {Array.from({ length: 9 - page.items.length }).map((_, idx) => (
+                      <div key={`empty-${idx}`} className="border-2 border-transparent"></div>
+                    ))}
+                  </div>
+
+                  {/* Page Indicator Footer */}
+                  <div className="mt-auto pt-4 text-center text-xs font-bold text-gray-500">
+                    Page {pageIndex + 1} of {chunkedPages.length}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Global CSS for Print Portal */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0 !important;
+          }
+          html, body {
+            background-color: white !important;
+            color: black !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Hide everything except the print portal */
+          body.is-printing-portal > *:not(.print-portal) {
+            display: none !important;
+          }
+          body.is-printing-portal .print-portal {
+            display: block !important;
+          }
+          .page-break-after-always {
+            page-break-after: always;
+            break-after: page;
+          }
+        }
+      `}</style>
     </div>
   );
 }
