@@ -158,6 +158,12 @@ function CollectionsPageContent() {
   const [editingProductRowId, setEditingProductRowId] = useState<string | null>(null);
   const [editingProductState, setEditingProductState] = useState<Partial<Product> | null>(null);
 
+  // PDF Download Modal States
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfDownloadType, setPdfDownloadType] = useState<"b2b" | "event">("b2b");
+  const [eventMarkupPercent, setEventMarkupPercent] = useState<string>("");
+  const [activePdfMarkup, setActivePdfMarkup] = useState<number>(0); // 0 = no markup
+
   // Warehouse & Quotation States
   const [currentTopTab, setCurrentTopTab] = useState<"collections" | "warehouse" | "quotation">("collections");
   const [isTabReady, setIsTabReady] = useState(true);
@@ -1048,18 +1054,24 @@ ${rows}
     URL.revokeObjectURL(url);
   };
 
-  const handlePrintCollection = () => {
+  const handlePrintCollection = (markupPercent: number = 0) => {
+    // Set the markup for the print portal to use
+    setActivePdfMarkup(markupPercent);
     // Set document title to collection name so PDF save dialog suggests this filename
     const originalTitle = document.title;
     if (selectedCol?.name) {
       document.title = selectedCol.name;
     }
-    document.body.classList.add("is-printing-portal");
+    // Small delay to let state update, then print
     setTimeout(() => {
-      window.print();
-      document.body.classList.remove("is-printing-portal");
-      document.title = originalTitle;
-    }, 300);
+      document.body.classList.add("is-printing-portal");
+      setTimeout(() => {
+        window.print();
+        document.body.classList.remove("is-printing-portal");
+        document.title = originalTitle;
+        setActivePdfMarkup(0);
+      }, 300);
+    }, 100);
   };
 
   // ── Excel / CSV Upload & Parse (supports .xlsx and .csv) ───────────
@@ -1960,7 +1972,7 @@ ${rows}
               </button>
 
               <button
-                onClick={handlePrintCollection}
+                onClick={() => setShowPdfModal(true)}
                 className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
               >
                 <Printer className="h-4 w-4" /> Download PDF
@@ -3775,6 +3787,115 @@ ${rows}
         </div>
       )}
 
+      {/* --- PDF DOWNLOAD MODAL (B2B / Event) --- */}
+      {showPdfModal && (
+        <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPdfModal(false)}>
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-black text-slate-900">Download Collection PDF</h3>
+              <button onClick={() => setShowPdfModal(false)} className="p-1 rounded-full hover:bg-slate-100 transition">
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-xs text-slate-500 font-medium">Choose download type for <span className="font-bold text-slate-800">{selectedCol?.name}</span></p>
+
+              {/* Toggle Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPdfDownloadType("b2b"); setEventMarkupPercent(""); }}
+                  className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all border-2 ${
+                    pdfDownloadType === "b2b"
+                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-lg">🏢</span>
+                    <span>B2B Price</span>
+                    <span className="text-[10px] font-medium text-slate-400">Original prices</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setPdfDownloadType("event")}
+                  className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all border-2 ${
+                    pdfDownloadType === "event"
+                      ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm shadow-purple-500/10"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-lg">🎪</span>
+                    <span>Event Price</span>
+                    <span className="text-[10px] font-medium text-slate-400">Add markup %</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Event Markup Input */}
+              {pdfDownloadType === "event" && (
+                <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 space-y-3">
+                  <label className="text-xs font-bold text-purple-800">How much % to add in price?</label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="500"
+                        value={eventMarkupPercent}
+                        onChange={(e) => setEventMarkupPercent(e.target.value)}
+                        placeholder="e.g. 20"
+                        className="w-full px-4 py-3 rounded-xl border border-purple-200 bg-white text-sm font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                        autoFocus
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-purple-500">%</span>
+                    </div>
+                  </div>
+                  {eventMarkupPercent && parseFloat(eventMarkupPercent) > 0 && (
+                    <p className="text-[11px] text-purple-600 font-semibold">
+                      📊 Example: ₹100 price → ₹{Math.round(100 * (1 + parseFloat(eventMarkupPercent) / 100))} in PDF
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end bg-slate-50/50">
+              <button
+                onClick={() => setShowPdfModal(false)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const markup = pdfDownloadType === "event" ? (parseFloat(eventMarkupPercent) || 0) : 0;
+                  setShowPdfModal(false);
+                  handlePrintCollection(markup);
+                }}
+                disabled={pdfDownloadType === "event" && (!eventMarkupPercent || parseFloat(eventMarkupPercent) <= 0)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white transition shadow-sm ${
+                  pdfDownloadType === "event" && (!eventMarkupPercent || parseFloat(eventMarkupPercent) <= 0)
+                    ? "bg-slate-300 cursor-not-allowed"
+                    : pdfDownloadType === "event"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- PRINT PORTAL FOR COLLECTION CATALOGUE --- */}
       {typeof document !== "undefined" && createPortal(
         <div className="print-portal hidden print:block w-full bg-white text-black p-0">
@@ -3884,7 +4005,12 @@ ${rows}
                               {prod.stock || "-"}
                             </div>
                             <div style={{ padding: '3px 1px' }}>
-                              {prod.rate || "-"}
+                              {(() => {
+                                const baseRate = parseFloat(prod.rate || "0");
+                                if (!baseRate) return "-";
+                                const finalRate = activePdfMarkup > 0 ? Math.round(baseRate * (1 + activePdfMarkup / 100)) : baseRate;
+                                return finalRate;
+                              })()}
                             </div>
                           </div>
                         </div>

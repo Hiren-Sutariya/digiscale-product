@@ -99,7 +99,14 @@ export default function ClientDetailsPage() {
       <div className="w-full space-y-6">
         
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center gap-3">
+          <button 
+            onClick={() => router.back()}
+            className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-600"
+            title="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Client Details</h1>
         </div>
 
