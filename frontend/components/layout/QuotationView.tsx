@@ -21,7 +21,9 @@ import {
   Clock,
   CheckCircle2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Phone,
+  AlignLeft
 } from "lucide-react";
 import Link from "next/link";
 import { QRCodeSVG } from 'qrcode.react';
@@ -136,10 +138,12 @@ export default function QuotationView() {
   // Terms and conditions loaded from settings
   const [termsList, setTermsList] = useState<string[]>([]);
 
-  // Client Info (Optional)
+  // Client Info & Notes (Optional)
   const [clientName, setClientName] = useState("");
   const [clientCompany, setClientCompany] = useState("");
   const [clientAddress, setClientAddress] = useState("");
+  const [clientContact, setClientContact] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   
   // Quotation Metadata (Clean empty strings by default on mount as requested!)
@@ -920,7 +924,8 @@ export default function QuotationView() {
       <style jsx global>{`
         @media print {
           @page {
-            margin: 20mm !important; /* Real margins on every page */
+            size: auto;
+            margin: 0mm !important; /* Set margin to 0 to hide browser URL/Time headers */
           }
           html, body {
             background-color: white !important;
@@ -940,7 +945,7 @@ export default function QuotationView() {
             display: block !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 15mm !important; /* Adding padding here to compensate for 0mm page margin */
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -961,7 +966,7 @@ export default function QuotationView() {
             top: 0 !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 15mm !important; /* Adding padding here to compensate for 0mm page margin */
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -1445,7 +1450,7 @@ export default function QuotationView() {
 
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Address & Contact Details
+                      Address
                     </label>
                     <textarea
                       rows={2}
@@ -1454,6 +1459,36 @@ export default function QuotationView() {
                       onChange={(e) => setClientAddress(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500 resize-none"
                     />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Contact Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. +91 90000 00000"
+                        value={clientContact}
+                        onChange={(e) => setClientContact(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Additional Notes
+                    </label>
+                    <div className="relative">
+                      <AlignLeft className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" />
+                      <textarea
+                        rows={2}
+                        placeholder="e.g. Include specific details for this quote..."
+                        value={additionalNotes}
+                        onChange={(e) => setAdditionalNotes(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500 resize-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1679,7 +1714,9 @@ export default function QuotationView() {
               <div className="sm:w-1/2">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
                 <p className="text-slate-900 font-extrabold">{clientCompany || "-"}</p>
-                <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress || "-"}</p>
+                {clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress}</p>}
+                {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
+                {(!clientCompany && !clientAddress && !clientContact) && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">-</p>}
               </div>
 
               {/* Right Side: Quotation Info Metadata */}
@@ -1895,9 +1932,17 @@ export default function QuotationView() {
                       <div className="h-1"></div>
                     )}
 
+                    {/* Additional Notes */}
+                    {additionalNotes && (
+                      <div className="text-[9px] text-slate-600 font-medium space-y-1 mt-2 leading-relaxed whitespace-pre-wrap">
+                        <p className="uppercase text-slate-700 font-black mb-1">Additional Notes:</p>
+                        <p>{additionalNotes}</p>
+                      </div>
+                    )}
+
                     {/* Customizable Terms and Conditions */}
                     {termsList.length > 0 && (
-                      <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-2 leading-relaxed">
+                      <div className="text-[9px] text-slate-400 font-semibold space-y-1 mt-2 leading-relaxed">
                         <p className="uppercase text-slate-500 font-black mb-1">Terms & Conditions:</p>
                         {termsList.map((term, i) => (
                           <p key={i}>{term}</p>
@@ -2133,6 +2178,8 @@ export default function QuotationView() {
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
                     {selectedQuoteForPreview.clientCompany && <p className="text-slate-900 font-extrabold">{selectedQuoteForPreview.clientCompany}</p>}
                     {selectedQuoteForPreview.clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{selectedQuoteForPreview.clientAddress}</p>}
+                    {/* Assuming you will pass clientContact later, we'll fall back to state variable if it matches */}
+                    {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
                   </div>
                 ) : (
                   <div className="sm:w-1/2"></div>
@@ -2260,6 +2307,14 @@ export default function QuotationView() {
                     </div>
                   )}
                 </div>
+
+                {/* Additional Notes */}
+                {additionalNotes && (
+                  <div className="text-[9px] text-slate-600 font-medium space-y-1 pt-4 leading-relaxed whitespace-pre-wrap">
+                    <p className="uppercase text-slate-700 font-black mb-1">Additional Notes:</p>
+                    <p>{additionalNotes}</p>
+                  </div>
+                )}
 
                 {termsList.length > 0 && (
                   <div className="text-[9px] text-slate-400 font-semibold space-y-1 pt-4 leading-relaxed">
@@ -2389,7 +2444,9 @@ export default function QuotationView() {
           <div className="sm:w-1/2">
             <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
             <p className="text-slate-900 font-extrabold">{printQuoteData.clientCompany || "-"}</p>
-            <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress || "-"}</p>
+            {printQuoteData.clientAddress && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress}</p>}
+            {clientContact && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">Contact: {clientContact}</p>}
+            {(!printQuoteData.clientCompany && !printQuoteData.clientAddress && !clientContact) && <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">-</p>}
           </div>
 
           {/* Right Side: Quotation Info Metadata */}
