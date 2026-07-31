@@ -104,27 +104,27 @@ export default function ClientDetailsPage() {
         </div>
 
       {/* Client Info Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-8 relative overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 mb-2">{client.name}</h2>
+            <h2 className="text-xl font-black text-slate-900 mb-1.5">{client.name}</h2>
             {client.company && (
-              <div className="flex items-center gap-2 text-blue-600 font-bold bg-blue-50 px-3 py-1.5 rounded-lg inline-flex mb-4">
-                <Building className="w-4 h-4" />
-                <span>{client.company}</span>
+              <div className="flex items-center gap-1.5 text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-md inline-flex mb-2">
+                <Building className="w-3.5 h-3.5" />
+                <span className="text-sm">{client.company}</span>
               </div>
             )}
           </div>
           
-          <div className="flex flex-col gap-3 min-w-[250px] bg-slate-50 p-4 rounded-xl border border-slate-100">
-            <div className="flex items-start gap-3 text-slate-700">
-              <MapPin className="w-5 h-5 mt-0.5 text-slate-400 shrink-0" />
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <div className="flex items-start gap-2.5 text-slate-600">
+              <MapPin className="w-4 h-4 mt-0.5 text-slate-400 shrink-0" />
               <span className="text-sm font-medium leading-relaxed">{client.address || "No address provided"}</span>
             </div>
-            <div className="flex items-center gap-3 text-slate-700">
-              <Phone className="w-5 h-5 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-2.5 text-slate-600">
+              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="text-sm font-bold">{client.contact || "No contact provided"}</span>
             </div>
           </div>
@@ -133,14 +133,14 @@ export default function ClientDetailsPage() {
 
       {/* Quotations List */}
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-              <FileText className="w-5 h-5" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+              <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-900">Sent Quotations</h3>
-              <p className="text-xs font-semibold text-slate-500 mt-0.5">
+              <h3 className="text-base font-black text-slate-900">Sent Quotations</h3>
+              <p className="text-xs font-semibold text-slate-500">
                 Total {quotations.length} quotation{quotations.length !== 1 ? 's' : ''} sent to this client
               </p>
             </div>
@@ -148,44 +148,44 @@ export default function ClientDetailsPage() {
         </div>
 
         {quotations.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <FileText className="w-8 h-8 text-slate-300" />
+          <div className="bg-white rounded-xl border border-dashed border-slate-300 p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+              <FileText className="w-6 h-6 text-slate-300" />
             </div>
-            <h4 className="text-slate-900 font-bold text-lg mb-2">No Quotations Yet</h4>
-            <p className="text-slate-500 font-medium max-w-sm">You haven't sent any quotations to {client.name} yet. Create one from the Quotations tab.</p>
+            <h4 className="text-slate-900 font-bold text-base mb-1.5">No Quotations Yet</h4>
+            <p className="text-slate-500 text-sm font-medium max-w-sm">You haven't sent any quotations to {client.name} yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quotations.map((quote) => (
               <div 
                 key={quote.id} 
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
+                className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow hover:border-blue-200 transition-all group"
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-black rounded-lg group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-black rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
                       {quote.quote_number}
                     </span>
                     {quote.is_order_done && (
-                      <span className="px-2 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider rounded-md">
-                        Order Done
+                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-wider rounded-md">
+                        Done
                       </span>
                     )}
                   </div>
-                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 </div>
                 
-                <div className="mb-4">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date</p>
-                  <p className="text-sm font-bold text-slate-700">{new Date(quote.quote_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <div className="mb-3">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Date</p>
+                  <p className="text-xs font-bold text-slate-700">{new Date(quote.quote_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </div>
                 
-                <div className="pt-4 border-t border-slate-100 flex items-end justify-between">
+                <div className="pt-3 border-t border-slate-100 flex items-end justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
-                    <p className="text-lg font-black text-slate-900 flex items-center gap-1">
-                      <IndianRupee className="w-4 h-4 text-slate-400" />
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Amount</p>
+                    <p className="text-base font-black text-slate-900 flex items-center gap-0.5">
+                      <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
                       {quote.total_amount?.toLocaleString() || 0}
                     </p>
                   </div>
