@@ -2579,23 +2579,23 @@ export default function QuotationView() {
                   <>
                     {/* QR Code rendered first on the left */}
                     {showBankDetails && companyInfo && ((companyInfo.accountNumber && companyInfo.ifsc) || companyInfo.upiId) && (
-                      <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[80px] h-[80px]">
+                      <div className="flex flex-col items-center justify-center p-2 border-2 border-slate-900 rounded-lg shrink-0 w-[100px] h-[100px]">
                         {companyInfo.qrCode ? (
                           <img src={companyInfo.qrCode} alt="QR Code" className="w-full h-full object-contain" />
                         ) : companyInfo.upiId ? (
                           <QRCodeSVG
                             value={companyInfo.upiId}
-                            size={60}
+                            size={80}
                             className="w-full h-full"
                           />
                         ) : (
                           <QRCodeSVG
                             value={`upi://pay?pa=${companyInfo.accountNumber}@${companyInfo.ifsc}.ifsc.npci&pn=${companyInfo.name}`}
-                            size={60}
+                            size={80}
                             className="w-full h-full"
                           />
                         )}
-                        {!companyInfo.qrCode && <span className="text-[6px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
+                        {!companyInfo.qrCode && <span className="text-[7px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Scan to Pay</span>}
                       </div>
                     )}
 
