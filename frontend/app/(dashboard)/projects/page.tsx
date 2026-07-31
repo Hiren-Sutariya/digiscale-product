@@ -4003,24 +4003,24 @@ ${rows}
                         {/* Details Section - fixed height */}
                         <div className="bg-white shrink-0">
                           {/* Header Row */}
-                          <div className="grid grid-cols-4 border-b border-slate-900 uppercase text-center" style={{ fontSize: '6.5px', fontWeight: 900 }}>
-                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">Description</div>
-                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">CTNS</div>
-                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">QTY</div>
-                            <div style={{ padding: '2px 1px' }} className="text-slate-955">PRICE</div>
+                          <div className="grid grid-cols-4 border-b border-slate-900 uppercase text-center" style={{ fontWeight: 900 }}>
+                            <div style={{ padding: '2px 1px', fontSize: '6.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">Description</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">CTNS</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">QTY</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="text-slate-955 flex items-center justify-center">PRICE</div>
                           </div>
                           {/* Data Row */}
-                          <div className="grid grid-cols-4 text-slate-900 text-center" style={{ fontSize: '7px', fontWeight: 700 }}>
-                            <div style={{ padding: '3px 2px' }} className="border-r border-slate-900 leading-tight break-words">
+                          <div className="grid grid-cols-4 text-slate-900 text-center" style={{ fontWeight: 700 }}>
+                            <div style={{ padding: '3px 2px', fontSize: '7px' }} className="border-r border-slate-900 leading-tight break-words flex items-center justify-center">
                               {prod.name}
                             </div>
-                            <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
+                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="border-r border-slate-900 flex items-center justify-center">
                               1
                             </div>
-                            <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
+                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="border-r border-slate-900 flex items-center justify-center">
                               {prod.cartonQty || "-"}
                             </div>
-                            <div style={{ padding: '3px 1px' }}>
+                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="flex items-center justify-center">
                               {(() => {
                                 const baseRate = parseFloat(prod.rate || "0");
                                 if (!baseRate) return "-";
