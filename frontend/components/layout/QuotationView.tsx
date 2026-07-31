@@ -751,8 +751,10 @@ export default function QuotationView() {
     // Set document title so PDF save dialog suggests this filename
     const originalTitle = document.title;
     const qName = quoteData.quoteNumber || quoteData.quote_number;
+    const cName = quoteData.clientName || quoteData.client_name;
+    
     if (qName) {
-      document.title = qName;
+      document.title = cName ? `${qName} - ${cName}` : qName;
     }
     
     // Wait for the DOM to paint the images before triggering the blocking print dialog
