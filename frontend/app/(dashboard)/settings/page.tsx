@@ -44,7 +44,6 @@ function SettingsPageContent() {
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "company", label: "Company Profile", icon: Building },
-    { id: "client_preferences", label: "Client Preferences", icon: Users },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "backup", label: "Data & Backup", icon: HardDrive },
@@ -102,7 +101,6 @@ function SettingsPageContent() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
-          {activeTab === "client_preferences" && <ClientPreferencesSection />}
           {activeTab === "notifications" && <NotificationsSection />}
           {activeTab === "security" && <SecuritySection />}
           {activeTab === "backup" && <BackupSection />}
@@ -645,138 +643,6 @@ function BillingSection() {
           <p className="mt-1 text-sm text-slate-550 font-bold">Total Exports</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ============ Client Preferences Section ============ */
-function ClientPreferencesSection() {
-  const [regularClientThreshold, setRegularClientThreshold] = useState("10");
-  const [vipClientThreshold, setVipClientThreshold] = useState("25");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  useEffect(() => {
-    getUserSettings()
-      .then((settingsData) => {
-        if (settingsData) {
-          if (settingsData.regular_client_threshold !== undefined) {
-            setRegularClientThreshold(String(settingsData.regular_client_threshold));
-          }
-          if (settingsData.vip_client_threshold !== undefined) {
-            setVipClientThreshold(String(settingsData.vip_client_threshold));
-          }
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setStatusMsg({ 
-          type: "error", 
-          text: "Failed to load client preferences." 
-        });
-        setLoading(false);
-      });
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setStatusMsg(null);
-    try {
-      await updateUserSettings({
-        regular_client_threshold: parseInt(regularClientThreshold) || 10,
-        vip_client_threshold: parseInt(vipClientThreshold) || 25,
-      });
-
-      setStatusMsg({ type: "success", text: "Client preferences updated successfully!" });
-      setSaving(false);
-    } catch (err: any) {
-      setStatusMsg({ type: "error", text: "Failed to save client preferences." });
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-48 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Client Preferences</h2>
-        <p className="text-sm font-semibold text-slate-500 mt-1">
-          Configure how clients are automatically categorized based on their completed orders.
-        </p>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <label className="mb-2 block text-sm font-bold text-slate-700">
-            Regular Client Threshold (Orders Done)
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              min="1"
-              placeholder="10"
-              value={regularClientThreshold}
-              onChange={(e) => setRegularClientThreshold(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-            />
-          </div>
-          <p className="mt-2 text-xs text-slate-400">
-            Number of completed orders required for a client to be marked as a Regular Client.
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-bold text-slate-700">
-            VIP Client Threshold (Orders Done)
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              min="1"
-              placeholder="25"
-              value={vipClientThreshold}
-              onChange={(e) => setVipClientThreshold(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm text-slate-800 font-medium outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-            />
-          </div>
-          <p className="mt-2 text-xs text-slate-400">
-            Number of completed orders required for a client to be marked as a VIP Client.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-end pt-4">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95 disabled:opacity-70"
-        >
-          {saving ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          ) : (
-            <Check className="h-4 w-4" />
-          )}
-          {saving ? "Saving..." : "Save Preferences"}
-        </button>
-      </div>
-
-      {statusMsg && (
-        <div className={`mt-4 rounded-xl p-4 text-sm font-bold ${
-          statusMsg.type === 'success' 
-            ? 'bg-green-50 text-green-700 border border-green-200' 
-            : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {statusMsg.text}
-        </div>
-      )}
     </div>
   );
 }
