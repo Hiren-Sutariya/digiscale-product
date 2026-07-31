@@ -74,6 +74,7 @@ import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
 import { useSearchParams, useRouter } from "next/navigation";
 import QuotationView from "@/components/layout/QuotationView";
+import { createPortal } from "react-dom";
 
 const statusConfig = {
   completed: {
@@ -3755,9 +3756,10 @@ ${rows}
       )}
 
       {/* --- PRINT PORTAL FOR COLLECTION CATALOGUE --- */}
-      <div className="print-portal hidden">
-        {(() => {
-          if (!selectedCol) return null;
+      {typeof document !== "undefined" && createPortal(
+        <div className="print-portal hidden">
+          {(() => {
+            if (!selectedCol) return null;
           // Split products into pages of 9
           const chunkedPages = [];
           let currentIndex = 0;
@@ -3883,7 +3885,9 @@ ${rows}
             </div>
           );
         })()}
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* Global CSS for Print Portal */}
       <style jsx global>{`
