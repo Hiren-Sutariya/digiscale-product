@@ -95,21 +95,13 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <button 
-          onClick={() => router.back()}
-          className="p-2 bg-white rounded-full border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-900 transition-colors shadow-sm"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-slate-50/50 relative animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full space-y-6">
+        
+        {/* Header */}
+        <div className="mb-6">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Client Details</h1>
-          <p className="text-sm font-medium text-slate-500 mt-0.5">View and manage information for {client.name}</p>
         </div>
-      </div>
 
       {/* Client Info Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mb-8 relative overflow-hidden">
