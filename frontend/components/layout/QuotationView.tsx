@@ -144,7 +144,7 @@ export default function QuotationView() {
   const [clientAddress, setClientAddress] = useState("");
   const [clientContact, setClientContact] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
-  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [showSavePopup, setShowSavePopup] = useState(false);
   
@@ -170,6 +170,8 @@ export default function QuotationView() {
   // Saved Quotations & Subview History
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
   const [clientsList, setClientsList] = useState<any[]>([]);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [showClientSearch, setShowClientSearch] = useState(false);
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
   const [historyTab, setHistoryTab] = useState<"follow_up" | "done">("follow_up");
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
@@ -203,13 +205,13 @@ export default function QuotationView() {
   }, [clientsList]);
 
   const filteredClientSuggestions = useMemo(() => {
-    if (!clientName) return [];
-    const searchLower = clientName.toLowerCase();
+    if (!clientSearchQuery) return [];
+    const searchLower = clientSearchQuery.toLowerCase();
     return uniqueClients.filter(c => 
       (c.name?.toLowerCase() || "").includes(searchLower) || 
       (c.company?.toLowerCase() || "").includes(searchLower)
     );
-  }, [clientName, uniqueClients]);
+  }, [clientSearchQuery, uniqueClients]);
 
   useEffect(() => {
     if (printQuoteData) {
@@ -603,6 +605,7 @@ export default function QuotationView() {
             name: clientName,
             company: clientCompany || null,
             address: clientAddress || null,
+            contact: clientContact || null,
             user_id: currentUserId
           };
           const { error: clientError } = await supabase.from('clients').insert([newClient]);
@@ -1399,6 +1402,58 @@ export default function QuotationView() {
             {clientOpen && (
               <div className="p-5 space-y-4 animate-in slide-in-from-top-2 duration-150">
                 <div className="space-y-3">
+                  
+                  {/* Search Existing Clients */}
+                  <div className="relative mb-4 pb-4 border-b border-slate-100">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Search Saved Clients
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-blue-500" />
+                      <input
+                        type="text"
+                        placeholder="Search by name or company..."
+                        value={clientSearchQuery}
+                        onChange={(e) => {
+                          setClientSearchQuery(e.target.value);
+                          setShowClientSearch(true);
+                        }}
+                        onFocus={() => setShowClientSearch(true)}
+                        onBlur={() => setTimeout(() => setShowClientSearch(false), 200)}
+                        className="w-full rounded-xl border-2 border-blue-100 bg-blue-50/30 pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500 focus:bg-white"
+                      />
+                      
+                      {/* Search Suggestions Dropdown */}
+                      {showClientSearch && filteredClientSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                          {filteredClientSuggestions.map((client: any, idx) => (
+                            <div 
+                              key={idx}
+                              className="px-4 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
+                              onClick={() => {
+                                setClientName(client.name || "");
+                                setClientCompany(client.company || "");
+                                setClientAddress(client.address || "");
+                                setClientContact(client.contact || "");
+                                setClientSearchQuery("");
+                                setShowClientSearch(false);
+                              }}
+                            >
+                              <div className="text-xs font-bold text-slate-800">{client.name}</div>
+                              {(client.company || client.contact) && (
+                                <div className="text-[10px] text-slate-500 flex gap-2">
+                                  {client.company && <span>{client.company}</span>}
+                                  {client.company && client.contact && <span>•</span>}
+                                  {client.contact && <span>{client.contact}</span>}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="relative">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       Customer Name
@@ -1407,38 +1462,11 @@ export default function QuotationView() {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="Search by Customer or Company Name..."
+                        placeholder="e.g. Vraj Sutariya"
                         value={clientName}
-                        onChange={(e) => {
-                          setClientName(e.target.value);
-                          setShowClientSuggestions(true);
-                        }}
-                        onFocus={() => setShowClientSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowClientSuggestions(false), 200)}
+                        onChange={(e) => setClientName(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
                       />
-                      
-                      {/* Suggestions Dropdown */}
-                      {showClientSuggestions && filteredClientSuggestions.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                          {filteredClientSuggestions.map((client: any, idx) => (
-                            <div 
-                              key={idx}
-                              className="px-4 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                              onClick={() => {
-                                setClientName(client.name);
-                                setClientCompany(client.company);
-                                setClientAddress(client.address || "");
-                                setClientContact(client.contact || "");
-                                setShowClientSuggestions(false);
-                              }}
-                            >
-                              <div className="text-xs font-bold text-slate-800">{client.name}</div>
-                              {client.company && <div className="text-[10px] text-slate-500">{client.company}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
 
