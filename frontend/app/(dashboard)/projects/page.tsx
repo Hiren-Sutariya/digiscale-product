@@ -3792,110 +3792,117 @@ ${rows}
               currentIndex += ITEMS_PER_PAGE;
             }
 
-            return chunkedPages.map((page, pageIndex) => (
-              <div key={pageIndex} className="w-full bg-white px-[12mm] py-[10mm] flex flex-col page-break-after-always" style={{ minHeight: '297mm' }}>
-                
-                {/* === HEADER (exact Quotation match) === */}
-                <div className="flex flex-row border-2 border-slate-900 overflow-hidden mb-3">
-                  {/* Left Side: Logo Block */}
-                  <div className="w-24 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[80px] shrink-0 overflow-hidden relative">
-                    {companyInfo?.logo ? (
-                      <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-base font-black tracking-wider uppercase px-2 text-slate-850">
-                        {companyInfo?.name?.substring(0, 8) || "DIGISCALE"}
-                      </span>
-                    )}
-                  </div>
+            return chunkedPages.map((page, pageIndex) => {
+              const isFirstPage = pageIndex === 0;
 
-                  {/* Right Side: Contact Info */}
-                  <div className="flex-1 p-3 flex flex-col justify-center text-slate-800 text-[9px] font-semibold space-y-0.5">
-                    <h2 className="text-xs font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
-                    <p className="text-[9px] leading-relaxed text-slate-655 uppercase">
-                      <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "-"}
-                    </p>
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-0 text-[9px] text-slate-655 uppercase">
-                      <p>
-                        <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
-                      </p>
-                      <p>
-                        <span className="font-extrabold text-slate-955">EMAIL:</span> {companyInfo?.email || "-"}
-                      </p>
-                    </div>
-                    {companyInfo?.gst && (
-                      <p className="text-[9px] text-slate-655 uppercase font-bold">
-                        <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* === COLLECTION NAME BANNER === */}
-                <div className="w-full bg-slate-100 text-center py-2 border-y-2 border-slate-900 mb-3">
-                  <h3 className="text-xs font-black text-slate-955 tracking-widest uppercase">
-                    {selectedCol.name}
-                  </h3>
-                </div>
-
-                {/* === PRODUCT GRID 3x3 === */}
-                <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
-                  {page.items.map((prod, idx) => (
-                    <div key={prod.id || idx} className="border border-slate-900 flex flex-col overflow-hidden">
-                      
-                      {/* Image Section */}
-                      <div className="flex-1 border-b border-slate-900 flex items-center justify-center bg-white overflow-hidden p-1" style={{ minHeight: '140px' }}>
-                        {prod.photoUrl ? (
-                          <img 
-                            src={prod.photoUrl} 
-                            alt={prod.name}
-                            className="max-h-full max-w-full object-contain"
-                          />
+              return (
+                <div key={pageIndex} className="collection-pdf-page bg-white flex flex-col page-break-after-always" style={{ width: '210mm', height: '297mm', padding: '8mm 10mm', boxSizing: 'border-box', overflow: 'hidden' }}>
+                  
+                  {/* === HEADER - only on page 1 === */}
+                  {isFirstPage && (
+                    <div className="flex flex-row border-2 border-slate-900 overflow-hidden shrink-0" style={{ marginBottom: '6px' }}>
+                      {/* Left Side: Logo Block */}
+                      <div className="bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 shrink-0 overflow-hidden relative" style={{ width: '80px', height: '70px' }}>
+                        {companyInfo?.logo ? (
+                          <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
                         ) : (
-                          <div className="flex items-center justify-center text-slate-300">
-                            <ImageIcon className="w-8 h-8" />
-                          </div>
+                          <span className="text-base font-black tracking-wider uppercase px-2 text-slate-850">
+                            {companyInfo?.name?.substring(0, 8) || "DIGISCALE"}
+                          </span>
                         )}
                       </div>
 
-                      {/* Details Section */}
-                      <div className="bg-white">
-                        {/* Header Row */}
-                        <div className="grid grid-cols-4 border-b border-slate-900 text-[7px] font-black text-slate-955 uppercase text-center">
-                          <div className="py-1 px-0.5 border-r border-slate-900">Description</div>
-                          <div className="py-1 px-0.5 border-r border-slate-900">CTNS</div>
-                          <div className="py-1 px-0.5 border-r border-slate-900">QTY</div>
-                          <div className="py-1 px-0.5">PRICE</div>
+                      {/* Right Side: Contact Info */}
+                      <div className="flex-1 p-2 flex flex-col justify-center text-slate-800 font-semibold" style={{ fontSize: '8px', lineHeight: '1.4' }}>
+                        <h2 style={{ fontSize: '10px', fontWeight: 900 }} className="text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
+                        <p className="text-slate-655 uppercase">
+                          <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "-"}
+                        </p>
+                        <div className="flex gap-4 text-slate-655 uppercase">
+                          <p>
+                            <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
+                          </p>
+                          <p>
+                            <span className="font-extrabold text-slate-955">EMAIL:</span> {companyInfo?.email || "-"}
+                          </p>
                         </div>
-                        {/* Data Row */}
-                        <div className="grid grid-cols-4 text-[8px] font-bold text-slate-900 text-center">
-                          <div className="py-1.5 px-1 border-r border-slate-900 leading-tight break-words">
-                            {prod.name}
+                        {companyInfo?.gst && (
+                          <p className="text-slate-655 uppercase font-bold">
+                            <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* === COLLECTION NAME BANNER (all pages) === */}
+                  <div className="w-full bg-slate-100 text-center border-y-2 border-slate-900 shrink-0" style={{ padding: '5px 0', marginBottom: '6px' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em' }} className="text-slate-955 uppercase">
+                      {selectedCol.name}
+                    </h3>
+                  </div>
+
+                  {/* === PRODUCT GRID 3x3 === */}
+                  <div className="flex-1 grid grid-cols-3 overflow-hidden" style={{ gap: '4px', gridTemplateRows: 'repeat(3, 1fr)' }}>
+                    {page.items.map((prod, idx) => (
+                      <div key={prod.id || idx} className="border border-slate-900 flex flex-col overflow-hidden">
+                        
+                        {/* Image Section - takes all available space */}
+                        <div className="flex-1 border-b border-slate-900 flex items-center justify-center bg-white overflow-hidden p-1">
+                          {prod.photoUrl ? (
+                            <img 
+                              src={prod.photoUrl} 
+                              alt={prod.name}
+                              className="max-h-full max-w-full object-contain"
+                              style={{ maxHeight: '100%' }}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center text-slate-300">
+                              <ImageIcon className="w-8 h-8" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Details Section - fixed height */}
+                        <div className="bg-white shrink-0">
+                          {/* Header Row */}
+                          <div className="grid grid-cols-4 border-b border-slate-900 uppercase text-center" style={{ fontSize: '6.5px', fontWeight: 900 }}>
+                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">Description</div>
+                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">CTNS</div>
+                            <div style={{ padding: '2px 1px' }} className="border-r border-slate-900 text-slate-955">QTY</div>
+                            <div style={{ padding: '2px 1px' }} className="text-slate-955">PRICE</div>
                           </div>
-                          <div className="py-1.5 px-0.5 border-r border-slate-900">
-                            {prod.cartonQty || "-"}
-                          </div>
-                          <div className="py-1.5 px-0.5 border-r border-slate-900">
-                            {prod.stock || "-"}
-                          </div>
-                          <div className="py-1.5 px-0.5">
-                            {prod.rate || "-"}
+                          {/* Data Row */}
+                          <div className="grid grid-cols-4 text-slate-900 text-center" style={{ fontSize: '7px', fontWeight: 700 }}>
+                            <div style={{ padding: '3px 2px' }} className="border-r border-slate-900 leading-tight break-words">
+                              {prod.name}
+                            </div>
+                            <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
+                              {prod.cartonQty || "-"}
+                            </div>
+                            <div style={{ padding: '3px 1px' }} className="border-r border-slate-900">
+                              {prod.stock || "-"}
+                            </div>
+                            <div style={{ padding: '3px 1px' }}>
+                              {prod.rate || "-"}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {/* Fill empty slots */}
-                  {Array.from({ length: ITEMS_PER_PAGE - page.items.length }).map((_, idx) => (
-                    <div key={`empty-${idx}`} />
-                  ))}
-                </div>
+                    ))}
+                    {/* Fill empty slots so grid stays 3x3 */}
+                    {Array.from({ length: ITEMS_PER_PAGE - page.items.length }).map((_, idx) => (
+                      <div key={`empty-${idx}`} />
+                    ))}
+                  </div>
 
-                {/* Page footer */}
-                <div className="mt-auto pt-2 text-center text-[8px] font-bold text-gray-400">
-                  Page {pageIndex + 1} of {chunkedPages.length}
+                  {/* Page footer */}
+                  <div className="shrink-0 text-center text-gray-400" style={{ paddingTop: '4px', fontSize: '7px', fontWeight: 700 }}>
+                    Page {pageIndex + 1} of {chunkedPages.length}
+                  </div>
                 </div>
-              </div>
-            ));
+              );
+            });
           })()}
         </div>,
         document.body
