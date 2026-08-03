@@ -157,3 +157,77 @@
     print-color-adjust: exact;
   }
 }
+
+/* Dark mode global overrides for components using white backgrounds and slate borders */
+.dark body,
+.dark .bg-white {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: var(--card) !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: var(--foreground) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-600 {
+  color: oklch(0.705 0.015 286.067) !important;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-350,
+.dark .border-slate-300,
+.dark .border-slate-200/80 {
+  border-color: var(--border) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* Dynamic Accent Color CSS Variables overrides */
+[data-theme-accent="blue"] {
+  --primary: oklch(0.607 0.205 253.5);
+}
+[data-theme-accent="indigo"] {
+  --primary: oklch(0.585 0.233 277.117);
+}
+[data-theme-accent="emerald"] {
+  --primary: oklch(0.627 0.194 149.2);
+}
+[data-theme-accent="violet"] {
+  --primary: oklch(0.606 0.25 292.0);
+}
+[data-theme-accent="rose"] {
+  --primary: oklch(0.643 0.22 350.0);
+}
+[data-theme-accent="amber"] {
+  --primary: oklch(0.769 0.188 70.0);
+}
+
+.bg-blue-650,
+.bg-blue-600 {
+  background-color: var(--primary) !important;
+}
+.text-blue-700,
+.text-blue-600 {
+  color: var(--primary) !important;
+}
+.border-blue-600 {
+  border-color: var(--primary) !important;
+}
+.bg-blue-50,
+.bg-blue-50/40,
+.bg-blue-50/50 {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+}

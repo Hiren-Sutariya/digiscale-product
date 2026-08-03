@@ -51,7 +51,6 @@ function SettingsPageContent() {
     { id: "theme",        label: "Theme",              icon: Paintbrush },
     { id: "language",     label: "Language",           icon: Languages },
     { id: "shortcuts",    label: "Keyboard Shortcuts", icon: Keyboard },
-    { id: "notifications", label: "Notifications",      icon: Bell },
     { id: "storage",      label: "Storage",            icon: HardDrive },
     { id: "billing",      label: "Billing",            icon: CreditCard },
     { id: "security",     label: "Security",           icon: Shield },
@@ -111,7 +110,6 @@ function SettingsPageContent() {
           {activeTab === "theme"         && <ThemeSection />}
           {activeTab === "language"      && <LanguageSection />}
           {activeTab === "shortcuts"     && <KeyboardShortcutsSection />}
-          {activeTab === "notifications" && <NotificationsSection />}
           {activeTab === "storage"       && <StorageSection />}
           {activeTab === "billing"       && <BillingSection />}
           {activeTab === "security"      && <SecuritySection />}
