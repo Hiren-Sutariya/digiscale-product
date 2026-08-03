@@ -183,7 +183,7 @@
 .dark .border-slate-200,
 .dark .border-slate-350,
 .dark .border-slate-300,
-.dark .border-slate-200/80 {
+.dark .border-slate-200\/80 {
   border-color: var(--border) !important;
 }
 
@@ -227,7 +227,7 @@
   border-color: var(--primary) !important;
 }
 .bg-blue-50,
-.bg-blue-50/40,
-.bg-blue-50/50 {
+.bg-blue-50\/40,
+.bg-blue-50\/50 {
   background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
 }
