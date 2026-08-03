@@ -80,240 +80,354 @@ function ExportModal({ canvas, onClose, projectName, batchImages, canvasConfig }
   batchImages: string[];
   canvasConfig: any;
 }) {
-  const [format, setFormat] = useState<"png" | "jpg" | "webp">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("digiscale_brand_kit");
-      if (saved) {
-        try {
-          const bk = JSON.parse(saved);
-          if (bk.exportSettings?.format) return bk.exportSettings.format as "png" | "jpg" | "webp";
-        } catch (e) {}
-      }
-    }
-    return "png";
-  });
+  const [format, setFormat] = useState<"png" | "jpg" | "webp" | "pdf">("png");
   const [transparent, setTransparent] = useState(false);
-  const [sizePreset, setSizePreset] = useState<"original" | "2k" | "4k" | "compress" | "custom">(() => {
+  const [quality, setQuality] = useState<number>(95);
+  const [compression, setCompression] = useState<boolean>(false);
+  
+  const [exportQueue, setExportQueue] = useState<{ name: string; status: "pending" | "processing" | "done"; progress: number }[]>([]);
+  const [exportHistory, setExportHistory] = useState<{ id: string; name: string; format: string; timestamp: string; settings: string }[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [progressMsg, setProgressMsg] = useState("");
+
+  // Load history from localStorage
+  useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("digiscale_brand_kit");
+      const saved = localStorage.getItem("digiscale_export_history");
       if (saved) {
         try {
-          const bk = JSON.parse(saved);
-          const mult = bk.exportSettings?.multiplier;
-          if (mult === 2) return "2k";
-          if (mult === 4) return "4k";
-          if (mult === 0.75) return "compress";
+          setExportHistory(JSON.parse(saved));
         } catch (e) {}
       }
     }
-    return "original";
-  });
-  const [customW, setCustomW] = useState<number | "">("");
-  const [batchExporting, setBatchExporting] = useState(false);
-  const [batchProgress, setBatchProgress] = useState(0);
+  }, []);
 
-  // Map size preset to export multiplier based on canvasConfig.width
-  const getMultiplier = () => {
-    const canvasNaturalW = canvasConfig.width;
-    switch (sizePreset) {
-      case "original":  return 1;
-      case "compress":  return 0.75;
-      case "2k":        return 2048 / canvasNaturalW;
-      case "4k":        return 3840 / canvasNaturalW;
-      case "custom":    return customW ? Number(customW) / canvasNaturalW : 1;
-      default:          return 1;
-    }
+  const addExportToHistory = (name: string, fmt: string, settings: string) => {
+    const newItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      name: name || "Untitled Design",
+      format: fmt,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      settings
+    };
+    const nextHistory = [newItem, ...exportHistory].slice(0, 5);
+    setExportHistory(nextHistory);
+    localStorage.setItem("digiscale_export_history", JSON.stringify(nextHistory));
   };
 
-  const exportCanvas = (cv: fabric.Canvas | null, fname: string): string | null => {
-    if (!cv) return null;
-    cv.discardActiveObject();
-    cv.renderAll();
-    const origBg = cv.backgroundColor;
-    if (transparent && format === "png") { cv.backgroundColor = ""; cv.renderAll(); }
-    const q = 0.95; // high quality default
-    const mult = getMultiplier();
-    const dataUrl = cv.toDataURL({ format: format === "webp" ? "jpeg" : format, quality: q, multiplier: mult });
-    if (transparent && format === "png") { cv.backgroundColor = origBg; cv.renderAll(); }
-    return dataUrl;
-  };
+  const handleSingleExport = async () => {
+    if (!canvas) return;
+    setIsExporting(true);
+    setProgressMsg("Rendering design...");
+    
+    const fileName = projectName || "Untitled Design";
+    const queueItem = { name: `${fileName}.${format}`, status: "processing" as const, progress: 50 };
+    setExportQueue([queueItem]);
 
-  const handleSingleExport = () => {
-    const dataUrl = exportCanvas(canvas, projectName);
-    if (!dataUrl) return;
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `${projectName || "design"}.${format}`;
-    a.click();
-    onClose();
-  };
-
-  // Export all batch images packed in a single ZIP file
-  const handleBatchExport = async () => {
-    if (!batchImages.length) return;
-    setBatchExporting(true);
-    setBatchProgress(0);
-
-    const zip = new JSZip();
-
-    for (let i = 0; i < batchImages.length; i++) {
-      await new Promise<void>((resolve) => {
-        // Create temp offscreen canvas element
-        const el = document.createElement("canvas");
-        el.width  = canvasConfig.width;
-        el.height = canvasConfig.height;
-        const tmpFab = new fabric.Canvas(el, {
-          width: canvasConfig.width,
-          height: canvasConfig.height,
-          backgroundColor: transparent ? "" : (canvas.backgroundColor as string),
-        });
-
-        const imgEl = new window.Image();
-        imgEl.src = batchImages[i];
-        imgEl.onload = () => {
-          const img = new fabric.Image(imgEl);
-          const cW = canvasConfig.width;
-          const cH = canvasConfig.height;
-          const scale = Math.min(cW / (img.width || 1), cH / (img.height || 1));
-          img.set({ scaleX: scale, scaleY: scale, originX: "center", originY: "center", left: cW / 2, top: cH / 2 });
-          tmpFab.add(img);
-          tmpFab.renderAll();
-
-          const mult = getMultiplier();
-          const q = 0.95; // high quality
-          const dataUrl = tmpFab.toDataURL({ format: format === "webp" ? "jpeg" : format, quality: q, multiplier: mult });
-
-          // Extract base64
-          const base64Data = dataUrl.split(",")[1];
-          zip.file(`${projectName || "design"}_${i + 1}.${format}`, base64Data, { base64: true });
-
-          tmpFab.dispose();
-          setBatchProgress(i + 1);
-          resolve();
-        };
-        imgEl.onerror = () => resolve();
-      });
-      // small delay to let UI thread breathe
-      await new Promise(r => setTimeout(r, 50));
-    }
+    await new Promise(r => setTimeout(r, 300));
 
     try {
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${projectName || "batch_export"}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Error generating zip:", err);
-    }
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      const origBg = canvas.backgroundColor;
 
-    setBatchExporting(false);
-    onClose();
+      if (transparent && format === "png") {
+        canvas.backgroundColor = "";
+        canvas.renderAll();
+      }
+
+      const q = quality / 100;
+      let mult = 1;
+      if (compression) {
+        mult = 0.7; // 30% resolution compression
+      }
+
+      if (format === "pdf") {
+        const canvasDataUrl = canvas.toDataURL({ format: "png", multiplier: mult });
+        const { jsPDF } = await import("jspdf");
+        const doc = new jsPDF({
+          orientation: canvasConfig.width > canvasConfig.height ? "landscape" : "portrait",
+          unit: "px",
+          format: [canvasConfig.width, canvasConfig.height]
+        });
+        doc.addImage(canvasDataUrl, "PNG", 0, 0, canvasConfig.width, canvasConfig.height);
+        doc.save(`${fileName}.pdf`);
+      } else {
+        const formatStr = format === "webp" ? "jpeg" : format;
+        const dataUrl = canvas.toDataURL({ format: formatStr, quality: q, multiplier: mult });
+        
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${fileName}.${format}`;
+        a.click();
+      }
+
+      if (transparent && format === "png") {
+        canvas.backgroundColor = origBg;
+        canvas.renderAll();
+      }
+
+      const settingsDesc = `${format.toUpperCase()} · Q: ${quality}% ${compression ? "(Compressed)" : ""}`;
+      addExportToHistory(fileName, format.toUpperCase(), settingsDesc);
+
+      setExportQueue([{ ...queueItem, status: "done", progress: 100 }]);
+      setProgressMsg("Export complete!");
+      
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportQueue([]);
+        onClose();
+      }, 850);
+
+    } catch (err) {
+      console.error(err);
+      setProgressMsg("Export failed.");
+      setIsExporting(false);
+    }
   };
 
-  const SIZE_PRESETS = [
-    { id: "original", label: "Original",    sub: "1x (canvas size)"   },
-    { id: "2k",       label: "2K",           sub: "2048 px wide"       },
-    { id: "4k",       label: "4K",           sub: "3840 px wide"       },
-    { id: "compress", label: "Compress",     sub: "75% size · smaller" },
-    { id: "custom",   label: "Custom",       sub: "Set width below"    },
-  ] as const;
+  const handleDownloadAgain = async (item: typeof exportHistory[0]) => {
+    if (!canvas) return;
+    setIsExporting(true);
+    setProgressMsg(`Downloading ${item.name}...`);
+    
+    const fmt = item.format.toLowerCase() as "png" | "jpg" | "webp" | "pdf";
+    const queueItem = { name: `Redownload: ${item.name}.${fmt}`, status: "processing" as const, progress: 50 };
+    setExportQueue([queueItem]);
+
+    await new Promise(r => setTimeout(r, 250));
+
+    try {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      const origBg = canvas.backgroundColor;
+
+      const q = quality / 100;
+      let mult = 1;
+      if (item.settings.includes("Compressed")) {
+        mult = 0.7;
+      }
+
+      if (fmt === "pdf") {
+        const canvasDataUrl = canvas.toDataURL({ format: "png", multiplier: mult });
+        const { jsPDF } = await import("jspdf");
+        const doc = new jsPDF({
+          orientation: canvasConfig.width > canvasConfig.height ? "landscape" : "portrait",
+          unit: "px",
+          format: [canvasConfig.width, canvasConfig.height]
+        });
+        doc.addImage(canvasDataUrl, "PNG", 0, 0, canvasConfig.width, canvasConfig.height);
+        doc.save(`${item.name}.pdf`);
+      } else {
+        const formatStr = fmt === "webp" ? "jpeg" : fmt;
+        const dataUrl = canvas.toDataURL({ format: formatStr, quality: q, multiplier: mult });
+        
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${item.name}.${fmt}`;
+        a.click();
+      }
+
+      setExportQueue([{ ...queueItem, status: "done", progress: 100 }]);
+      setProgressMsg("Download complete!");
+      
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportQueue([]);
+      }, 700);
+
+    } catch (err) {
+      console.error(err);
+      setIsExporting(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-[340px] shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-[720px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transition-all animate-in fade-in zoom-in-95 duration-200">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <span className="text-sm font-bold text-slate-800">Export Design</span>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition">
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 bg-white">
+          <div className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-blue-600" />
+            <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Export Settings</span>
+          </div>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-50 transition cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Format */}
-          <div>
-            <Label>Format</Label>
-            <div className="flex gap-2">
-              {(["png","jpg","webp"] as const).map(f => (
-                <button key={f} onClick={() => setFormat(f)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${format === f ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}>
-                  {f.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Transparent (PNG only) */}
-          {format === "png" && (
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" checked={transparent} onChange={e => setTransparent(e.target.checked)} className="rounded" />
-              <span className="text-xs font-semibold text-slate-700">Transparent background</span>
-            </label>
-          )}
-
-          {/* Size / Resolution */}
-          <div>
-            <Label>Size &amp; Resolution</Label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {SIZE_PRESETS.map(p => (
-                <button key={p.id} onClick={() => setSizePreset(p.id)}
-                  className={`px-3 py-2.5 rounded-xl text-left transition ${
-                    sizePreset === p.id
-                      ? "bg-blue-600 text-white ring-2 ring-blue-500 ring-offset-1"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}>
-                  <div className="text-[11px] font-bold leading-none">{p.label}</div>
-                  <div className={`text-[9px] mt-0.5 ${sizePreset === p.id ? "text-blue-100" : "text-slate-400"}`}>{p.sub}</div>
-                </button>
-              ))}
+        {/* Dual Column Layout */}
+        <div className="grid grid-cols-[1.2fr_1fr] divide-x divide-slate-100 flex-1 overflow-y-auto">
+          
+          {/* Left Column: Export Controls */}
+          <div className="p-6 space-y-6">
+            
+            {/* Format Selector */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Export Format</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["png", "jpg", "webp", "pdf"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFormat(f)}
+                    className={`py-2.5 rounded-xl text-xs font-black transition cursor-pointer border ${
+                      format === f
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/10"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {sizePreset === "custom" && (
-              <div className="mt-2">
-                <div className="text-[9px] text-slate-400 font-semibold mb-1">Custom Width (px)</div>
-                <input type="number" placeholder="e.g. 1200" value={customW}
-                  onChange={e => setCustomW(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
+            {/* PNG Transparency Option */}
+            {format === "png" && (
+              <label className="flex items-center gap-2.5 p-3.5 bg-slate-50 rounded-xl border border-slate-200/60 cursor-pointer select-none transition hover:bg-slate-100/70">
+                <input
+                  type="checkbox"
+                  checked={transparent}
+                  onChange={e => setTransparent(e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                />
+                <span className="text-xs font-bold text-slate-700">Transparent Background</span>
+              </label>
+            )}
+
+            {/* Quality Slider (JPG & WEBP) */}
+            {(format === "jpg" || format === "webp") && (
+              <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/50">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] uppercase font-black tracking-wider text-slate-400">Quality</label>
+                  <span className="text-xs font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{quality}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  value={quality}
+                  onChange={e => setQuality(Number(e.target.value))}
+                  className="w-full accent-blue-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <p className="text-[9px] text-slate-400 leading-relaxed font-semibold">Lower quality decreases final file size.</p>
               </div>
             )}
+
+            {/* Compression Toggle */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Compression</label>
+              <div
+                onClick={() => setCompression(!compression)}
+                className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200/50 cursor-pointer hover:bg-slate-100/50 transition"
+              >
+                <div>
+                  <span className="text-xs font-bold text-slate-700 block">Enable High Compression</span>
+                  <span className="text-[9px] text-slate-400 font-semibold mt-0.5 block">Compresses dimensions to 70% to save disk storage.</span>
+                </div>
+                <button
+                  type="button"
+                  className={`relative h-6 w-11 rounded-full transition shrink-0 ${compression ? "bg-blue-600" : "bg-slate-300"}`}
+                >
+                  <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${compression ? "left-[21px]" : "left-0.5"}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Trigger Button */}
+            <button
+              onClick={handleSingleExport}
+              disabled={isExporting}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-blue-500/10 cursor-pointer"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {progressMsg}
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export Now
+                </>
+              )}
+            </button>
+
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-slate-100" />
-
-          {/* Export current canvas */}
-          <button onClick={handleSingleExport}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition flex items-center justify-center gap-2 active:scale-[0.98]">
-            <Download className="w-4 h-4" /> Export This Design
-          </button>
-
-          {/* Batch Export */}
-          {batchImages.length > 1 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-slate-100" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">or batch</span>
-                <div className="flex-1 h-px bg-slate-100" />
-              </div>
-
-              <button onClick={handleBatchExport} disabled={batchExporting}
-                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white text-sm font-bold rounded-xl transition flex items-center justify-center gap-2 active:scale-[0.98]">
-                {batchExporting ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Packaging ZIP {batchProgress}/{batchImages.length}...</>
-                ) : (
-                  <><Download className="w-4 h-4" /> Export All {batchImages.length} Images (.ZIP)</>
-                )}
-              </button>
-
-              <p className="text-[9px] text-slate-400 text-center">
-                All batch images will download packed into a single zip file.
-              </p>
+          {/* Right Column: Queue & History */}
+          <div className="p-6 bg-slate-50/30 flex flex-col justify-between space-y-6">
+            
+            {/* Export Queue Section */}
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Export Queue</label>
+              {exportQueue.length > 0 ? (
+                <div className="space-y-2">
+                  {exportQueue.map((q, idx) => (
+                    <div key={idx} className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-700 truncate max-w-[150px]">{q.name}</span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                          q.status === "done" ? "bg-green-150 text-green-700" : "bg-blue-50 text-blue-600 animate-pulse"
+                        }`}>
+                          {q.status}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${q.status === "done" ? "bg-green-500" : "bg-blue-600"}`}
+                          style={{ width: `${q.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-4 text-center text-slate-400 text-[10px] font-semibold bg-slate-100/50 rounded-xl border border-slate-200 border-dashed">
+                  Queue is idle.
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Export History Section */}
+            <div className="flex-1 space-y-3">
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">Export History</label>
+              {exportHistory.length > 0 ? (
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {exportHistory.map((item) => (
+                    <div key={item.id} className="bg-white border border-slate-150 p-2.5 rounded-xl shadow-sm flex items-center justify-between gap-2 group hover:border-blue-400 transition">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                            item.format === "PDF" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                          }`}>
+                            {item.format}
+                          </span>
+                          <span className="text-[11px] font-extrabold text-slate-700 truncate block">{item.name}</span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">{item.timestamp} · {item.settings}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadAgain(item)}
+                        className="py-1 px-2.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 text-[9px] font-black rounded-lg transition shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        Download Again
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-slate-400 text-[10px] font-semibold bg-slate-100/50 rounded-xl border border-slate-200 border-dashed">
+                  No export history.
+                </div>
+              )}
+            </div>
+
+          </div>
+
         </div>
+
       </div>
     </div>
   );
