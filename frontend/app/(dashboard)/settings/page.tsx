@@ -25,6 +25,9 @@ import {
   Users,
   Trash2,
   QrCode,
+  Paintbrush,
+  Languages,
+  Keyboard,
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
@@ -43,11 +46,16 @@ function SettingsPageContent() {
   }, [searchParams]);
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "company", label: "Company Profile", icon: Building },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "backup", label: "Data & Backup", icon: HardDrive },
+    { id: "profile",      label: "Profile",            icon: User },
+    { id: "company",      label: "Company Details",    icon: Building },
+    { id: "theme",        label: "Theme",              icon: Paintbrush },
+    { id: "language",     label: "Language",           icon: Languages },
+    { id: "shortcuts",    label: "Keyboard Shortcuts", icon: Keyboard },
+    { id: "notifications", label: "Notifications",      icon: Bell },
+    { id: "storage",      label: "Storage",            icon: HardDrive },
+    { id: "billing",      label: "Billing",            icon: CreditCard },
+    { id: "security",     label: "Security",           icon: Shield },
+    { id: "backup",       label: "Data & Backup",      icon: HardDrive },
   ];
 
   return (
@@ -60,22 +68,22 @@ function SettingsPageContent() {
       <div className="mt-8 flex-1 grid gap-8 lg:grid-cols-[280px_1fr] overflow-hidden min-h-0">
 
         {/* Sidebar Tabs */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 space-y-1.5 shadow-sm h-fit shrink-0">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 space-y-1.5 shadow-sm h-fit shrink-0 overflow-y-auto max-h-[70vh]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-blue-50 text-blue-700 font-extrabold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
                 {tab.label}
-                <ChevronRight className="ml-auto h-4 w-4 opacity-50" />
+                <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-50" />
               </button>
             );
           })}
@@ -87,10 +95,10 @@ function SettingsPageContent() {
               logout();
               window.location.href = "/login";
             }}
-            className="flex w-full items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium text-red-600 transition hover:bg-red-50"
+            className="flex w-full items-center gap-4 rounded-xl px-4 py-2.5 text-xs font-bold text-red-650 transition hover:bg-red-50 cursor-pointer"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-              <LogOut className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600">
+              <LogOut className="h-4 w-4" />
             </div>
             Sign Out
           </button>
@@ -98,11 +106,16 @@ function SettingsPageContent() {
 
         {/* Content */}
         <div className="rounded-2xl border border-slate-200 bg-white p-8 overflow-y-auto h-full shadow-sm">
-          {activeTab === "profile" && <ProfileSection />}
-          {activeTab === "company" && <CompanySection />}
+          {activeTab === "profile"       && <ProfileSection />}
+          {activeTab === "company"       && <CompanySection />}
+          {activeTab === "theme"         && <ThemeSection />}
+          {activeTab === "language"      && <LanguageSection />}
+          {activeTab === "shortcuts"     && <KeyboardShortcutsSection />}
           {activeTab === "notifications" && <NotificationsSection />}
-          {activeTab === "security" && <SecuritySection />}
-          {activeTab === "backup" && <BackupSection />}
+          {activeTab === "storage"       && <StorageSection />}
+          {activeTab === "billing"       && <BillingSection />}
+          {activeTab === "security"      && <SecuritySection />}
+          {activeTab === "backup"        && <BackupSection />}
         </div>
 
       </div>
@@ -1998,6 +2011,293 @@ function BackupSection() {
   );
 }
 
+
+/* ============ Theme Section ============ */
+function ThemeSection() {
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("light");
+  const [accentColor, setAccentColor] = useState<string>("blue");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mode = localStorage.getItem("digiscale_theme_mode") as any || "light";
+      const color = localStorage.getItem("digiscale_theme_accent") || "blue";
+      setThemeMode(mode);
+      setAccentColor(color);
+    }
+  }, []);
+
+  const handleSaveTheme = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("digiscale_theme_mode", themeMode);
+      localStorage.setItem("digiscale_theme_accent", accentColor);
+      alert("Theme settings saved successfully!");
+    }
+  };
+
+  const ACCENTS = [
+    { id: "blue", label: "Blue", bg: "bg-blue-600" },
+    { id: "indigo", label: "Indigo", bg: "bg-indigo-600" },
+    { id: "emerald", label: "Emerald", bg: "bg-emerald-600" },
+    { id: "violet", label: "Violet", bg: "bg-violet-600" },
+    { id: "rose", label: "Rose", bg: "bg-rose-600" },
+    { id: "amber", label: "Amber", bg: "bg-amber-500" },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Theme</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Customize the appearance and accent color of the workspace.
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="mb-3 block text-sm font-bold text-slate-700">Theme Mode</label>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { id: "light", label: "Light Mode", desc: "Classic bright appearance" },
+              { id: "dark", label: "Dark Mode", desc: "Easy on eyes in dark rooms" },
+              { id: "system", label: "System Sync", desc: "Follow system preference" },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setThemeMode(t.id)}
+                className={`p-4 rounded-xl border text-left transition ${
+                  themeMode === t.id
+                    ? "border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <div className="text-xs font-black">{t.label}</div>
+                <div className="text-[10px] text-slate-400 font-semibold mt-1">{t.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-3 block text-sm font-bold text-slate-700">Accent Color</label>
+          <div className="flex flex-wrap gap-3">
+            {ACCENTS.map(acc => (
+              <button
+                key={acc.id}
+                onClick={() => setAccentColor(acc.id)}
+                className={`w-10 h-10 rounded-full border-2 transition relative flex items-center justify-center cursor-pointer ${
+                  accentColor === acc.id ? "border-slate-800 scale-105" : "border-transparent hover:scale-105"
+                }`}
+              >
+                <div className={`w-7.5 h-7.5 rounded-full ${acc.bg} shadow-sm`} />
+                {accentColor === acc.id && (
+                  <Check className="absolute w-4.5 h-4.5 text-white stroke-[3.5px]" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSaveTheme}
+        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95"
+      >
+        Save Theme Settings
+      </button>
+    </div>
+  );
+}
+
+/* ============ Language Section ============ */
+function LanguageSection() {
+  const [selectedLang, setSelectedLang] = useState<string>("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSelectedLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const handleSaveLanguage = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("digiscale_language", selectedLang);
+      alert("Language setting saved! The app will reload to apply translation.");
+      window.location.reload();
+    }
+  };
+
+  const LANGUAGES = [
+    { id: "en", name: "English", sub: "United States & Global" },
+    { id: "gu", name: "Gujarati (ગુજરાતી)", sub: "India (Gujarat)" },
+    { id: "hi", name: "Hindi (हिन्दी)", sub: "India (National)" },
+    { id: "es", name: "Spanish (Español)", sub: "Spain & Latin America" },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Language</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Choose your default system display language.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {LANGUAGES.map(lang => (
+          <button
+            key={lang.id}
+            onClick={() => setSelectedLang(lang.id)}
+            className={`p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
+              selectedLang === lang.id
+                ? "border-blue-600 bg-blue-50/40"
+                : "border-slate-200 bg-white hover:bg-slate-50"
+            }`}
+          >
+            <div>
+              <span className={`text-xs font-bold block ${selectedLang === lang.id ? "text-blue-900" : "text-slate-800"}`}>
+                {lang.name}
+              </span>
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{lang.sub}</span>
+            </div>
+            {selectedLang === lang.id && (
+              <Check className="w-4 h-4 text-blue-600" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={handleSaveLanguage}
+        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95"
+      >
+        Save Language Settings
+      </button>
+    </div>
+  );
+}
+
+/* ============ Keyboard Shortcuts Section ============ */
+function KeyboardShortcutsSection() {
+  const SHORTCUTS = [
+    { keys: ["Ctrl", "Z"], action: "Undo", desc: "Revert the last change made to the design." },
+    { keys: ["Ctrl", "Shift", "Z"], action: "Redo", desc: "Restore the last undone action." },
+    { keys: ["Ctrl", "D"], action: "Duplicate", desc: "Copy and paste the selected canvas object." },
+    { keys: ["Delete", "Backspace"], action: "Delete selection", desc: "Remove selected text/image from canvas." },
+    { keys: ["Ctrl", "L"], action: "Lock / Unlock", desc: "Lock the selected element position or unlock it." },
+    { keys: ["Arrow Keys"], action: "Move element", desc: "Move active object on canvas pixel by pixel." },
+    { keys: ["Ctrl", "Plus"], action: "Zoom In", desc: "Increase canvas scale visibility." },
+    { keys: ["Ctrl", "Minus"], action: "Zoom Out", desc: "Decrease canvas scale visibility." },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Keyboard Shortcuts</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Boost your design efficiency with editor keyboard hotkeys.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black tracking-wider text-slate-500 uppercase">
+              <th className="py-3 px-5">Shortcut Hotkeys</th>
+              <th className="py-3 px-5">Action</th>
+              <th className="py-3 px-5">Description</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+            {SHORTCUTS.map((s, i) => (
+              <tr key={i} className="hover:bg-slate-50/50 transition">
+                <td className="py-3 px-5">
+                  <div className="flex items-center gap-1">
+                    {s.keys.map((k, kid) => (
+                      <kbd key={kid} className="px-2 py-1 bg-slate-100 border border-slate-200 rounded-md font-mono text-[10px] text-slate-800 shadow-sm">
+                        {k}
+                      </kbd>
+                    ))}
+                  </div>
+                </td>
+                <td className="py-3 px-5 font-bold text-slate-900">{s.action}</td>
+                <td className="py-3 px-5 text-slate-500 font-medium">{s.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============ Storage Section ============ */
+function StorageSection() {
+  const [cachedHistoryCount, setCachedHistoryCount] = useState(0);
+  const [cachedSnapshotsCount, setCachedSnapshotsCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hist = localStorage.getItem("digiscale_export_history");
+      if (hist) {
+        try {
+          setCachedHistoryCount(JSON.parse(hist).length);
+        } catch (e) {}
+      }
+      
+      getBackupsFromIndexedDB().then(bak => {
+        setCachedSnapshotsCount(bak.length);
+      }).catch(() => {});
+    }
+  }, []);
+
+  const handleClearCache = () => {
+    if (window.confirm("Are you sure you want to clear export history logs? This will reset your Export History list.")) {
+      localStorage.removeItem("digiscale_export_history");
+      setCachedHistoryCount(0);
+      alert("Cache cleared successfully!");
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Storage</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Manage local caching, snapshots, and file storage sizes.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Export Log Items</div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedHistoryCount} items</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">Cached locally in browser storage.</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">IndexedDB Snapshots</div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedSnapshotsCount} snapshots</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">Local backup points available to restore.</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-3 shadow-sm">
+        <div>
+          <span className="text-xs font-bold text-slate-900 block">Clear Temporary Files</span>
+          <span className="text-[11px] text-slate-500 font-semibold block mt-1 leading-relaxed">
+            Free up browser local storage space by clearing export log queues and histories.
+          </span>
+        </div>
+        <button
+          onClick={handleClearCache}
+          className="px-4 py-2 border border-slate-350 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-bold rounded-lg transition active:scale-95"
+        >
+          Clear Export Logs Cache
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   return (
