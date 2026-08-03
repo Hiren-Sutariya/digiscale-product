@@ -399,6 +399,7 @@ export function PropertiesPanel() {
   // PANEL: UPLOAD
   // ════════════════════════════════════════════════════════════════════
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadFiles = (files: FileList | null) => {
     if (!files || !canvas) return;
@@ -1042,7 +1043,6 @@ export function PropertiesPanel() {
   };
 
   const BrandKitPanel = () => {
-    const brandLogoInputRef = useRef<HTMLInputElement>(null);
     return (
       <div className="overflow-y-auto flex-1 p-3 space-y-4">
         {/* Company Logo Section */}
