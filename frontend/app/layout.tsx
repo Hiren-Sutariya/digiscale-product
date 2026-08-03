@@ -32,6 +32,27 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", inter.variable, jakarta.variable, montserratHeading.variable)}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const mode = localStorage.getItem('digiscale_theme_mode') || 'light';
+                  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                  const accent = localStorage.getItem('digiscale_theme_accent') || 'blue';
+                  document.documentElement.setAttribute('data-theme-accent', accent);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
       </body>

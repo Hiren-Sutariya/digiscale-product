@@ -2016,6 +2016,7 @@ function BackupSection() {
 function ThemeSection() {
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("light");
   const [accentColor, setAccentColor] = useState<string>("blue");
+  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2030,7 +2031,18 @@ function ThemeSection() {
     if (typeof window !== "undefined") {
       localStorage.setItem("digiscale_theme_mode", themeMode);
       localStorage.setItem("digiscale_theme_accent", accentColor);
-      alert("Theme settings saved successfully!");
+      
+      // Update DOM immediately
+      const isDark = themeMode === 'dark' || (themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      document.documentElement.setAttribute('data-theme-accent', accentColor);
+      
+      setStatusMsg({ type: "success", text: "Theme settings saved & applied successfully!" });
+      setTimeout(() => setStatusMsg(null), 3000);
     }
   };
 
@@ -2052,6 +2064,12 @@ function ThemeSection() {
         </p>
       </div>
 
+      {statusMsg && (
+        <div className="rounded-xl p-4 text-sm font-semibold border bg-green-50 border-green-200 text-green-700">
+          {statusMsg.text}
+        </div>
+      )}
+
       <div className="space-y-6">
         <div>
           <label className="mb-3 block text-sm font-bold text-slate-700">Theme Mode</label>
@@ -2064,7 +2082,7 @@ function ThemeSection() {
               <button
                 key={t.id}
                 onClick={() => setThemeMode(t.id)}
-                className={`p-4 rounded-xl border text-left transition ${
+                className={`p-4 rounded-xl border text-left transition cursor-pointer ${
                   themeMode === t.id
                     ? "border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -2100,7 +2118,7 @@ function ThemeSection() {
 
       <button
         onClick={handleSaveTheme}
-        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95"
+        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
       >
         Save Theme Settings
       </button>
@@ -2111,6 +2129,7 @@ function ThemeSection() {
 /* ============ Language Section ============ */
 function LanguageSection() {
   const [selectedLang, setSelectedLang] = useState<string>("en");
+  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2121,8 +2140,10 @@ function LanguageSection() {
   const handleSaveLanguage = () => {
     if (typeof window !== "undefined") {
       localStorage.setItem("digiscale_language", selectedLang);
-      alert("Language setting saved! The app will reload to apply translation.");
-      window.location.reload();
+      setStatusMsg({ type: "success", text: "Language setting saved! Reloading application..." });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     }
   };
 
@@ -2141,6 +2162,12 @@ function LanguageSection() {
           Choose your default system display language.
         </p>
       </div>
+
+      {statusMsg && (
+        <div className="rounded-xl p-4 text-sm font-semibold border bg-green-50 border-green-200 text-green-700 animate-pulse">
+          {statusMsg.text}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {LANGUAGES.map(lang => (
@@ -2168,7 +2195,7 @@ function LanguageSection() {
 
       <button
         onClick={handleSaveLanguage}
-        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95"
+        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
       >
         Save Language Settings
       </button>
@@ -2178,6 +2205,25 @@ function LanguageSection() {
 
 /* ============ Keyboard Shortcuts Section ============ */
 function KeyboardShortcutsSection() {
+  const [activeTestKey, setActiveTestKey] = useState<string>("");
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      const keysPressed = [];
+      if (e.ctrlKey || e.metaKey) keysPressed.push("Ctrl");
+      if (e.shiftKey) keysPressed.push("Shift");
+      if (e.altKey) keysPressed.push("Alt");
+      if (e.key !== "Control" && e.key !== "Shift" && e.key !== "Alt" && e.key !== "Meta") {
+        keysPressed.push(e.key.toUpperCase());
+      }
+      setActiveTestKey(keysPressed.join(" + "));
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const SHORTCUTS = [
     { keys: ["Ctrl", "Z"], action: "Undo", desc: "Revert the last change made to the design." },
     { keys: ["Ctrl", "Shift", "Z"], action: "Redo", desc: "Restore the last undone action." },
@@ -2196,6 +2242,21 @@ function KeyboardShortcutsSection() {
         <p className="mt-1 text-sm text-slate-500">
           Boost your design efficiency with editor keyboard hotkeys.
         </p>
+      </div>
+
+      {/* Interactive testing field */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 text-center flex flex-col items-center justify-center space-y-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Interactive Hotkey Test Pad</span>
+        <p className="text-xs text-slate-550 font-medium">Press any combination of keys on your keyboard to test:</p>
+        <div className="h-12 flex items-center justify-center px-6 py-2 rounded-xl bg-white border border-slate-200 min-w-[200px]">
+          {activeTestKey ? (
+            <span className="font-mono text-sm font-bold text-blue-700 tracking-wide animate-pulse">
+              {activeTestKey}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400 font-bold italic">Press keys to detect...</span>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -2220,7 +2281,7 @@ function KeyboardShortcutsSection() {
                   </div>
                 </td>
                 <td className="py-3 px-5 font-bold text-slate-900">{s.action}</td>
-                <td className="py-3 px-5 text-slate-500 font-medium">{s.desc}</td>
+                <td className="py-3 px-5 text-slate-550 font-medium">{s.desc}</td>
               </tr>
             ))}
           </tbody>
@@ -2234,27 +2295,47 @@ function KeyboardShortcutsSection() {
 function StorageSection() {
   const [cachedHistoryCount, setCachedHistoryCount] = useState(0);
   const [cachedSnapshotsCount, setCachedSnapshotsCount] = useState(0);
+  const [localStorageKB, setLocalStorageKB] = useState(0);
+  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
+  const calculateStorage = () => {
     if (typeof window !== "undefined") {
       const hist = localStorage.getItem("digiscale_export_history");
       if (hist) {
         try {
           setCachedHistoryCount(JSON.parse(hist).length);
         } catch (e) {}
+      } else {
+        setCachedHistoryCount(0);
       }
-      
+
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          total += key.length + (localStorage.getItem(key)?.length || 0);
+        }
+      }
+      setLocalStorageKB(Math.round((total / 1024) * 100) / 100);
+
       getBackupsFromIndexedDB().then(bak => {
         setCachedSnapshotsCount(bak.length);
-      }).catch(() => {});
+      }).catch(() => {
+        setCachedSnapshotsCount(0);
+      });
     }
+  };
+
+  useEffect(() => {
+    calculateStorage();
   }, []);
 
   const handleClearCache = () => {
     if (window.confirm("Are you sure you want to clear export history logs? This will reset your Export History list.")) {
       localStorage.removeItem("digiscale_export_history");
-      setCachedHistoryCount(0);
-      alert("Cache cleared successfully!");
+      calculateStorage();
+      setStatusMsg({ type: "success", text: "Export history logs cleared successfully!" });
+      setTimeout(() => setStatusMsg(null), 3000);
     }
   };
 
@@ -2267,17 +2348,29 @@ function StorageSection() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {statusMsg && (
+        <div className="rounded-xl p-4 text-sm font-semibold border bg-green-50 border-green-200 text-green-700">
+          {statusMsg.text}
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Export Log Items</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{cachedHistoryCount} items</p>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">Cached locally in browser storage.</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">Cached locally in browser.</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">IndexedDB Snapshots</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{cachedSnapshotsCount} snapshots</p>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">Local backup points available to restore.</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">Live database snapshots.</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">LocalStorage Size</div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{localStorageKB} KB</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">Total metadata quota used.</p>
         </div>
       </div>
 
@@ -2290,7 +2383,7 @@ function StorageSection() {
         </div>
         <button
           onClick={handleClearCache}
-          className="px-4 py-2 border border-slate-350 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-bold rounded-lg transition active:scale-95"
+          className="px-4 py-2 border border-slate-350 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-bold rounded-lg transition active:scale-95 cursor-pointer"
         >
           Clear Export Logs Cache
         </button>
