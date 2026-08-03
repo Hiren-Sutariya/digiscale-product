@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import DashboardNavbar from "@/components/layout/DashboardNavbar";
+import { checkAndRunAutoBackup } from "@/lib/backup";
+import { getUserProfile } from "@/services/api";
 
 export default function DashboardLayout({
   children,
@@ -19,11 +21,24 @@ export default function DashboardLayout({
     }
   }, [pathname]);
 
+  // Run automatic background backup check on mount
+  useEffect(() => {
+    getUserProfile()
+      .then((profile) => {
+        if (profile && profile.id) {
+          checkAndRunAutoBackup(profile.id.toString());
+        }
+      })
+      .catch((err) => {
+        console.error("Auto-backup validation skipped (offline/unauthenticated):", err);
+      });
+  }, []);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {!hideNavbar && <DashboardNavbar />}
 
-      <main ref={mainRef} className="flex-1 overflow-auto bg-slate-50">
+      <main ref={mainRef} className="flex-1 overflow-hidden bg-slate-50 flex flex-col">
         {children}
       </main>
     </div>

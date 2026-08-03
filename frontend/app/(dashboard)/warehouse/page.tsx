@@ -557,7 +557,7 @@ export default function WarehousePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
+      <div className="flex flex-col h-full items-center justify-center">
         <div className="relative">
           <div className="absolute inset-0 rounded-full blur-xl bg-blue-500/20 animate-pulse"></div>
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 relative z-10" />
@@ -584,11 +584,10 @@ export default function WarehousePage() {
     : [];
 
   return (
-    <div className="px-8 pt-4 pb-12 min-h-screen bg-slate-50/50">
-      <div className="space-y-6">
-        
-        {/* Toolbar */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
+      {/* Static Toolbar Header */}
+      <div className="shrink-0 px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Search Inputs Row */}
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
             {/* Shelf Rows Search */}
@@ -632,6 +631,11 @@ export default function WarehousePage() {
             Create Shelf Row
           </button>
         </div>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
+        <div className="space-y-6">
 
         {/* Stats Section */}
         {globalSearchQuery.trim() === "" && (
@@ -1269,6 +1273,7 @@ export default function WarehousePage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

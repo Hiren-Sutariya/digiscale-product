@@ -7,6 +7,7 @@ from app.database import engine, Base
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
 from app.api.upload import router as upload_router
+from app.api.remove_bg import router as remove_bg_router
 
 from app.api.settings import router as settings_router
 
@@ -48,6 +49,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(upload_router)
 app.include_router(settings_router, prefix="/settings", tags=["settings"])
+app.include_router(remove_bg_router)
 
 
 @app.get("/")

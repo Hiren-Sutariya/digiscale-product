@@ -5,6 +5,7 @@ class UserSettingsBase(BaseModel):
     phone: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
+    auto_remove_background: Optional[bool] = False
 
     company_logo: Optional[str] = None
     company_name: Optional[str] = None

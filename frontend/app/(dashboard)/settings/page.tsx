@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   User,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword, logout } from "@/services/api";
 import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
@@ -50,13 +51,13 @@ function SettingsPageContent() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-8 h-[calc(100vh-80px)] flex flex-col overflow-hidden">
 
       <PageTitle
         title="Settings"
       />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div className="mt-8 flex-1 grid gap-8 lg:grid-cols-[280px_1fr] overflow-hidden min-h-0">
 
         {/* Sidebar Tabs */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 space-y-1.5 shadow-sm h-fit shrink-0">
@@ -83,9 +84,7 @@ function SettingsPageContent() {
 
           <button 
             onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user_name");
-              localStorage.removeItem("user_email");
+              logout();
               window.location.href = "/login";
             }}
             className="flex w-full items-center gap-4 rounded-xl px-4 py-3 text-[15px] font-medium text-red-600 transition hover:bg-red-50"
@@ -98,7 +97,7 @@ function SettingsPageContent() {
         </div>
 
         {/* Content */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 overflow-y-auto h-full shadow-sm">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
           {activeTab === "notifications" && <NotificationsSection />}
@@ -117,6 +116,7 @@ function ProfileSection() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("Male");
+  const [autoRemoveBg, setAutoRemoveBg] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -146,6 +146,7 @@ function ProfileSection() {
           setPhone(settingsData.phone || "");
           setOriginalPhone(settingsData.phone || "");
           setGender(settingsData.gender || "Male");
+          setAutoRemoveBg(settingsData.auto_remove_background || false);
           setAvatarUrl(settingsData.avatar_url || null);
           setLoading(false);
         } catch(e) {}
@@ -164,6 +165,7 @@ function ProfileSection() {
           setPhone(settingsData.phone || "");
           setOriginalPhone(settingsData.phone || "");
           setGender(settingsData.gender || "Male");
+          setAutoRemoveBg(settingsData.auto_remove_background || false);
           setAvatarUrl(settingsData.avatar_url || null);
         }
         setLoading(false);
@@ -210,7 +212,8 @@ function ProfileSection() {
       await updateUserSettings({
         phone,
         gender,
-        avatar_url: avatarUrl
+        avatar_url: avatarUrl,
+        auto_remove_background: autoRemoveBg
       });
       
       await updateUserProfile(name, email);
@@ -226,10 +229,8 @@ function ProfileSection() {
       setStatusMsg({ type: "success", text: "Changes saved successfully!" });
       setSaving(false);
       
-      // Force page reload after short delay to sync navbar
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Dispatch event for components to sync if they want
+      window.dispatchEvent(new Event("profileUpdated"));
     } catch (err: any) {
       setStatusMsg({ type: "error", text: err.message || "Failed to update profile." });
       setSaving(false);
@@ -439,6 +440,22 @@ function ProfileSection() {
               <option value="Prefer not to say">Prefer not to say</option>
             </select>
             <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
+
+        <div className="sm:col-span-2 mt-4 p-4 rounded-xl border border-blue-100 bg-blue-50/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-slate-900 text-sm">Auto Remove Background</p>
+              <p className="mt-1 text-xs text-slate-500">Automatically remove image backgrounds when uploading in Collections.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAutoRemoveBg(!autoRemoveBg)}
+              className={`relative h-7 w-12 rounded-full transition ${autoRemoveBg ? "bg-blue-600" : "bg-slate-300"}`}
+            >
+              <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition ${autoRemoveBg ? "left-[22px]" : "left-0.5"}`} />
+            </button>
           </div>
         </div>
       </div>
@@ -783,9 +800,7 @@ function SecuritySection() {
       await deleteAccount();
       
       // Clear user login credentials
-      localStorage.removeItem("token");
-      localStorage.removeItem("user_name");
-      localStorage.removeItem("user_email");
+      logout();
       
       setShowConfirmModal(false);
       
@@ -796,7 +811,6 @@ function SecuritySection() {
       setDeleting(false);
     }
   };
-
   return (
     <div className="space-y-8">
       <div>
@@ -1422,305 +1436,568 @@ function CompanySection() {
 }
 
 /* ============ Backup Section ============ */
+
+/* ============ Backup Section ============ */
+import { 
+  createBackupPayload, 
+  downloadExcelFromBackupPayload, 
+  restoreBackupFromExcel, 
+  restoreBackupPayload, 
+  formatBackupDate,
+  deleteAllWorkspaceData
+} from "@/lib/backup";
+import { 
+  getBackupsFromIndexedDB, 
+  deleteBackupFromIndexedDB,
+  saveBackupToIndexedDB
+} from "@/lib/db";
+import { 
+  Download, 
+  RefreshCw, 
+  Clock, 
+  CheckCircle, 
+  AlertTriangle, 
+  AlertCircle, 
+  X, 
+  Database
+} from "lucide-react";
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
 function BackupSection() {
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [lastBackupTime, setLastBackupTime] = useState<string>("Never");
+  const [autoBackupFrequency, setAutoBackupFrequency] = useState<string>("7");
+  const [localBackups, setLocalBackups] = useState<any[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDownloadBackup = () => {
+  // Custom modal state
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    type: "success" | "error" | "confirm";
+    onConfirm?: () => void;
+  } | null>(null);
+
+  // Load user profile and IndexedDB backups on mount
+  useEffect(() => {
+    getUserProfile().then((profile) => {
+      if (profile && profile.id) {
+        setCurrentUserId(profile.id.toString());
+      }
+    });
+
+    if (typeof window !== "undefined") {
+      const storedLast = localStorage.getItem("digiscale_last_backup_time");
+      if (storedLast) setLastBackupTime(storedLast);
+
+      const storedFreq = localStorage.getItem("digiscale_auto_backup_frequency") || "7";
+      setAutoBackupFrequency(storedFreq);
+    }
+
+    refreshBackupHistory();
+  }, []);
+
+  const refreshBackupHistory = async () => {
     try {
-      const backupData: Record<string, string> = {};
-      let totalBytes = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith("digiscale_") || key.startsWith("quotation_data_"))) {
-          const val = localStorage.getItem(key) || "";
-          backupData[key] = val;
-          totalBytes += key.length + val.length;
-        }
-      }
-      
-      // We will create two files: the Excel file and the raw JSON. Wait, no, we just download the Excel file.
-      const wb = XLSX.utils.book_new();
-
-      // Collections
-      try {
-        const colsStr = backupData["digiscale_cached_collections"];
-        const cols = colsStr ? JSON.parse(colsStr) : [];
-        if (cols.length > 0) {
-          const flatCols = cols.map((c: any) => ({
-            "Collection ID": c.id,
-            "Collection Name": c.name,
-            "Type": c.type,
-            "Item Count": c.itemCount || 0,
-            "Total Value": c.totalValue || 0,
-          }));
-          const wsCols = XLSX.utils.json_to_sheet(flatCols);
-          XLSX.utils.book_append_sheet(wb, wsCols, "Collections");
-        }
-      } catch (e) {}
-
-      // Products (we have to look at digiscale_products_* keys and digiscale_cached_all_products)
-      try {
-        const allProducts = [];
-        
-        // Add cached all products
-        const allProdsStr = backupData["digiscale_cached_all_products"];
-        if (allProdsStr) {
-          const arr = JSON.parse(allProdsStr);
-          if (Array.isArray(arr)) allProducts.push(...arr);
-        }
-
-        for (const [key, val] of Object.entries(backupData)) {
-          if (key.startsWith("digiscale_products_")) {
-            const arr = JSON.parse(val);
-            if (Array.isArray(arr)) {
-              allProducts.push(...arr);
-            }
-          }
-        }
-        
-        // Deduplicate products by ID
-        const uniqueProducts = Array.from(new Map(allProducts.map(p => [p.id, p])).values());
-
-        if (uniqueProducts.length > 0) {
-          // Flatten nested objects to make them Excel-friendly and explicitly map Image URL
-          const flatProducts = uniqueProducts.map((p: any) => ({
-            "Product ID": p.id || "",
-            "Product Name": p.name || "",
-            "SKU": p.sku || "",
-            "Rate": p.rate || "",
-            "Stock": p.stock || 0,
-            "Carton Qty": p.cartonQty || 1,
-            "Unit Type": p.unit_type || "pcs",
-            "Color": p.color || "",
-            "Length": p.length || "",
-            "Warehouse/Rack": p.warehouse || "",
-            "Description": p.description || "",
-            "Image URL": p.photoUrl || "",
-          }));
-          const wsProds = XLSX.utils.json_to_sheet(flatProducts);
-          XLSX.utils.book_append_sheet(wb, wsProds, "Products");
-        }
-      } catch (e) {}
-
-      // Warehouse
-      try {
-        const slotsStr = backupData["digiscale_warehouse_slots"] || backupData["digiscale_cached_warehouse_slots"];
-        if (slotsStr) {
-          const slotsMap = JSON.parse(slotsStr);
-          const slotsList = Object.values(slotsMap);
-          const wsSlots = XLSX.utils.json_to_sheet(slotsList);
-          XLSX.utils.book_append_sheet(wb, wsSlots, "Warehouse Slots");
-        }
-
-        const assignStr = backupData["digiscale_warehouse_assignments"] || backupData["digiscale_cached_warehouse_assignments"];
-        if (assignStr) {
-          const assignMap = JSON.parse(assignStr);
-          const assignList = Object.values(assignMap).flat();
-          const wsAssign = XLSX.utils.json_to_sheet(assignList as any[]);
-          XLSX.utils.book_append_sheet(wb, wsAssign, "Warehouse Assignments");
-        }
-      } catch (e) {}
-
-      // Quotations
-      try {
-        const allQuotations = [];
-        for (const [key, val] of Object.entries(backupData)) {
-          if (key.startsWith("quotation_data_")) {
-            const payload = JSON.parse(val);
-            // Payload is {quotations: [], currentQuotation: null}
-            if (payload && Array.isArray(payload.quotations)) {
-              allQuotations.push(...payload.quotations);
-            }
-          }
-        }
-
-        if (allQuotations.length > 0) {
-          // Flatten items
-          const flatQuotations = allQuotations.map((q: any) => ({
-            ...q,
-            items: JSON.stringify(q.items || [])
-          }));
-          const wsQuots = XLSX.utils.json_to_sheet(flatQuotations);
-          XLSX.utils.book_append_sheet(wb, wsQuots, "Quotations");
-        }
-      } catch (e) {}
-
-      // Add a hidden-like System_Data sheet to store exact state for reliable restoration
-      try {
-        const systemDataRows = [];
-        const MAX_CELL_CHARS = 30000;
-        for (const [k, v] of Object.entries(backupData)) {
-          if (v.length <= MAX_CELL_CHARS) {
-            systemDataRows.push({ Key: k, Chunk: 0, Value: v });
-          } else {
-            let chunkIdx = 0;
-            for (let i = 0; i < v.length; i += MAX_CELL_CHARS) {
-              systemDataRows.push({ Key: k, Chunk: chunkIdx++, Value: v.substring(i, i + MAX_CELL_CHARS) });
-            }
-          }
-        }
-        const wsSystem = XLSX.utils.json_to_sheet(systemDataRows);
-        XLSX.utils.book_append_sheet(wb, wsSystem, "System_Data");
-      } catch(e) {}
-
-      // If workbook is empty, add a dummy sheet
-      if (wb.SheetNames.length === 0) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ message: "No data found" }]), "Empty");
-      }
-
-      XLSX.writeFile(wb, `Digiscale_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
-      setSuccessMsg("Backup downloaded successfully in Excel format.");
-      setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err: any) {
-      setErrorMsg("Failed to download backup.");
+      const backups = await getBackupsFromIndexedDB();
+      setLocalBackups(backups);
+    } catch (e) {
+      console.error("Failed to load local backups from IndexedDB:", e);
     }
   };
 
-  const handleUploadBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const getBackupSize = (bak: any): number => {
+    try {
+      return JSON.stringify(bak).length;
+    } catch {
+      return 0;
+    }
+  };
+
+  const totalBackupSize = localBackups.reduce((sum, bak) => sum + getBackupSize(bak), 0);
+
+  const handleCreateLocalSnapshot = async () => {
+    if (!currentUserId) {
+      setModalConfig({
+        title: "Error",
+        message: "User profile not loaded yet. Please try again in a moment.",
+        type: "error"
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = await createBackupPayload(currentUserId);
+      const timestamp = new Date().toISOString();
+      await saveBackupToIndexedDB(timestamp, {
+        fileName: `Backup_${timestamp.split("T")[0]}.xlsx`,
+        ...payload
+      });
+      localStorage.setItem("digiscale_last_backup_time", timestamp);
+      setLastBackupTime(timestamp);
+      setModalConfig({
+        title: "Snapshot Created",
+        message: "Your live database snapshot has been successfully saved to history without file download.",
+        type: "success"
+      });
+      await refreshBackupHistory();
+    } catch (err: any) {
+      setModalConfig({
+        title: "Error",
+        message: "Failed to create local snapshot: " + (err.message || err),
+        type: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualExport = async () => {
+    if (!currentUserId) {
+      setModalConfig({
+        title: "Error",
+        message: "User profile not loaded yet. Please try again in a moment.",
+        type: "error"
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = await createBackupPayload(currentUserId);
+      
+      // Download Excel
+      downloadExcelFromBackupPayload(payload);
+
+      // Save a local auto-backup copy in IndexedDB
+      const timestamp = new Date().toISOString();
+      await saveBackupToIndexedDB(timestamp, {
+        fileName: `Backup_${timestamp.split("T")[0]}.xlsx`,
+        ...payload
+      });
+
+      // Update state
+      localStorage.setItem("digiscale_last_backup_time", timestamp);
+      setLastBackupTime(timestamp);
+      
+      setModalConfig({
+        title: "Success",
+        message: "Your live database has been successfully downloaded as an Excel workbook and saved to history.",
+        type: "success"
+      });
+      await refreshBackupHistory();
+    } catch (err: any) {
+      setModalConfig({
+        title: "Error",
+        message: "Failed to generate Excel backup: " + (err.message || err),
+        type: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!currentUserId) {
+      setModalConfig({
+        title: "Error",
+        message: "User profile not loaded yet. Please try again.",
+        type: "error"
+      });
+      return;
+    }
 
     setLoading(true);
-    setErrorMsg("");
-    setSuccessMsg("");
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
-
-        if (!wb.SheetNames.includes("System_Data")) {
-          throw new Error("Invalid backup format. Missing System_Data sheet.");
-        }
-
-        const systemSheet = wb.Sheets["System_Data"];
-        const systemRows: any[] = XLSX.utils.sheet_to_json(systemSheet);
-
-        // Group by Key and sort by Chunk
-        const dataMap: Record<string, {chunk: number, val: string}[]> = {};
-        for (const row of systemRows) {
-          if (row.Key !== undefined && row.Value !== undefined) {
-            if (!dataMap[row.Key]) dataMap[row.Key] = [];
-            dataMap[row.Key].push({ chunk: row.Chunk || 0, val: row.Value });
-          }
-        }
-
-        let restoredCount = 0;
-        for (const [key, chunks] of Object.entries(dataMap)) {
-          chunks.sort((a, b) => a.chunk - b.chunk);
-          const fullValue = chunks.map(c => c.val).join("");
-          if (key.startsWith("digiscale_") || key.startsWith("quotation_data_")) {
-            localStorage.setItem(key, fullValue);
-            restoredCount++;
-          }
-        }
-        
-        setSuccessMsg(`Backup restored successfully (${restoredCount} items). Reloading page...`);
-        setTimeout(() => {
+    try {
+      const count = await restoreBackupFromExcel(file, currentUserId);
+      setModalConfig({
+        title: "Database Restored",
+        message: `Your live database has been perfectly restored with ${count} items. Workspace will reload to apply changes.`,
+        type: "success",
+        onConfirm: () => {
           window.location.reload();
-        }, 1500);
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to restore backup. Invalid file format.");
-        setLoading(false);
-      }
-    };
-    reader.onerror = () => {
-      setErrorMsg("Error reading the file.");
+        }
+      });
+    } catch (err: any) {
+      setModalConfig({
+        title: "Error Restoring",
+        message: err.message || "Failed to restore backup. Invalid Excel spreadsheet format.",
+        type: "error"
+      });
       setLoading(false);
-    };
-    reader.readAsArrayBuffer(file);
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  const [storageSize, setStorageSize] = useState("0 MB");
+  const triggerRestoreLocal = (timestamp: string, backup: any) => {
+    if (!currentUserId) return;
+    setModalConfig({
+      title: "Confirm Restore",
+      message: "Are you sure you want to restore this local snapshot? This will overwrite all collections, products, warehouse slots, and quotations currently on Supabase.",
+      type: "confirm",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await restoreBackupPayload(backup, currentUserId);
+          setModalConfig({
+            title: "Database Restored",
+            message: "Your database has been successfully restored from local snapshot. Reloading workspace...",
+            type: "success",
+            onConfirm: () => {
+              window.location.reload();
+            }
+          });
+        } catch (err: any) {
+          setModalConfig({
+            title: "Restore Failed",
+            message: "Failed to restore from local snapshot: " + (err.message || err),
+            type: "error"
+          });
+          setLoading(false);
+        }
+      }
+    });
+  };
 
-  useEffect(() => {
-    let bytes = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith("digiscale_") || key.startsWith("quotation_data_"))) {
-        bytes += key.length + (localStorage.getItem(key)?.length || 0);
+  const handleDownloadLocal = (backup: any) => {
+    try {
+      downloadExcelFromBackupPayload(backup);
+    } catch (err: any) {
+      setModalConfig({
+        title: "Download Failed",
+        message: "Failed to generate Excel download: " + (err.message || err),
+        type: "error"
+      });
+    }
+  };
+
+  const triggerDeleteLocal = async (timestamp: string) => {
+    if (window.confirm("Are you sure you want to delete this backup snapshot? This action is permanent and cannot be undone.")) {
+      try {
+        await deleteBackupFromIndexedDB(timestamp);
+        await refreshBackupHistory();
+      } catch (err: any) {
+        setModalConfig({
+          title: "Delete Failed",
+          message: "Failed to delete backup snapshot: " + (err.message || err),
+          type: "error"
+        });
       }
     }
-    setStorageSize((bytes / (1024 * 1024)).toFixed(2) + " MB");
-  }, []);
+  };
+
+  const handleFrequencyChange = (val: string) => {
+    setAutoBackupFrequency(val);
+    localStorage.setItem("digiscale_auto_backup_frequency", val);
+  };
+
+  const getFrequencyLabel = (freq: string): string => {
+    switch (freq) {
+      case "off": return "Off (Disable Auto-Backups)";
+      case "1": return "Every Day (Daily)";
+      case "7": return "Every 7 Days (Weekly)";
+      case "30": return "Every 30 Days (Monthly)";
+      default: return "Every 7 Days (Weekly)";
+    }
+  };
+
+  const handleEraseAllData = async () => {
+    if (!currentUserId) return;
+    
+    setModalConfig({
+      title: "Confirm Erase All Data",
+      message: "WARNING: This will permanently erase ALL your workspace data (Products, Collections, Clients, etc.). Your user profile and settings will be preserved. Are you absolutely sure you want to proceed?",
+      type: "confirm",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await deleteAllWorkspaceData(currentUserId);
+          setModalConfig({
+            title: "Workspace Erased",
+            message: "All workspace data has been permanently deleted.",
+            type: "success"
+          });
+          setTimeout(() => window.location.reload(), 2000);
+        } catch (err: any) {
+          console.error(err);
+          setModalConfig({
+            title: "Erase Failed",
+            message: "Failed to erase workspace data: " + (err.message || err),
+            type: "error"
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Data & Backup</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Export your local Digiscale application data to Excel.
-        </p>
-        <p className="mt-2 text-sm font-semibold text-blue-600">
-          Total Storage Used: {storageSize}
-        </p>
+      {/* Custom Alert/Confirm Modal Popup */}
+      {modalConfig && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => {
+              if (modalConfig.type !== "confirm") setModalConfig(null);
+            }}
+          />
+          <div className="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-2xl transition-all duration-300 scale-100 border border-slate-100 z-10">
+            <div className="flex items-start gap-4">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                modalConfig.type === "success" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                modalConfig.type === "error" ? "bg-red-50 text-red-600 border border-red-100" :
+                "bg-amber-50 text-amber-600 border border-amber-100"
+              }`}>
+                {modalConfig.type === "success" && <CheckCircle className="h-5 w-5" />}
+                {modalConfig.type === "error" && <AlertCircle className="h-5 w-5" />}
+                {modalConfig.type === "confirm" && <AlertTriangle className="h-5 w-5" />}
+              </div>
+              
+              <div className="flex-1 mt-0.5">
+                <h3 className={`text-base font-bold leading-6 ${
+                  modalConfig.type === 'error' ? 'text-red-600' :
+                  modalConfig.type === 'success' ? 'text-emerald-700' :
+                  modalConfig.type === 'confirm' ? 'text-amber-700' : 'text-slate-900'
+                }`}>
+                  {modalConfig.title}
+                </h3>
+                <div className="mt-2">
+                  <p className="text-[13px] text-slate-500 font-semibold leading-relaxed">
+                    {modalConfig.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              {modalConfig.type === "confirm" && (
+                <button
+                  type="button"
+                  className="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors focus:outline-none"
+                  onClick={() => setModalConfig(null)}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                className={`inline-flex justify-center rounded-lg border border-transparent px-5 py-2 text-xs font-bold text-white transition-colors focus:outline-none shadow-sm ${
+                  modalConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                  modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                  modalConfig.type === 'confirm' ? 'bg-amber-600 hover:bg-amber-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+                }`}
+                onClick={() => {
+                  if (modalConfig.onConfirm) {
+                    modalConfig.onConfirm();
+                  } else {
+                    setModalConfig(null);
+                  }
+                }}
+              >
+                {modalConfig.type === "confirm" ? "Proceed" : "OK"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Title Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900">Data & Backup</h2>
+          <p className="mt-1 text-xs text-slate-500 font-medium">
+            Manage your live Supabase database backups, exports, and automatic background snapshots.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100">
+            <Clock className="h-3.5 w-3.5" />
+            Last Backup: {lastBackupTime === "Never" ? "Never" : formatBackupDate(lastBackupTime)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-100">
+            <HardDrive className="h-3.5 w-3.5" />
+            Backup Storage: {formatBytes(totalBackupSize)}
+          </span>
+        </div>
       </div>
 
-      {errorMsg && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-          {errorMsg}
-        </div>
-      )}
-      {successMsg && (
-        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-600 border border-emerald-200">
-          {successMsg}
-        </div>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
+      {/* Top Controls Grid: Auto-Backup, Manual Actions, Danger Zone */}
+      <div className="grid gap-5 md:grid-cols-3 relative z-20">
+        {/* 1. Auto Backup Configuration */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col h-full">
           <div>
-            <h3 className="font-semibold text-slate-900">Download Excel Backup</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Save a copy of your collections, products, warehouse layouts, and quotations locally to an Excel file (.xlsx).
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Auto-Backup
+            </h3>
+            <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed font-semibold">
+              Automatically take background snapshots stored securely in your browser's IndexedDB.
             </p>
           </div>
-          <button 
-            onClick={handleDownloadBackup}
-            className="mt-6 w-fit rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-sm"
-          >
-            Export Excel
-          </button>
+          <div className="mt-auto pt-4">
+            <label className="mb-1.5 block text-[11px] font-bold text-slate-700 uppercase tracking-wider">Frequency</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-50 outline-none shadow-sm"
+              >
+                <span className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-slate-500" />
+                  {getFrequencyLabel(autoBackupFrequency)}
+                </span>
+                <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {dropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                  <div className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl transition-all">
+                    {[
+                      { value: "off", label: "Off (Disable)" },
+                      { value: "1", label: "Every Day" },
+                      { value: "7", label: "Every 7 Days" },
+                      { value: "30", label: "Every 30 Days" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => { handleFrequencyChange(opt.value); setDropdownOpen(false); }}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-bold transition ${autoBackupFrequency === opt.value ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}
+                      >
+                        <span>{opt.label}</span>
+                        {autoBackupFrequency === opt.value && <Check className="h-3.5 w-3.5" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 flex flex-col justify-between">
+        {/* 2. Manual Backup Actions */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col h-full">
           <div>
-            <h3 className="font-semibold text-slate-900">Upload Excel Backup</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Restore your data from a Digiscale Excel backup file (.xlsx). This will overwrite existing local data.
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <Database className="h-5 w-5 text-blue-600" />
+              Manual Actions
+            </h3>
+            <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed font-semibold">
+              Create, download, or restore backups manually from Excel files.
             </p>
           </div>
-          <div className="mt-6">
-            <input 
-              type="file" 
-              accept=".xlsx" 
-              className="hidden" 
-              ref={fileInputRef}
-              onChange={handleUploadBackup}
-            />
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-              className="w-fit rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-400 shadow-sm disabled:opacity-50"
-            >
-              {loading ? "Restoring..." : "Import Backup"}
+          <div className="mt-auto pt-4 space-y-2">
+            <div className="flex gap-2">
+              <button onClick={handleCreateLocalSnapshot} disabled={loading} className="flex-1 rounded-xl border border-blue-600 bg-white text-blue-600 py-2 text-[11px] font-bold transition hover:bg-blue-50 active:scale-98">
+                Local Backup
+              </button>
+              <button onClick={handleManualExport} disabled={loading} className="flex-1 rounded-xl bg-blue-600 text-white py-2 text-[11px] font-bold transition hover:bg-blue-700 active:scale-98">
+                Export Excel
+              </button>
+            </div>
+            <div>
+              <input type="file" accept=".xlsx" className="hidden" ref={fileInputRef} onChange={handleUploadBackup} />
+              <button onClick={() => fileInputRef.current?.click()} disabled={loading} className="w-full rounded-xl border border-slate-300 bg-white py-2 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50">
+                {loading ? "Restoring..." : "Import Excel Backup"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Danger Zone */}
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-5 flex flex-col h-full shadow-sm">
+          <div>
+            <h3 className="font-bold text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Danger Zone
+            </h3>
+            <p className="mt-1.5 text-[11px] text-red-600/80 leading-relaxed font-bold">
+              Permanently erase all workspace data (Products, Collections, etc.). Irrecoverable without backup.
+            </p>
+          </div>
+          <div className="mt-auto pt-4">
+            <button onClick={handleEraseAllData} disabled={loading} className="w-full rounded-xl bg-red-600 py-2 text-[11px] font-bold text-white transition hover:bg-red-700 flex items-center justify-center gap-2 active:scale-98 shadow-sm">
+              <Trash2 className="h-3.5 w-3.5" />
+              {loading ? "Erasing Data..." : "Erase All Data"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* 4. Local Backup Snapshots History Table */}
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm flex flex-col">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm">Local Backup Snapshots</h3>
+            <p className="text-[11px] text-slate-500 font-semibold">Restore or download any local snapshot directly from IndexedDB.</p>
+          </div>
+          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+            Total: {localBackups.length}
+          </span>
+        </div>
+        {localBackups.length === 0 ? (
+          <div className="p-8 text-center text-xs font-bold text-slate-400 bg-slate-50/50">
+            No local snapshots stored yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto max-h-[35vh] overflow-y-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-slate-50 shadow-sm z-10">
+                <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-sm">
+                  <th className="py-2.5 px-5">Date & Time</th>
+                  <th className="py-2.5 px-5">Name</th>
+                  <th className="py-2.5 px-5">Size</th>
+                  <th className="py-2.5 px-5 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700 bg-white">
+                {localBackups.map((bak) => (
+                  <tr key={bak.timestamp} className="hover:bg-slate-50/50 transition">
+                    <td className="py-2.5 px-5 font-bold text-slate-900">{formatBackupDate(bak.timestamp)}</td>
+                    <td className="py-2.5 px-5 text-slate-500">{bak.fileName || "Auto-saved snapshot"}</td>
+                    <td className="py-2.5 px-5 text-slate-600 font-bold">{formatBytes(getBackupSize(bak))}</td>
+                    <td className="py-2.5 px-5">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => triggerRestoreLocal(bak.timestamp, bak)} disabled={loading} className="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition font-bold flex items-center gap-1.5" title="Restore">
+                          <RefreshCw className="h-3 w-3" /> Restore
+                        </button>
+                        <button onClick={() => handleDownloadLocal(bak)} className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition font-bold flex items-center gap-1.5" title="Download">
+                          <Download className="h-3 w-3" /> Save
+                        </button>
+                        <button onClick={() => triggerDeleteLocal(bak.timestamp)} className="p-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition" title="Delete">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
 export default function SettingsPage() {
   return (

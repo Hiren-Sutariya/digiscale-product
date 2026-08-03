@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import SignupRequest, LoginRequest, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest
@@ -53,7 +56,6 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     # Check if account deletion is scheduled
     if user.deletion_scheduled_at:
         # Check if the 7-day grace period has passed
-        from datetime import datetime
         time_elapsed = datetime.utcnow() - user.deletion_scheduled_at
         if time_elapsed.days >= 7:
             # Permanently delete user

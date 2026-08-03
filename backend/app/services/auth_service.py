@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from hmac import HMAC
 import json
 import base64
 import time
@@ -45,7 +46,8 @@ def create_access_token(data: Dict, expires_delta: Optional[float] = None) -> st
     # Calculate signature
     signing_input = ".".join(segments).encode('utf-8')
     key = settings.JWT_SECRET.encode('utf-8')
-    signature = hmac.new(key, signing_input, hashlib.sha256).digest()
+    mac: HMAC = hmac.new(key, signing_input, hashlib.sha256)
+    signature = mac.digest()
     
     segments.append(base64url_encode(signature))
     return ".".join(segments)
@@ -61,7 +63,8 @@ def decode_access_token(token: str) -> Optional[Dict]:
         # Verify signature
         signing_input = f"{header_segment}.{payload_segment}".encode('utf-8')
         key = settings.JWT_SECRET.encode('utf-8')
-        expected_signature = hmac.new(key, signing_input, hashlib.sha256).digest()
+        mac: HMAC = hmac.new(key, signing_input, hashlib.sha256)
+        expected_signature = mac.digest()
         
         actual_signature = base64url_decode(crypto_segment)
         

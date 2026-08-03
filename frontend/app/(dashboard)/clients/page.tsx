@@ -221,11 +221,11 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="p-8 pb-32 min-h-screen bg-slate-50/50 relative">
-      <div className="w-full space-y-6">
-        
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
+      {/* Static Toolbar Header */}
+      <div className="shrink-0 px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80">
         {/* Toolbar */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
             <div className="relative w-full sm:w-[50%]">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -276,6 +276,10 @@ export default function ClientsPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
 
         {/* Clients Grid */}
         {loading ? (

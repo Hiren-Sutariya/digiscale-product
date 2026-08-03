@@ -169,10 +169,12 @@ function CollectionsPageContent() {
   // Products State
   const [products, setProducts] = useState<Product[]>([]);
   const [draftProducts, setDraftProducts] = useState<Partial<Product>[]>([]);
+  const [isSavingDraftIdx, setIsSavingDraftIdx] = useState<number | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [productSearch, setProductSearch] = useState("");
   const [editingProductRowId, setEditingProductRowId] = useState<string | null>(null);
   const [editingProductState, setEditingProductState] = useState<Partial<Product> | null>(null);
+  const [isSavingEditRow, setIsSavingEditRow] = useState(false);
 
   // PDF Download Modal States
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -706,7 +708,9 @@ function CollectionsPageContent() {
     });
   };
 
-  const handleSaveDraftRow = async (draft: Partial<Product>) => {
+  const handleSaveDraftRow = async (draft: Partial<Product>, idx: number) => {
+    if (isSavingDraftIdx !== null) return; // Prevent double-click / concurrent saves
+    setIsSavingDraftIdx(idx);
     const finalName = draft.name?.trim() || `Product #${products.length + 1}`;
     const targetCollectionId = selectedCol?.id;
     if (!targetCollectionId) {
@@ -773,6 +777,8 @@ function CollectionsPageContent() {
     } catch (err: any) {
       console.error("Failed to save product:", err?.message || err);
       alert("Failed to save product.");
+    } finally {
+      setIsSavingDraftIdx(null);
     }
   };
 
@@ -784,8 +790,10 @@ function CollectionsPageContent() {
 
   const handleSaveEditRow = async () => {
     if (!editingProductState || !editingProductRowId) return;
+    if (isSavingEditRow) return; // Prevent double-click
+    setIsSavingEditRow(true);
     const targetCollectionId = selectedCol?.id;
-    if (!targetCollectionId) return;
+    if (!targetCollectionId) { setIsSavingEditRow(false); return; }
 
     const productPayload = {
       name: editingProductState.name || "",
@@ -859,6 +867,8 @@ function CollectionsPageContent() {
     } catch (err) {
       console.error("Failed to update product:", err);
       alert("Failed to update product.");
+    } finally {
+      setIsSavingEditRow(false);
     }
   };
 
@@ -1941,14 +1951,13 @@ ${rows}
 
 
   return (
-    <div className="px-8 pt-4 pb-12 min-h-screen bg-slate-50/50">
+    <div className="px-8 pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
 
       {/* DETAIL VIEW MODE */}
       {selectedCol ? (
-        <div className="space-y-6">
-
-
-          <button
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0 space-y-6">
+          <div className="shrink-0 space-y-6">
+            <button
             onClick={() => {
               setSelectedCol(null);
               if (typeof window !== "undefined") {
@@ -2056,10 +2065,28 @@ ${rows}
               Workspace Images ({detailImages.length})
             </button>
           </div>
+        </div>
 
+        {/* Static Product Search Bar */}
+        {activeTab === "products" && (
+          <div className="shrink-0 px-0 pt-3 pb-2">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Search products by name or color..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className={`flex-1 min-h-0 ${activeTab === "products" ? "flex flex-col overflow-hidden" : "overflow-y-auto pr-1 pb-6 space-y-6"}`}>
           {activeTab === "products" && (
-            <div
-              className="space-y-4 rounded-2xl transition-all duration-200"
+          <div
+            className="flex-1 overflow-hidden min-h-0 flex flex-col space-y-4 rounded-2xl transition-all duration-200"
               onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
               onDragLeave={(ev) => { ev.currentTarget.classList.remove("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
               onDrop={(ev) => {
@@ -2132,18 +2159,6 @@ ${rows}
                 }
               }}
             >
-              {/* Product search bar */}
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-405" />
-                <input
-                  type="text"
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Search products by name or color..."
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                />
-              </div>
-
               {filteredProducts.length === 0 && draftProducts.length === 0 ? (
                 <div className="py-16 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 bg-white">
                   <Box className="h-10 w-10 text-slate-300 mb-3" />
@@ -2161,11 +2176,11 @@ ${rows}
                   </button>
                 </div>
               ) : (
-                <div className="overflow-hidden border border-slate-200 rounded-2xl bg-white shadow-sm">
-                  <div className="overflow-x-auto">
+                <div className="flex-1 overflow-hidden min-h-0 flex flex-col border border-slate-200 rounded-2xl bg-white shadow-sm">
+                  <div className="flex-1 overflow-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-wider text-slate-450">
+                        <tr className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-450 shadow-sm">
                           <th className="py-4 px-6 w-[40px] text-center">
                             <input 
                               type="checkbox" 
@@ -2290,8 +2305,26 @@ ${rows}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex gap-2 justify-center">
-                                <button onClick={() => handleSaveDraftRow(draft)} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Product"><Check className="h-4 w-4" /></button>
-                                <button onClick={() => setDraftProducts(prev => prev.filter((d) => d !== draft))} className="p-1.5 bg-red-50 text-red-500 rounded hover:bg-red-100 transition" title="Discard"><X className="h-4 w-4" /></button>
+                                <button
+                                  onClick={() => handleSaveDraftRow(draft, idx)}
+                                  disabled={isSavingDraftIdx !== null}
+                                  className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                  title="Save Product"
+                                >
+                                  {isSavingDraftIdx === idx ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => setDraftProducts(prev => prev.filter((d) => d !== draft))}
+                                  disabled={isSavingDraftIdx !== null}
+                                  className="p-1.5 bg-red-50 text-red-500 rounded hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                  title="Discard"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -2397,8 +2430,26 @@ ${rows}
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <div className="flex gap-2 justify-center">
-                                    <button onClick={handleSaveEditRow} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save Changes"><Check className="h-4 w-4" /></button>
-                                    <button onClick={() => { setEditingProductRowId(null); setEditingProductState(null); }} className="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200 transition" title="Cancel"><X className="h-4 w-4" /></button>
+                                    <button
+                                      onClick={handleSaveEditRow}
+                                      disabled={isSavingEditRow}
+                                      className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                      title="Save Changes"
+                                    >
+                                      {isSavingEditRow ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Check className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => { setEditingProductRowId(null); setEditingProductState(null); }}
+                                      disabled={isSavingEditRow}
+                                      className="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                      title="Cancel"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -2575,6 +2626,7 @@ ${rows}
             </div>
           )}
         </div>
+      </div>
       ) : (
         /* MAIN LIST/GRID VIEW */
         <>
@@ -2587,9 +2639,9 @@ ${rows}
 
 
               {currentTopTab === "collections" ? (
-                <>
+                <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                   {/* Toolbar */}
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+                  <div className="shrink-0 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
                     {/* Search Inputs Row */}
                     <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
                       {/* Collections Search */}
@@ -2657,9 +2709,10 @@ ${rows}
                       </button>
                     </div>
                   </div>
-
-                  {globalSearchQuery.trim() !== "" ? (
-                    renderGlobalSearchResults()
+                  
+                  <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1">
+                    {globalSearchQuery.trim() !== "" ? (
+                      renderGlobalSearchResults()
                   ) : (
                     <>
                       {filteredCollections.length === 0 ? (
@@ -2830,12 +2883,13 @@ ${rows}
                       )}
                     </>
                   )}
-                </>
+                  </div>
+                </div>
               ) : currentTopTab === "warehouse" ? (
                 /* WAREHOUSE — REDESIGNED */
-                <>
+                <div className="h-full flex flex-col overflow-hidden">
                   {/* Warehouse Toolbar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 mt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 mt-2 shrink-0">
                     <div className="relative w-full max-w-md">
                       <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
                       <input
@@ -2857,7 +2911,8 @@ ${rows}
                   </div>
 
                   {/* Hidable warehouse content */}
-                  {globalSearchQuery.trim() !== "" ? (
+                  <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1">
+                    {globalSearchQuery.trim() !== "" ? (
                     renderGlobalSearchResults()
                   ) : (
                     <div className="flex gap-6 items-start">
@@ -3129,7 +3184,8 @@ ${rows}
                       </div>
                     </div>
                   )}
-                </>
+                  </div>
+                </div>
               ) : (
                 <div className="mt-6">
                   <QuotationView />

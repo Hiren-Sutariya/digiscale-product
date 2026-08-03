@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -12,6 +12,7 @@ class UserSettings(Base):
     phone = Column(String, nullable=True)
     gender = Column(String, nullable=True)
     avatar_url = Column(Text, nullable=True)
+    auto_remove_background = Column(Boolean, default=False, nullable=False)
 
     # Company Settings
     company_logo = Column(Text, nullable=True)

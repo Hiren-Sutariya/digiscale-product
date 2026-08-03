@@ -1,6 +1,21 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/python",
+
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend"
-  ]
+  ],
+
+  "python.analysis.exclude": [
+    "${workspaceFolder}/backend/venv/**",
+    "${workspaceFolder}/backend/uploads/**",
+    "${workspaceFolder}/frontend/node_modules/**",
+    "${workspaceFolder}/frontend/.next/**"
+  ],
+
+  "python.analysis.typeCheckingMode": "off",
+
+  "pyrefly.enable": false,
+
+  "python.linting.enabled": false,
+  "python.linting.pyflakesEnabled": false
 }

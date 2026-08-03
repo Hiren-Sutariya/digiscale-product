@@ -28,12 +28,27 @@ export default function ClientDetailsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchClientDetails();
+    let initialLoad = true;
+    try {
+      const cachedClients = JSON.parse(sessionStorage.getItem("digiscale_clients") || "[]");
+      const cachedClient = cachedClients.find((c: any) => c.id.toString() === clientId);
+      if (cachedClient) {
+        setClient(cachedClient);
+        const cachedQuotes = JSON.parse(sessionStorage.getItem("digiscale_client_quotes") || "{}");
+        if (cachedQuotes[cachedClient.name.toLowerCase()]) {
+          setQuotations(cachedQuotes[cachedClient.name.toLowerCase()]);
+        }
+        setLoading(false);
+        initialLoad = false;
+      }
+    } catch (e) {}
+
+    fetchClientDetails(initialLoad);
   }, [clientId]);
 
-  const fetchClientDetails = async () => {
+  const fetchClientDetails = async (showLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const profile = await getUserProfile();
       if (!profile) throw new Error("Not authenticated");
 

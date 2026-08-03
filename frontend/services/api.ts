@@ -98,12 +98,13 @@ export function logout(): void {
   }
 }
 
-export async function uploadImage(file: File, projectId?: number | null): Promise<any> {
+export async function uploadImage(file: File, projectId?: number | null, autoRemove: boolean = false): Promise<any> {
   const formData = new FormData();
   formData.append("file", file);
   if (projectId !== undefined && projectId !== null) {
     formData.append("project_id", projectId.toString());
   }
+  formData.append("auto_remove", autoRemove ? "true" : "false");
 
   const headers = { ...getAuthHeader() };
   const response = await fetch(`${API_BASE_URL}/upload`, {
@@ -196,6 +197,9 @@ export async function updateUserSettings(data: any): Promise<any> {
   }
   const result = await response.json();
   setCache("settings", result);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("digiscale_settings", JSON.stringify(result));
+  }
   return result;
 }
 

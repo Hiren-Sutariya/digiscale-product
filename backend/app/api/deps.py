@@ -1,72 +1,64 @@
+from datetime import datetime
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.services.auth_service import decode_access_token
 from app.models.user import User
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    token = credentials.credentials
+
+def _resolve_user_from_token(token: str, db: Session) -> Optional[User]:
+    """Shared helper: decode JWT and return User or None."""
     payload = decode_access_token(token)
-    
     if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        
+        return None
     email = payload.get("sub")
     if not email:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
-        
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
-        
-    # Check if account is deleted past grace period
+        return None
+    return db.query(User).filter(User.email == email).first()
+
+
+def _check_deletion(user: User, db: Session) -> None:
+    """Raise 401 if the user's 7-day deletion grace period has passed."""
     if user.deletion_scheduled_at:
-        from datetime import datetime
-        time_elapsed = datetime.utcnow() - user.deletion_scheduled_at
-        if time_elapsed.days >= 7:
+        elapsed = datetime.utcnow() - user.deletion_scheduled_at
+        if elapsed.days >= 7:
             db.delete(user)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account has been permanently deleted.",
             )
-            
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    """Require a valid authenticated user. Raises 401 otherwise."""
+    user = _resolve_user_from_token(credentials.credentials, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    _check_deletion(user, db)
     return user
 
-def RoleChecker(allowed_roles: list[str]):
-    def role_checker(
-        project_id: int = None,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
-    ):
-        if not project_id:
-            # Global/Dashboard routes don't have project_id, allow if any role
-            return current_user
-            
-        from app.models.project import Project
-        project = db.query(Project).filter(Project.id == project_id).first()
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
 
-        if project.user_id == current_user.id:
-            return current_user
-            
-        raise HTTPException(status_code=403, detail="Not authorized to access this project")
-    return role_checker
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Return the authenticated user if a valid token is present, else None."""
+    if not credentials:
+        return None
+    return _resolve_user_from_token(credentials.credentials, db)
 

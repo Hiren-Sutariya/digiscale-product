@@ -952,7 +952,7 @@ export default function QuotationView() {
   }
 
   return (
-    <div className="w-full">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* CSS @media print overrides: Removes URL, date/time header, page numbers, Safari bg colors, and extra blank pages */}
       <style jsx global>{`
         @media print {
@@ -1123,7 +1123,7 @@ export default function QuotationView() {
           </button>
         </div>
       )}
-
+      <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1 no-print">
       {activeSubView === "history" ? (
         <div className="no-print bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
           
@@ -1256,8 +1256,9 @@ export default function QuotationView() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Side: Inputs Panels (no-print) — Unified Scroll */}
-        <div className="no-print lg:col-span-4 space-y-4 pr-1 select-none">
+        {/* Left Side: Inputs Panels (no-print) — Sticky with internal scroll */}
+        <div className="no-print lg:col-span-4 select-none lg:sticky lg:top-0">
+          <div className="space-y-4 pr-1 overflow-y-auto max-h-[calc(100vh-220px)] pb-4">
           
           {/* Warn if Profile details not filled yet */}
           {!loadingProfile && !companyInfo && (
@@ -1657,6 +1658,7 @@ export default function QuotationView() {
               )}
             </div>
           </div>
+          </div>{/* end inner overflow-y-auto scroll wrapper */}
         </div>
 
         {/* Right Side: Print Preview Container */}
@@ -2446,6 +2448,7 @@ export default function QuotationView() {
         </div>
       </div>
     )}
+    </div>
 
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
     {printQuoteData && typeof document !== "undefined" && createPortal(

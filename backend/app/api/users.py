@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -54,7 +57,6 @@ def schedule_account_deletion(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    from datetime import datetime
     current_user.deletion_scheduled_at = datetime.utcnow()
     db.commit()
     return {"message": "Account scheduled for deletion. It will be permanently removed in 7 days."}

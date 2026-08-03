@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Logo from "@/components/ui/logo";
-import { getUserProfile, getUserSettings } from "@/services/api";
+import { getUserProfile, getUserSettings, logout } from "@/services/api";
 
 import {
   Bell,
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 const navLinks = [
+  { href: "/workspace", label: "Workspace", icon: Paintbrush },
   { href: "/projects", label: "Collections", icon: FolderOpen },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse },
   { href: "/clients", label: "Clients", icon: Users },
@@ -276,10 +277,10 @@ export default function DashboardNavbar() {
                     <div className="px-2 pb-2 border-t border-slate-100 mt-0 pt-2">
                       <button
                         onClick={() => {
-                          localStorage.removeItem("token");
+                          logout();
                           setIsLoggedIn(false);
                           setProfileOpen(false);
-                          window.location.href = "/";
+                          window.location.href = "/login";
                         }}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition cursor-pointer group"
                       >
