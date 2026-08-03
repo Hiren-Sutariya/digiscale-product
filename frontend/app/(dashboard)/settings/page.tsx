@@ -36,9 +36,383 @@ import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    // Tabs & Title
+    settings: "Settings",
+    profile: "Profile",
+    company: "Company Details",
+    theme: "Theme",
+    language: "Language",
+    shortcuts: "Keyboard Shortcuts",
+    storage: "Storage",
+    billing: "Billing",
+    security: "Security",
+    backup: "Data & Backup",
+    signOut: "Sign Out",
+    // Profile
+    profileHeading: "Profile",
+    profileDesc: "Update your personal information.",
+    changeAvatar: "Change Avatar",
+    fullName: "Full Name",
+    emailAddress: "Email",
+    editEmail: "Edit Email",
+    cancel: "Cancel",
+    mobileNumber: "Mobile Number",
+    gender: "Gender",
+    male: "Male",
+    female: "Female",
+    other: "Other",
+    preferNotToSay: "Prefer not to say",
+    autoRemoveBg: "Auto Remove Background",
+    autoRemoveBgDesc: "Automatically remove image backgrounds when uploading in Collections.",
+    saveChanges: "Save Changes",
+    saving: "Saving...",
+    saveSuccess: "Changes saved successfully!",
+    // Company details
+    companyHeading: "Company Profile",
+    companyDesc: "Create and manage your professional business details for outputs, invoices, and cards.",
+    uploadLogo: "Upload Company Logo",
+    uploadQR: "Upload Custom QR",
+    generalInfo: "General Information",
+    companyName: "Company Name",
+    companyEmail: "Company Email",
+    primaryPhone: "Primary Mobile Number",
+    secondaryPhone: "Secondary Mobile Number",
+    gstin: "GST Number (GSTIN)",
+    website: "Website URL",
+    address: "Company Address",
+    bankDetails: "Bank & Payout Details",
+    bankName: "Bank Name",
+    accountNumber: "Account Number",
+    ifscCode: "IFSC Code",
+    upiId: "UPI ID (For QR Code)",
+    termsHeading: "Terms & Conditions",
+    termsDesc: "Invoice/Quotation Terms (Printed at bottom of quotation)",
+    saveCompany: "Save Company Profile",
+    // Theme
+    themeHeading: "Theme",
+    themeDesc: "Customize the appearance and accent color of the workspace.",
+    themeMode: "Theme Mode",
+    lightMode: "Light Mode",
+    darkMode: "Dark Mode",
+    systemSync: "System Sync",
+    accentColor: "Accent Color",
+    saveTheme: "Save Theme Settings",
+    themeSuccess: "Theme settings saved & applied successfully!",
+    // Language
+    langHeading: "Language",
+    langDesc: "Choose your default system display language.",
+    saveLanguage: "Save Language Settings",
+    langSuccess: "Language setting saved! Reloading application...",
+    // Keyboard
+    kbdHeading: "Keyboard Shortcuts",
+    kbdDesc: "Boost your design efficiency with editor keyboard hotkeys.",
+    testPad: "Interactive Hotkey Test Pad",
+    testPadDesc: "Press any combination of keys on your keyboard to test:",
+    testPadPress: "Press keys to detect...",
+    shortcutHeader: "Shortcut Hotkeys",
+    actionHeader: "Action",
+    descHeader: "Description",
+    // Storage
+    storageHeading: "Storage",
+    storageDesc: "Manage local caching, snapshots, and file storage sizes.",
+    exportLogs: "Export Log Items",
+    cachedBrowser: "Cached locally in browser.",
+    snapshotsTitle: "IndexedDB Snapshots",
+    snapshotsDesc: "Live database snapshots.",
+    localSize: "LocalStorage Size",
+    localSizeDesc: "Total metadata quota used.",
+    clearFiles: "Clear Temporary Files",
+    clearFilesDesc: "Free up browser local storage space by clearing export log queues and histories.",
+    clearCacheBtn: "Clear Export Logs Cache",
+  },
+  gu: {
+    // Tabs & Title
+    settings: "સેટિંગ્સ",
+    profile: "પ્રોફાઇલ",
+    company: "કંપનીની વિગતો",
+    theme: "થીમ",
+    language: "ભાષા",
+    shortcuts: "કીબોર્ડ શૉર્ટકટ્સ",
+    storage: "સ્ટોરેજ",
+    billing: "બિલિંગ",
+    security: "સુરક્ષા",
+    backup: "ડેટા અને બેકઅપ",
+    signOut: "સાઇન આઉટ",
+    // Profile
+    profileHeading: "પ્રોફાઇલ",
+    profileDesc: "તમારી વ્યક્તિગત માહિતી અપડેટ કરો.",
+    changeAvatar: "અવતાર બદલો",
+    fullName: "પૂરું નામ",
+    emailAddress: "ઈમેલ",
+    editEmail: "ઈમેલ સંપાદિત કરો",
+    cancel: "રદ કરો",
+    mobileNumber: "મોબાઇલ નંબર",
+    gender: "લિંગ (જેન્ડર)",
+    male: "પુરુષ",
+    female: "સ્ત્રી",
+    other: "અન્ય",
+    preferNotToSay: "કહેવા માંગતા નથી",
+    autoRemoveBg: "ઓટો બેકગ્રાઉન્ડ રીમુવર",
+    autoRemoveBgDesc: "કલેક્શનમાં અપલોડ કરતી વખતે આપમેળે ઇમેજ બેકગ્રાઉન્ડ દૂર કરો.",
+    saveChanges: "ફેરફારો સાચવો",
+    saving: "સાચવી રહ્યું છે...",
+    saveSuccess: "ફેરફારો સફળતાપૂર્વક સાચવવામાં આવ્યા!",
+    // Company details
+    companyHeading: "કંપની પ્રોફાઇલ",
+    companyDesc: "આઉટપુટ, ઇન્વૉઇસેસ અને કાર્ડ્સ માટે તમારા વ્યાવસાયિક વ્યવસાયની વિગતો મેનેજ કરો.",
+    uploadLogo: "કંપનીનો લોગો અપલોડ કરો",
+    uploadQR: "કસ્ટમ QR કોડ અપલોડ કરો",
+    generalInfo: "સામાન્ય માહિતી",
+    companyName: "કંપનીનું નામ",
+    companyEmail: "કંપની ઈમેલ",
+    primaryPhone: "પ્રાથમિક મોબાઇલ નંબર",
+    secondaryPhone: "ગૌણ મોબાઇલ નંબર",
+    gstin: "GST નંબર (GSTIN)",
+    website: "વેબસાઇટ URL",
+    address: "કંપનીનું સરનામું",
+    bankDetails: "બેંક અને ચૂકવણીની વિગતો",
+    bankName: "બેંકનું નામ",
+    accountNumber: "એકાઉન્ટ નંબર",
+    ifscCode: "IFSC કોડ",
+    upiId: "UPI ID (QR કોડ માટે)",
+    termsHeading: "નિયમો અને શરતો",
+    termsDesc: "ઇન્વોઇસ/ક્વોટેશનની શરતો (ક્વોટેશનની નીચે પ્રિન્ટ થશે)",
+    saveCompany: "કંપની પ્રોફાઇલ સાચવો",
+    // Theme
+    themeHeading: "થીમ",
+    themeDesc: "વર્કસ્પેસનો દેખાવ અને મુખ્ય રંગ કસ્ટમાઇઝ કરો.",
+    themeMode: "થીમ મોડ",
+    lightMode: "લાઈટ મોડ",
+    darkMode: "ડાર્ક મોડ",
+    systemSync: "સિસ્ટમ સિંક",
+    accentColor: "એક્સેન્ટ કલર",
+    saveTheme: "થીમ સેટિંગ્સ સાચવો",
+    themeSuccess: "થીમ સેટિંગ્સ સફળતાપૂર્વક સાચવવામાં આવી!",
+    // Language
+    langHeading: "ભાષા",
+    langDesc: "તમારી ડિફોલ્ટ સિસ્ટમ પ્રદર્શન ભાષા પસંદ કરો.",
+    saveLanguage: "ભાષા સેટિંગ્સ સાચવો",
+    langSuccess: "ભાષા સફળતાપૂર્વક સેટ થઈ! એપ્લિકેશન ફરીથી લોડ થઈ રહી છે...",
+    // Keyboard
+    kbdHeading: "કીબોર્ડ શૉર્ટકટ્સ",
+    kbdDesc: "કીબોર્ડ શૉર્ટકટ્સનો ઉપયોગ કરીને વધુ ઝડપથી ડિઝાઇન કરો.",
+    testPad: "ઇન્ટરેક્ટિવ શૉર્ટકટ ટેસ્ટ પેડ",
+    testPadDesc: "પરીક્ષણ કરવા માટે તમારા કીબોર્ડ પર કોઈપણ કી દબાવો:",
+    testPadPress: "કી દબાવો...",
+    shortcutHeader: "કીબોર્ડ શૉર્ટકટ",
+    actionHeader: "ક્રિયા",
+    descHeader: "વર્ણન",
+    // Storage
+    storageHeading: "સ્ટોરેજ",
+    storageDesc: "બ્રાઉઝર કૅશ અને ડેટાબેઝ સ્નેપશોટ કદ મેનેજ કરો.",
+    exportLogs: "નિકાસ લોગ વસ્તુઓ",
+    cachedBrowser: "બ્રાઉઝરમાં સ્થાનિક રીતે સંગ્રહિત.",
+    snapshotsTitle: "સ્થાનિક સ્નેપશોટ",
+    snapshotsDesc: "ડેટાબેઝ બેકઅપ સ્નેપશોટ્સ.",
+    localSize: "લોકલ સ્ટોરેજ કદ",
+    localSizeDesc: "વપરાયેલ કુલ મેટાડેટા ક્વોટા.",
+    clearFiles: "કામચલાઉ ફાઇલો સાફ કરો",
+    clearFilesDesc: "બ્રાઉઝર લોકલ સ્ટોરેજ ખાલી કરવા માટે નિકાસ ઇતિહાસ સાફ કરો.",
+    clearCacheBtn: "કૅશ સાફ કરો",
+  },
+  hi: {
+    // Tabs & Title
+    settings: "सेटिंग्स",
+    profile: "प्रोफाइल",
+    company: "कंपनी का विवरण",
+    theme: "थीम",
+    language: "भाषा",
+    shortcuts: "कीबोर्ड शॉर्टकट",
+    storage: "स्टोरेज",
+    billing: "बिलिंग",
+    security: "सुरक्षा",
+    backup: "डेटा और बैकअप",
+    signOut: "साइन आउट",
+    // Profile
+    profileHeading: "प्रोफाइल",
+    profileDesc: "अपनी व्यक्तिगत जानकारी अपडेट करें।",
+    changeAvatar: "अवतार बदलें",
+    fullName: "पूरा नाम",
+    emailAddress: "ईमेल",
+    editEmail: "ईमेल बदलें",
+    cancel: "रद्द करें",
+    mobileNumber: "मोबाइल नंबर",
+    gender: "लिंग",
+    male: "पुरुष",
+    female: "महिला",
+    other: "अन्य",
+    preferNotToSay: "बताना नहीं चाहते",
+    autoRemoveBg: "ऑटो बैकग्राउंड रिमूवर",
+    autoRemoveBgDesc: "कलेक्शन में अपलोड करते समय इमेज बैकग्राउंड अपने आप हटा दें।",
+    saveChanges: "बदलाव सहेजें",
+    saving: "सहेज रहा है...",
+    saveSuccess: "बदलाव सफलतापूर्वक सहेज लिए गए!",
+    // Company details
+    companyHeading: "कंपनी प्रोफाइल",
+    companyDesc: "आउटपुट, चालान और कार्ड के लिए व्यावसायिक विवरण प्रबंधित करें।",
+    uploadLogo: "कंपनी लोगो अपलोड करें",
+    uploadQR: "कस्टम QR कोड अपलोड करें",
+    generalInfo: "सामान्य जानकारी",
+    companyName: "कंपनी का नाम",
+    companyEmail: "कंपनी ईमेल",
+    primaryPhone: "प्राथमिक मोबाइल नंबर",
+    secondaryPhone: "माध्यमिक मोबाइल नंबर",
+    gstin: "GST नंबर (GSTIN)",
+    website: "वेबसाइट URL",
+    address: "कंपनी का पता",
+    bankDetails: "बैंक और भुगतान विवरण",
+    bankName: "बैंक का नाम",
+    accountNumber: "खाता संख्या",
+    ifscCode: "IFSC कोड",
+    upiId: "UPI ID (QR कोड के लिए)",
+    termsHeading: "नियम और शर्तें",
+    termsDesc: "चालान/कोटेशन शर्तें (कोटेशन के नीचे दिखाई देगा)",
+    saveCompany: "कंपनी प्रोफाइल सहेजें",
+    // Theme
+    themeHeading: "थीम",
+    themeDesc: "कार्यक्षेत्र का रंग और प्रकटन अनुकूलित करें।",
+    themeMode: "थीम मोड",
+    lightMode: "लाइट मोड",
+    darkMode: "डार्क मोड",
+    systemSync: "सिस्टम सिंक",
+    accentColor: "एक्सेन्ट रंग",
+    saveTheme: "थीम सेटिंग्स सहेजें",
+    themeSuccess: "थीम सेटिंग्स सफलतापूर्वक सहेजी गईं!",
+    // Language
+    langHeading: "भाषा",
+    langDesc: "अपनी डिफ़ॉल्ट सिस्टम भाषा चुनें।",
+    saveLanguage: "भाषा सेटिंग्स सहेजें",
+    langSuccess: "भाषा सफलतापूर्वक सहेजी गई! एप्लिकेशन पुनः लोड हो रहा है...",
+    // Keyboard
+    kbdHeading: "कीबोर्ड शॉर्टकट",
+    kbdDesc: "कीबोर्ड शॉर्टकट का उपयोग करके तेजी से डिज़ाइन करें।",
+    testPad: "इंटरैक्टिव शॉर्टकट टेस्ट पैड",
+    testPadDesc: "परीक्षण करने के लिए अपने कीबोर्ड पर कोई भी कुंजी दबाएं:",
+    testPadPress: "कुंजी दबाएं...",
+    shortcutHeader: "कीबोर्ड शॉर्टकट",
+    actionHeader: "क्रिया",
+    descHeader: "विवरण",
+    // Storage
+    storageHeading: "स्टोरेज",
+    storageDesc: "ब्राउज़र कैश और डेटाबेस स्नैपशॉट का आकार प्रबंधित करें।",
+    exportLogs: "निर्यात लॉग आइटम",
+    cachedBrowser: "ब्राउज़र में स्थानीय रूप से संग्रहीत।",
+    snapshotsTitle: "स्थानीय स्नैपशॉट",
+    snapshotsDesc: "डेटाबेस बैकअप स्नैपशॉट।",
+    localSize: "लोकल स्टोरेज आकार",
+    localSizeDesc: "उपयोग किया गया कुल डेटा कोटा।",
+    clearFiles: "अस्थायी फ़ाइलें साफ़ करें",
+    clearFilesDesc: "ब्राउज़र लोकल स्टोरेज खाली करने के लिए निर्यात इतिहास साफ़ करें।",
+    clearCacheBtn: "कैश साफ़ करें",
+  },
+  es: {
+    // Tabs & Title
+    settings: "Ajustes",
+    profile: "Perfil",
+    company: "Detalles de Empresa",
+    theme: "Tema",
+    language: "Idioma",
+    shortcuts: "Atajos de Teclado",
+    storage: "Almacenamiento",
+    billing: "Facturación",
+    security: "Seguridad",
+    backup: "Datos y Respaldo",
+    signOut: "Cerrar Sesión",
+    // Profile
+    profileHeading: "Perfil",
+    profileDesc: "Actualice su información personal.",
+    changeAvatar: "Cambiar Avatar",
+    fullName: "Nombre Completo",
+    emailAddress: "Correo Electrónico",
+    editEmail: "Editar Correo",
+    cancel: "Cancelar",
+    mobileNumber: "Número de Teléfono",
+    gender: "Género",
+    male: "Masculino",
+    female: "Femenino",
+    other: "Otro",
+    preferNotToSay: "Prefiero no decirlo",
+    autoRemoveBg: "Quitar Fondo Automáticamente",
+    autoRemoveBgDesc: "Elimina automáticamente los fondos de las imágenes al subirlas en Colecciones.",
+    saveChanges: "Guardar Cambios",
+    saving: "Guardando...",
+    saveSuccess: "¡Cambios guardados con éxito!",
+    // Company details
+    companyHeading: "Perfil de Empresa",
+    companyDesc: "Administre los detalles profesionales de su negocio para salidas, facturas y tarjetas.",
+    uploadLogo: "Subir Logo de Empresa",
+    uploadQR: "Subir QR Personalizado",
+    generalInfo: "Información General",
+    companyName: "Nombre de Empresa",
+    companyEmail: "Correo de Empresa",
+    primaryPhone: "Teléfono Principal",
+    secondaryPhone: "Teléfono Secundario",
+    gstin: "Número de Identificación (GSTIN)",
+    website: "URL del Sitio Web",
+    address: "Dirección de Empresa",
+    bankDetails: "Detalles Bancarios y Pagos",
+    bankName: "Nombre del Banco",
+    accountNumber: "Número de Cuenta",
+    ifscCode: "Código IFSC",
+    upiId: "ID de UPI (Para código QR)",
+    termsHeading: "Términos y Condiciones",
+    termsDesc: "Términos de Factura/Cotización (Impresos al final del documento)",
+    saveCompany: "Guardar Perfil de Empresa",
+    // Theme
+    themeHeading: "Tema",
+    themeDesc: "Personalice la apariencia y el color de acento del espacio de trabajo.",
+    themeMode: "Modo del Tema",
+    lightMode: "Modo Claro",
+    darkMode: "Modo Oscuro",
+    systemSync: "Sincronizar Sistema",
+    accentColor: "Color de Acento",
+    saveTheme: "Guardar Ajustes de Tema",
+    themeSuccess: "¡Ajustes de tema guardados y aplicados con éxito!",
+    // Language
+    langHeading: "Idioma",
+    langDesc: "Elija el idioma de visualización predeterminado del sistema.",
+    saveLanguage: "Guardar Ajustes de Idioma",
+    langSuccess: "¡Idioma guardado! Recargando aplicación...",
+    // Keyboard
+    kbdHeading: "Atajos de Teclado",
+    kbdDesc: "Aumente su eficiencia de diseño con los atajos del editor.",
+    testPad: "Panel de Prueba de Atajos",
+    testPadDesc: "Presione cualquier combinación de teclas en su teclado para probar:",
+    testPadPress: "Presione teclas para detectar...",
+    shortcutHeader: "Atajos",
+    actionHeader: "Acción",
+    descHeader: "Descripción",
+    // Storage
+    storageHeading: "Almacenamiento",
+    storageDesc: "Administre el almacenamiento local, copias de seguridad e historial.",
+    exportLogs: "Registros de Exportación",
+    cachedBrowser: "Almacenado localmente en el navegador.",
+    snapshotsTitle: "Copias de Seguridad local",
+    snapshotsDesc: "Copias de seguridad de la base de datos.",
+    localSize: "Tamaño LocalStorage",
+    localSizeDesc: "Total de cuota de metadatos utilizada.",
+    clearFiles: "Limpiar Archivos Temporales",
+    clearFilesDesc: "Libere espacio en el navegador limpiando el historial de descargas.",
+    clearCacheBtn: "Limpiar Caché",
+  }
+};
+
 function SettingsPageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
+  const [lang, setLang] = useState<string>("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const t = (key: string) => {
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+  };
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -46,22 +420,22 @@ function SettingsPageContent() {
   }, [searchParams]);
 
   const tabs = [
-    { id: "profile",      label: "Profile",            icon: User },
-    { id: "company",      label: "Company Details",    icon: Building },
-    { id: "theme",        label: "Theme",              icon: Paintbrush },
-    { id: "language",     label: "Language",           icon: Languages },
-    { id: "shortcuts",    label: "Keyboard Shortcuts", icon: Keyboard },
-    { id: "storage",      label: "Storage",            icon: HardDrive },
-    { id: "billing",      label: "Billing",            icon: CreditCard },
-    { id: "security",     label: "Security",           icon: Shield },
-    { id: "backup",       label: "Data & Backup",      icon: HardDrive },
+    { id: "profile",      label: t("profile"),            icon: User },
+    { id: "company",      label: t("company"),            icon: Building },
+    { id: "theme",        label: t("theme"),              icon: Paintbrush },
+    { id: "language",     label: t("language"),           icon: Languages },
+    { id: "shortcuts",    label: t("shortcuts"),          icon: Keyboard },
+    { id: "storage",      label: t("storage"),            icon: HardDrive },
+    { id: "billing",      label: t("billing"),            icon: CreditCard },
+    { id: "security",     label: t("security"),           icon: Shield },
+    { id: "backup",       label: t("backup"),             icon: HardDrive },
   ];
 
   return (
     <div className="p-8 h-[calc(100vh-80px)] flex flex-col overflow-hidden">
 
       <PageTitle
-        title="Settings"
+        title={t("settings")}
       />
 
       <div className="mt-8 flex-1 grid gap-8 lg:grid-cols-[280px_1fr] overflow-hidden min-h-0">
@@ -99,7 +473,7 @@ function SettingsPageContent() {
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600">
               <LogOut className="h-4 w-4" />
             </div>
-            Sign Out
+            {t("signOut")}
           </button>
         </div>
 
@@ -2015,15 +2389,19 @@ function ThemeSection() {
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("light");
   const [accentColor, setAccentColor] = useState<string>("blue");
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [lang, setLang] = useState<string>("en");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
       const mode = localStorage.getItem("digiscale_theme_mode") as any || "light";
       const color = localStorage.getItem("digiscale_theme_accent") || "blue";
       setThemeMode(mode);
       setAccentColor(color);
     }
   }, []);
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
   const handleSaveTheme = () => {
     if (typeof window !== "undefined") {
@@ -2039,7 +2417,7 @@ function ThemeSection() {
       }
       document.documentElement.setAttribute('data-theme-accent', accentColor);
       
-      setStatusMsg({ type: "success", text: "Theme settings saved & applied successfully!" });
+      setStatusMsg({ type: "success", text: t("themeSuccess") });
       setTimeout(() => setStatusMsg(null), 3000);
     }
   };
@@ -2056,9 +2434,9 @@ function ThemeSection() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">Theme</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t("themeHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Customize the appearance and accent color of the workspace.
+          {t("themeDesc")}
         </p>
       </div>
 
@@ -2070,31 +2448,31 @@ function ThemeSection() {
 
       <div className="space-y-6">
         <div>
-          <label className="mb-3 block text-sm font-bold text-slate-700">Theme Mode</label>
+          <label className="mb-3 block text-sm font-bold text-slate-700">{t("themeMode")}</label>
           <div className="grid grid-cols-3 gap-3">
-            {([
-              { id: "light", label: "Light Mode", desc: "Classic bright appearance" },
-              { id: "dark", label: "Dark Mode", desc: "Easy on eyes in dark rooms" },
-              { id: "system", label: "System Sync", desc: "Follow system preference" },
-            ] as const).map(t => (
+            {[
+              { id: "light", label: t("lightMode"), desc: lang === "gu" ? "પ્રકાશિત શૈલી" : lang === "hi" ? "प्रकाशित शैली" : "Classic bright appearance" },
+              { id: "dark", label: t("darkMode"), desc: lang === "gu" ? "આંખો માટે અનુકૂળ" : lang === "hi" ? "आंखों के लिए अनुकूल" : "Easy on eyes in dark rooms" },
+              { id: "system", label: t("systemSync"), desc: lang === "gu" ? "સિસ્ટમ અનુસાર" : lang === "hi" ? "सिस्टम अनुसार" : "Follow system preference" },
+            ].map(tObj => (
               <button
-                key={t.id}
-                onClick={() => setThemeMode(t.id)}
+                key={tObj.id}
+                onClick={() => setThemeMode(tObj.id as any)}
                 className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                  themeMode === t.id
+                  themeMode === tObj.id
                     ? "border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <div className="text-xs font-black">{t.label}</div>
-                <div className="text-[10px] text-slate-400 font-semibold mt-1">{t.desc}</div>
+                <div className="text-xs font-black">{tObj.label}</div>
+                <div className="text-[10px] text-slate-400 font-semibold mt-1">{tObj.desc}</div>
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <label className="mb-3 block text-sm font-bold text-slate-700">Accent Color</label>
+          <label className="mb-3 block text-sm font-bold text-slate-700">{t("accentColor")}</label>
           <div className="flex flex-wrap gap-3">
             {ACCENTS.map(acc => (
               <button
@@ -2118,7 +2496,7 @@ function ThemeSection() {
         onClick={handleSaveTheme}
         className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
       >
-        Save Theme Settings
+        {t("saveTheme")}
       </button>
     </div>
   );
@@ -2128,17 +2506,22 @@ function ThemeSection() {
 function LanguageSection() {
   const [selectedLang, setSelectedLang] = useState<string>("en");
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [lang, setLang] = useState<string>("en");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setSelectedLang(localStorage.getItem("digiscale_language") || "en");
+      const activeL = localStorage.getItem("digiscale_language") || "en";
+      setSelectedLang(activeL);
+      setLang(activeL);
     }
   }, []);
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
   const handleSaveLanguage = () => {
     if (typeof window !== "undefined") {
       localStorage.setItem("digiscale_language", selectedLang);
-      setStatusMsg({ type: "success", text: "Language setting saved! Reloading application..." });
+      setStatusMsg({ type: "success", text: t("langSuccess") });
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -2155,9 +2538,9 @@ function LanguageSection() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">Language</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t("langHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose your default system display language.
+          {t("langDesc")}
         </p>
       </div>
 
@@ -2168,23 +2551,23 @@ function LanguageSection() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {LANGUAGES.map(lang => (
+        {LANGUAGES.map(langObj => (
           <button
-            key={lang.id}
-            onClick={() => setSelectedLang(lang.id)}
+            key={langObj.id}
+            onClick={() => setSelectedLang(langObj.id)}
             className={`p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
-              selectedLang === lang.id
+              selectedLang === langObj.id
                 ? "border-blue-600 bg-blue-50/40"
                 : "border-slate-200 bg-white hover:bg-slate-50"
             }`}
           >
             <div>
-              <span className={`text-xs font-bold block ${selectedLang === lang.id ? "text-blue-900" : "text-slate-800"}`}>
-                {lang.name}
+              <span className={`text-xs font-bold block ${selectedLang === langObj.id ? "text-blue-900" : "text-slate-800"}`}>
+                {langObj.name}
               </span>
-              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{lang.sub}</span>
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">{langObj.sub}</span>
             </div>
-            {selectedLang === lang.id && (
+            {selectedLang === langObj.id && (
               <Check className="w-4 h-4 text-blue-600" />
             )}
           </button>
@@ -2195,7 +2578,7 @@ function LanguageSection() {
         onClick={handleSaveLanguage}
         className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 cursor-pointer"
       >
-        Save Language Settings
+        {t("saveLanguage")}
       </button>
     </div>
   );
@@ -2204,8 +2587,13 @@ function LanguageSection() {
 /* ============ Keyboard Shortcuts Section ============ */
 function KeyboardShortcutsSection() {
   const [activeTestKey, setActiveTestKey] = useState<string>("");
+  const [lang, setLang] = useState<string>("en");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
       const keysPressed = [];
@@ -2222,37 +2610,39 @@ function KeyboardShortcutsSection() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   const SHORTCUTS = [
-    { keys: ["Ctrl", "Z"], action: "Undo", desc: "Revert the last change made to the design." },
-    { keys: ["Ctrl", "Shift", "Z"], action: "Redo", desc: "Restore the last undone action." },
-    { keys: ["Ctrl", "D"], action: "Duplicate", desc: "Copy and paste the selected canvas object." },
-    { keys: ["Delete", "Backspace"], action: "Delete selection", desc: "Remove selected text/image from canvas." },
-    { keys: ["Ctrl", "L"], action: "Lock / Unlock", desc: "Lock the selected element position or unlock it." },
-    { keys: ["Arrow Keys"], action: "Move element", desc: "Move active object on canvas pixel by pixel." },
-    { keys: ["Ctrl", "Plus"], action: "Zoom In", desc: "Increase canvas scale visibility." },
-    { keys: ["Ctrl", "Minus"], action: "Zoom Out", desc: "Decrease canvas scale visibility." },
+    { keys: ["Ctrl", "Z"], action: lang === "gu" ? "પૂર્વવત્ કરો (Undo)" : lang === "hi" ? "पूर्ववत करें (Undo)" : "Undo", desc: lang === "gu" ? "ડિઝાઇનમાં કરેલા છેલ્લો ફેરફાર પાછો ખેંચો." : "Revert the last change made to the design." },
+    { keys: ["Ctrl", "Shift", "Z"], action: lang === "gu" ? "ફરીથી કરો (Redo)" : lang === "hi" ? "फिर से करें (Redo)" : "Redo", desc: lang === "gu" ? "છેલ્લા પૂર્વવત્ કરેલા ફેરફારને ફરીથી લાગુ કરો." : "Restore the last undone action." },
+    { keys: ["Ctrl", "D"], action: lang === "gu" ? "ડુપ્લિકેટ કરો" : lang === "hi" ? "डुप्लिकेट करें" : "Duplicate", desc: lang === "gu" ? "પસંદ કરેલા ઓબ્જેક્ટની બે નકલ બનાવો." : "Copy and paste the selected canvas object." },
+    { keys: ["Delete", "Backspace"], action: lang === "gu" ? "પસંદ કરેલું કાઢી નાખો" : lang === "hi" ? "चयनित हटाएं" : "Delete selection", desc: lang === "gu" ? "કેનવાસમાંથી પસંદ કરેલું કાઢી નાખો." : "Remove selected text/image from canvas." },
+    { keys: ["Ctrl", "L"], action: lang === "gu" ? "લોક / અનલોક" : lang === "hi" ? "लॉक / अनलॉक" : "Lock / Unlock", desc: lang === "gu" ? "ઓબ્જેક્ટની સ્થિતિ લોક અથવા અનલોક કરો." : "Lock the selected element position or unlock it." },
+    { keys: ["Arrow Keys"], action: lang === "gu" ? "ઓબ્જેક્ટ ખસેડો" : lang === "hi" ? "ऑब्जेक्ट खिसकाएं" : "Move element", desc: lang === "gu" ? "કેનવાસ પર ઓબ્જેક્ટને પિક્સેલ બાય પિક્સેલ ખસેડો." : "Move active object on canvas pixel by pixel." },
+    { keys: ["Ctrl", "Plus"], action: lang === "gu" ? "ઝૂમ ઇન" : lang === "hi" ? "ज़ूम इन" : "Zoom In", desc: lang === "gu" ? "કેનવાસનું કદ મોટું કરીને જુઓ." : "Increase canvas scale visibility." },
+    { keys: ["Ctrl", "Minus"], action: lang === "gu" ? "ઝૂમ આઉટ" : lang === "hi" ? "ज़ूम आउट" : "Zoom Out", desc: lang === "gu" ? "કેનવાસનું કદ નાનું કરીને જુઓ." : "Decrease canvas scale visibility." },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">Keyboard Shortcuts</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t("kbdHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Boost your design efficiency with editor keyboard hotkeys.
+          {t("kbdDesc")}
         </p>
       </div>
 
       {/* Interactive testing field */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 text-center flex flex-col items-center justify-center space-y-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Interactive Hotkey Test Pad</span>
-        <p className="text-xs text-slate-550 font-medium">Press any combination of keys on your keyboard to test:</p>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("testPad")}</span>
+        <p className="text-xs text-slate-550 font-medium">{t("testPadDesc")}</p>
         <div className="h-12 flex items-center justify-center px-6 py-2 rounded-xl bg-white border border-slate-200 min-w-[200px]">
           {activeTestKey ? (
             <span className="font-mono text-sm font-bold text-blue-700 tracking-wide animate-pulse">
               {activeTestKey}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 font-bold italic">Press keys to detect...</span>
+            <span className="text-xs text-slate-400 font-bold italic">{t("testPadPress")}</span>
           )}
         </div>
       </div>
@@ -2261,9 +2651,9 @@ function KeyboardShortcutsSection() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black tracking-wider text-slate-500 uppercase">
-              <th className="py-3 px-5">Shortcut Hotkeys</th>
-              <th className="py-3 px-5">Action</th>
-              <th className="py-3 px-5">Description</th>
+              <th className="py-3 px-5">{t("shortcutHeader")}</th>
+              <th className="py-3 px-5">{t("actionHeader")}</th>
+              <th className="py-3 px-5">{t("descHeader")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
@@ -2295,6 +2685,7 @@ function StorageSection() {
   const [cachedSnapshotsCount, setCachedSnapshotsCount] = useState(0);
   const [localStorageKB, setLocalStorageKB] = useState(0);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [lang, setLang] = useState<string>("en");
 
   const calculateStorage = () => {
     if (typeof window !== "undefined") {
@@ -2325,14 +2716,25 @@ function StorageSection() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
     calculateStorage();
   }, []);
 
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   const handleClearCache = () => {
-    if (window.confirm("Are you sure you want to clear export history logs? This will reset your Export History list.")) {
+    const confirmText = lang === "gu"
+      ? "શું તમે ખરેખર નિકાસ ઇતિહાસ સાફ કરવા માંગો છો? આનાથી તમારું લિસ્ટ શૂન્ય થઈ જશે."
+      : lang === "hi"
+      ? "क्या आप वाकई निर्यात इतिहास साफ करना चाहते हैं? इससे आपकी सूची शून्य हो जाएगी।"
+      : "Are you sure you want to clear export history logs? This will reset your Export History list.";
+
+    if (window.confirm(confirmText)) {
       localStorage.removeItem("digiscale_export_history");
       calculateStorage();
-      setStatusMsg({ type: "success", text: "Export history logs cleared successfully!" });
+      setStatusMsg({ type: "success", text: lang === "gu" ? "નિકાસ ઇતિહાસ કૅશ સાફ થઈ ગયો છે!" : lang === "hi" ? "निर्यात इतिहास कैश साफ कर दिया गया है!" : "Export history logs cleared successfully!" });
       setTimeout(() => setStatusMsg(null), 3000);
     }
   };
@@ -2340,9 +2742,9 @@ function StorageSection() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">Storage</h2>
+        <h2 className="text-xl font-bold text-slate-900">{t("storageHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Manage local caching, snapshots, and file storage sizes.
+          {t("storageDesc")}
         </p>
       </div>
 
@@ -2354,36 +2756,36 @@ function StorageSection() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Export Log Items</div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedHistoryCount} items</p>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">Cached locally in browser.</p>
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("exportLogs")}</div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedHistoryCount} {lang === "gu" ? "વસ્તુઓ" : lang === "hi" ? "आइटम" : "items"}</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">{t("cachedBrowser")}</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">IndexedDB Snapshots</div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedSnapshotsCount} snapshots</p>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">Live database snapshots.</p>
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("snapshotsTitle")}</div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{cachedSnapshotsCount} {lang === "gu" ? "સ્નેપશોટ" : lang === "hi" ? "स्नैपशॉट" : "snapshots"}</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">{t("snapshotsDesc")}</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">LocalStorage Size</div>
+          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("localSize")}</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{localStorageKB} KB</p>
-          <p className="mt-1 text-xs text-slate-500 font-semibold">Total metadata quota used.</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">{t("localSizeDesc")}</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-3 shadow-sm">
         <div>
-          <span className="text-xs font-bold text-slate-900 block">Clear Temporary Files</span>
+          <span className="text-xs font-bold text-slate-900 block">{t("clearFiles")}</span>
           <span className="text-[11px] text-slate-500 font-semibold block mt-1 leading-relaxed">
-            Free up browser local storage space by clearing export log queues and histories.
+            {t("clearFilesDesc")}
           </span>
         </div>
         <button
           onClick={handleClearCache}
           className="px-4 py-2 border border-slate-350 hover:bg-rose-50 hover:text-rose-600 text-slate-700 text-xs font-bold rounded-lg transition active:scale-95 cursor-pointer"
         >
-          Clear Export Logs Cache
+          {t("clearCacheBtn")}
         </button>
       </div>
     </div>
