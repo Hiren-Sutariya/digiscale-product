@@ -160,39 +160,48 @@
 
 /* Dark mode global overrides for components using white backgrounds and slate borders */
 .dark body,
-.dark .bg-white {
-  background-color: var(--background) !important;
-  color: var(--foreground) !important;
+.dark main,
+.dark .bg-slate-50,
+.dark .bg-slate-100 {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
 }
 
-.dark .bg-slate-50 {
-  background-color: var(--card) !important;
+.dark header,
+.dark .bg-white,
+.dark .rounded-2xl.bg-white,
+.dark .bg-slate-50\/50 {
+  background-color: #121824 !important;
+  color: #f8fafc !important;
 }
 
 .dark .text-slate-900,
 .dark .text-slate-800,
-.dark .text-slate-700 {
-  color: var(--foreground) !important;
+.dark .text-slate-700,
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: #f8fafc !important;
 }
 
 .dark .text-slate-500,
-.dark .text-slate-600 {
-  color: oklch(0.705 0.015 286.067) !important;
+.dark .text-slate-600,
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
 }
 
 .dark .border-slate-200,
 .dark .border-slate-350,
 .dark .border-slate-300,
+.dark .border-slate-100,
 .dark .border-slate-200\/80 {
-  border-color: var(--border) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: var(--card) !important;
-  border-color: var(--border) !important;
-  color: var(--foreground) !important;
+  background-color: #1a2233 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
 }
 
 /* Dynamic Accent Color CSS Variables overrides */
