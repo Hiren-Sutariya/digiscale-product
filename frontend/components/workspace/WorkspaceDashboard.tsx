@@ -33,8 +33,30 @@ export const WorkspaceDashboard = () => {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("Untitled Design");
-  const [newWidth, setNewWidth] = useState(1080);
-  const [newHeight, setNewHeight] = useState(1080);
+  const [newWidth, setNewWidth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("digiscale_brand_kit");
+      if (saved) {
+        try {
+          const bk = JSON.parse(saved);
+          if (bk.canvasSize?.width) return bk.canvasSize.width;
+        } catch (e) {}
+      }
+    }
+    return 1080;
+  });
+  const [newHeight, setNewHeight] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("digiscale_brand_kit");
+      if (saved) {
+        try {
+          const bk = JSON.parse(saved);
+          if (bk.canvasSize?.height) return bk.canvasSize.height;
+        } catch (e) {}
+      }
+    }
+    return 1080;
+  });
 
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");

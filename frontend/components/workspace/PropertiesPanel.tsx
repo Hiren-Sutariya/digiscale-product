@@ -9,7 +9,7 @@ import {
   RotateCcw, Download, X, AlignCenterHorizontal, AlignCenterVertical,
   Loader2, Eye, EyeOff, Upload, ImageIcon, ChevronDown,
   Sun, Contrast, Droplets, Zap, Wind,
-  Type, Minus, Plus, Copy, Trash2, Star, ChevronRight,
+  Type, Minus, Plus, Copy, Trash2, Star, ChevronRight, Briefcase, Sparkles
 } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -80,9 +80,34 @@ function ExportModal({ canvas, onClose, projectName, batchImages, canvasConfig }
   batchImages: string[];
   canvasConfig: any;
 }) {
-  const [format, setFormat] = useState<"png" | "jpg" | "webp">("png");
+  const [format, setFormat] = useState<"png" | "jpg" | "webp">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("digiscale_brand_kit");
+      if (saved) {
+        try {
+          const bk = JSON.parse(saved);
+          if (bk.exportSettings?.format) return bk.exportSettings.format as "png" | "jpg" | "webp";
+        } catch (e) {}
+      }
+    }
+    return "png";
+  });
   const [transparent, setTransparent] = useState(false);
-  const [sizePreset, setSizePreset] = useState<"original" | "2k" | "4k" | "compress" | "custom">("original");
+  const [sizePreset, setSizePreset] = useState<"original" | "2k" | "4k" | "compress" | "custom">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("digiscale_brand_kit");
+      if (saved) {
+        try {
+          const bk = JSON.parse(saved);
+          const mult = bk.exportSettings?.multiplier;
+          if (mult === 2) return "2k";
+          if (mult === 4) return "4k";
+          if (mult === 0.75) return "compress";
+        } catch (e) {}
+      }
+    }
+    return "original";
+  });
   const [customW, setCustomW] = useState<number | "">("");
   const [batchExporting, setBatchExporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
@@ -305,6 +330,50 @@ export function PropertiesPanel() {
 
   const [exportOpen, setExportOpen] = useState(false);
   const [sidebarSubTab, setSidebarSubTab] = useState<"object" | "canvas">("object");
+
+  // ─── Brand Kit State ───
+  const [brandKit, setBrandKit] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("digiscale_brand_kit");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return {
+      logos: [] as string[],
+      colors: ["#1e293b", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"],
+      fonts: {
+        header: { family: "Inter", size: 48, bold: true },
+        subheader: { family: "Inter", size: 32, bold: true },
+        body: { family: "Inter", size: 18, bold: false },
+      },
+      watermark: {
+        enabled: false,
+        text: "Digiscale",
+        opacity: 0.3,
+        position: "bottom-right" as "bottom-right" | "center",
+        scale: 1,
+      },
+      exportSettings: {
+        format: "png" as "png" | "jpg" | "webp",
+        multiplier: 1,
+        quality: 0.95,
+      },
+      canvasSize: {
+        width: 1080,
+        height: 1080,
+      },
+    };
+  });
+
+  const saveBrandKit = (updated: typeof brandKit) => {
+    setBrandKit(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("digiscale_brand_kit", JSON.stringify(updated));
+    }
+  };
 
   useEffect(() => {
     if (activeObject) {
@@ -851,6 +920,450 @@ export function PropertiesPanel() {
       )}
     </div>
   );
+
+  // ════════════════════════════════════════════════════════════════════
+  // PANEL: BRAND KIT
+  // ════════════════════════════════════════════════════════════════════
+  const BRAND_KIT_FONTS = [
+    "Inter",
+    "Roboto",
+    "Montserrat",
+    "Poppins",
+    "Playfair Display",
+    "Lora",
+    "Oswald",
+    "Georgia",
+    "Courier New",
+  ];
+
+  const handleBrandLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const src = ev.target?.result as string;
+      const nextLogos = [...brandKit.logos, src];
+      saveBrandKit({ ...brandKit, logos: nextLogos });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddLogoToCanvas = (src: string) => {
+    if (!canvas) return;
+    fabric.Image.fromURL(src, (img) => {
+      img.scaleToWidth(Math.min(canvasConfig.width * 0.3, 200));
+      img.set({
+        left: canvasConfig.width / 2,
+        top: canvasConfig.height / 2,
+        originX: "center",
+        originY: "center"
+      });
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      saveHistoryState();
+    });
+  };
+
+  const handleApplyColor = (color: string) => {
+    if (!canvas) return;
+    if (activeObject) {
+      activeObject.set("fill", color);
+      canvas.renderAll();
+      saveHistoryState();
+    } else {
+      setCanvasConfig(prev => ({
+        ...prev,
+        backgroundType: "color",
+        backgroundColor: color
+      }));
+      saveHistoryState();
+    }
+  };
+
+  const handleAddBrandText = (level: "header" | "subheader" | "body") => {
+    if (!canvas) return;
+    const fontConf = brandKit.fonts[level];
+    const textConfig = {
+      header: { text: "Add Brand Heading", size: 90, weight: "bold" },
+      subheader: { text: "Add Brand Subheading", size: 54, weight: "bold" },
+      body: { text: "Add brand body text", size: 30, weight: "normal" },
+    }[level];
+
+    const t = new fabric.IText(textConfig.text, {
+      left: canvasConfig.width / 2,
+      top: canvasConfig.height / 2,
+      originX: "center",
+      originY: "center",
+      fontFamily: fontConf.family + ", sans-serif",
+      fontSize: textConfig.size,
+      fontWeight: fontConf.bold ? "bold" : "normal",
+      fill: "#1e293b",
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.renderAll();
+    saveHistoryState();
+  };
+
+  const handleApplyWatermark = () => {
+    if (!canvas) return;
+    const existing = canvas.getObjects().find(o => (o as any).isWatermark);
+    if (existing) canvas.remove(existing);
+
+    const isCenter = brandKit.watermark.position === "center";
+    const x = isCenter ? canvasConfig.width / 2 : canvasConfig.width - 150;
+    const y = isCenter ? canvasConfig.height / 2 : canvasConfig.height - 60;
+
+    const wm = new fabric.IText(brandKit.watermark.text || "Watermark", {
+      left: x,
+      top: y,
+      originX: "center",
+      originY: "center",
+      fontFamily: "Inter, sans-serif",
+      fontSize: Math.round(canvasConfig.width * 0.035),
+      fill: "#cccccc",
+      opacity: brandKit.watermark.opacity,
+      fontWeight: "bold",
+    });
+    (wm as any).isWatermark = true;
+    
+    canvas.add(wm);
+    canvas.renderAll();
+    saveHistoryState();
+  };
+
+  const handleApplyDefaultSize = () => {
+    setCanvasConfig(prev => ({
+      ...prev,
+      width: brandKit.canvasSize.width,
+      height: brandKit.canvasSize.height
+    }));
+  };
+
+  const BrandKitPanel = () => {
+    const brandLogoInputRef = useRef<HTMLInputElement>(null);
+    return (
+      <div className="overflow-y-auto flex-1 p-3 space-y-4">
+        {/* Company Logo Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black tracking-wider text-slate-500">Company Logo</span>
+            <button
+              onClick={() => brandLogoInputRef.current?.click()}
+              className="text-[9px] text-blue-600 hover:text-blue-700 font-extrabold flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> Upload Logo
+            </button>
+            <input
+              type="file"
+              ref={brandLogoInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleBrandLogoUpload}
+            />
+          </div>
+
+          {brandKit.logos.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {brandKit.logos.map((src: string, idx: number) => (
+                <div key={idx} className="relative group aspect-square rounded-xl border border-slate-200 bg-white overflow-hidden p-1.5 flex items-center justify-center cursor-pointer shadow-sm hover:border-blue-450 transition">
+                  <img
+                    src={src}
+                    className="max-h-full max-w-full object-contain"
+                    alt={`Brand Logo ${idx + 1}`}
+                    onClick={() => handleAddLogoToCanvas(src)}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const updated = brandKit.logos.filter((_: any, i: number) => i !== idx);
+                      saveBrandKit({ ...brandKit, logos: updated });
+                    }}
+                    className="absolute top-0.5 right-0.5 p-1 bg-white hover:bg-rose-50 text-rose-500 rounded-md opacity-0 group-hover:opacity-100 transition shadow border border-slate-100"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-slate-400 text-[10px] font-semibold bg-white rounded-xl border border-slate-200 border-dashed">
+              No logo uploaded yet.
+            </div>
+          )}
+        </div>
+
+        {/* Brand Colors Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black tracking-wider text-slate-500">Brand Colors</span>
+            <label className="text-[9px] text-blue-600 hover:text-blue-700 font-extrabold flex items-center gap-1 cursor-pointer">
+              <Plus className="w-3.5 h-3.5" /> Add Color
+              <input
+                type="color"
+                className="hidden"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!brandKit.colors.includes(val)) {
+                    saveBrandKit({ ...brandKit, colors: [...brandKit.colors, val] });
+                  }
+                }}
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {brandKit.colors.map((c: string, idx: number) => (
+              <div
+                key={idx}
+                className="w-8 h-8 rounded-xl border border-slate-350 cursor-pointer shadow-sm relative group transition hover:scale-105 active:scale-95"
+                style={{ backgroundColor: c }}
+                onClick={() => handleApplyColor(c)}
+                title="Click to apply"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = brandKit.colors.filter((_: any, i: number) => i !== idx);
+                    saveBrandKit({ ...brandKit, colors: updated });
+                  }}
+                  className="absolute -top-1.5 -right-1.5 p-0.5 bg-white hover:bg-rose-50 text-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition shadow border border-slate-200"
+                >
+                  <X className="w-2 h-2" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Brand Fonts Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-3">
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Fonts</span>
+          
+          <div className="space-y-2">
+            {/* Header Font Select */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-slate-500">Heading</span>
+              <select
+                value={brandKit.fonts.header.family}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  fonts: { ...brandKit.fonts, header: { ...brandKit.fonts.header, family: e.target.value } }
+                })}
+                className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+              >
+                {BRAND_KIT_FONTS.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleAddBrandText("header")}
+                className="p-1 bg-blue-50 text-blue-600 hover:bg-blue-650 hover:text-white rounded-md transition"
+                title="Add Heading text"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Subheader Font Select */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-slate-500">Subheading</span>
+              <select
+                value={brandKit.fonts.subheader.family}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  fonts: { ...brandKit.fonts, subheader: { ...brandKit.fonts.subheader, family: e.target.value } }
+                })}
+                className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+              >
+                {BRAND_KIT_FONTS.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleAddBrandText("subheader")}
+                className="p-1 bg-blue-50 text-blue-600 hover:bg-blue-650 hover:text-white rounded-md transition"
+                title="Add Subheading text"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Body Font Select */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-slate-500">Body</span>
+              <select
+                value={brandKit.fonts.body.family}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  fonts: { ...brandKit.fonts, body: { ...brandKit.fonts.body, family: e.target.value } }
+                })}
+                className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+              >
+                {BRAND_KIT_FONTS.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleAddBrandText("body")}
+                className="p-1 bg-blue-50 text-blue-600 hover:bg-blue-650 hover:text-white rounded-md transition"
+                title="Add Body text"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Watermark Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2.5">
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Watermark</span>
+          
+          <div className="space-y-2">
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Watermark Text</label>
+              <input
+                type="text"
+                value={brandKit.watermark.text}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  watermark: { ...brandKit.watermark, text: e.target.value }
+                })}
+                className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Watermark text..."
+              />
+            </div>
+
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Opacity ({Math.round(brandKit.watermark.opacity * 100)}%)</label>
+              <input
+                type="range"
+                min={0.1}
+                max={1.0}
+                step={0.05}
+                value={brandKit.watermark.opacity}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  watermark: { ...brandKit.watermark, opacity: Number(e.target.value) }
+                })}
+                className="w-full accent-blue-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[9px] text-slate-400 font-bold block mb-1">Position</label>
+                <select
+                  value={brandKit.watermark.position}
+                  onChange={(e) => saveBrandKit({
+                    ...brandKit,
+                    watermark: { ...brandKit.watermark, position: e.target.value as any }
+                  })}
+                  className="w-full text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+                >
+                  <option value="bottom-right">Bottom Right</option>
+                  <option value="center">Center</option>
+                </select>
+              </div>
+              
+              <div className="flex items-end shrink-0">
+                <button
+                  onClick={handleApplyWatermark}
+                  className="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-lg transition active:scale-95 shadow-sm"
+                >
+                  + Add to Canvas
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Default Export Settings Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2.5">
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Default Export Settings</span>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Format</label>
+              <select
+                value={brandKit.exportSettings.format}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  exportSettings: { ...brandKit.exportSettings, format: e.target.value as any }
+                })}
+                className="w-full text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+              >
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="webp">WEBP</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Multiplier</label>
+              <select
+                value={brandKit.exportSettings.multiplier}
+                onChange={(e) => saveBrandKit({
+                  ...brandKit,
+                  exportSettings: { ...brandKit.exportSettings, multiplier: Number(e.target.value) }
+                })}
+                className="w-full text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700"
+              >
+                <option value={1}>1x (Original)</option>
+                <option value={2}>2x (Retina)</option>
+                <option value={0.75}>0.75x (Compressed)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Default Canvas Size Section */}
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-2.5">
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Default Canvas Size</span>
+          
+          <div className="space-y-2.5">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[9px] text-slate-400 font-bold block mb-1">Width</label>
+                <input
+                  type="number"
+                  value={brandKit.canvasSize.width}
+                  onChange={(e) => saveBrandKit({
+                    ...brandKit,
+                    canvasSize: { ...brandKit.canvasSize, width: Number(e.target.value) }
+                  })}
+                  className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+                  min={100}
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="text-[9px] text-slate-400 font-bold block mb-1">Height</label>
+                <input
+                  type="number"
+                  value={brandKit.canvasSize.height}
+                  onChange={(e) => saveBrandKit({
+                    ...brandKit,
+                    canvasSize: { ...brandKit.canvasSize, height: Number(e.target.value) }
+                  })}
+                  className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+                  min={100}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleApplyDefaultSize}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-lg transition active:scale-95 shadow-sm text-center"
+            >
+              Resize Canvas to Default ({brandKit.canvasSize.width} x {brandKit.canvasSize.height})
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // ════════════════════════════════════════════════════════════════════
   // PANEL: TEXT
@@ -2110,6 +2623,7 @@ export function PropertiesPanel() {
   const panelTitle = () => {
     if (activeTool === "upload")    return "Upload Image";
     if (activeTool === "assets")    return "Assets Library";
+    if (activeTool === "brandkit")  return "Brand Kit";
     if (activeTool === "removebg")  return "Remove Background";
     if (activeTool === "crop")      return "Crop & Transform";
     if (activeTool === "text")      return "Add Text";
@@ -2166,6 +2680,7 @@ export function PropertiesPanel() {
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTool === "upload"    && UploadPanel()}
         {activeTool === "assets"    && AssetsPanel()}
+        {activeTool === "brandkit"  && BrandKitPanel()}
         {activeTool === "removebg"  && RemoveBgPanel()}
         {activeTool === "crop"      && CropPanel()}
         {activeTool === "text"      && TextPanel()}

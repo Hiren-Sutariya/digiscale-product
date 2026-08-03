@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { Upload, Eraser, Crop, Type, LayoutGrid, LayoutTemplate } from "lucide-react";
+import { Upload, Eraser, Crop, Type, LayoutGrid, LayoutTemplate, Briefcase } from "lucide-react";
 import { useWorkspace } from "./WorkspaceProvider";
 
 const NAV_ITEMS = [
   { id: "upload",    icon: Upload,         label: "Upload"     },
   { id: "assets",    icon: LayoutGrid,     label: "Assets"     },
+  { id: "brandkit",  icon: Briefcase,      label: "Brand\nKit" },
   { id: "removebg",  icon: Eraser,         label: "Remove\nBG" },
   { id: "crop",      icon: Crop,           label: "Crop"       },
   "divider",
