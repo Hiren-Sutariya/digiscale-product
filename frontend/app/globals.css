@@ -162,8 +162,9 @@
 .dark body,
 .dark main,
 .dark .bg-slate-50,
-.dark .bg-slate-100 {
-  background-color: #0b0f19 !important;
+.dark .bg-slate-100,
+.dark .bg-\[\#f0f2f7\] {
+  background-color: #090d16 !important;
   color: #f1f5f9 !important;
 }
 
@@ -173,6 +174,66 @@
 .dark .bg-slate-50\/50 {
   background-color: #121824 !important;
   color: #f8fafc !important;
+}
+
+/* Ensure selected rows and active search cards are beautifully dark slate */
+.dark .bg-blue-50\/30,
+.dark .bg-blue-50\/50 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Exclude Print Containers and PDF Preview pages from dark mode overrides so they look exactly like white paper with crisp dark text */
+.dark .print-container,
+.dark .print-container *,
+.dark #print-area,
+.dark #print-area * {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.dark .print-container .text-slate-900,
+.dark .print-container .text-slate-800,
+.dark .print-container .text-slate-700,
+.dark .print-container h1,
+.dark .print-container h2,
+.dark .print-container h3,
+.dark .print-container h4,
+.dark .print-container h5,
+.dark .print-container h6,
+.dark .print-container p,
+.dark .print-container span,
+.dark .print-container td,
+.dark .print-container th,
+.dark .print-container div {
+  color: #0f172a !important;
+}
+
+.dark .print-container .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+.dark .print-container .bg-slate-550,
+.dark .print-container .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+.dark .print-container .bg-white {
+  background-color: #ffffff !important;
+}
+
+.dark .print-container input,
+.dark .print-container select,
+.dark .print-container textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Ensure the design editor canvas sheet remains clean white regardless of dark mode */
+.dark .design-canvas,
+.dark canvas {
+  background-color: #ffffff !important;
 }
 
 .dark .text-slate-900,
@@ -196,12 +257,53 @@
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
+/* Input elements in dark mode */
 .dark input,
 .dark select,
 .dark textarea {
   background-color: #1a2233 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: #f8fafc !important;
+}
+
+/* Utility classes mapping for light-colored background badges and buttons */
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: rgba(148, 163, 184, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+}
+
+.dark .hover\:bg-slate-150:hover,
+.dark .hover\:bg-slate-100:hover,
+.dark .hover\:bg-slate-50:hover {
+  background-color: #1a2233 !important;
 }
 
 /* Dynamic Accent Color CSS Variables overrides */
