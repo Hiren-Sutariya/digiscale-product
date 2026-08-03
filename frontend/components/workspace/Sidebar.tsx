@@ -18,7 +18,7 @@ export function Sidebar() {
   const { activeTool, setActiveTool } = useWorkspace();
 
   return (
-    <div className="w-[72px] bg-white border-r border-slate-200 flex flex-col items-center py-5 shrink-0 z-10 shadow-[2px_0_15px_-3px_rgba(0,0,0,0.05)]">
+    <div className="w-[84px] bg-white border-r border-slate-200 flex flex-col items-center py-5 shrink-0 z-10 shadow-[2px_0_15px_-3px_rgba(0,0,0,0.05)]">
       <div className="flex flex-col gap-1.5 w-full px-2.5">
         {NAV_ITEMS.map((item, i) => {
           if (item === "divider") {

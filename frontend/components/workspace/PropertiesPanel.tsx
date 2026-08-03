@@ -2639,7 +2639,7 @@ export function PropertiesPanel() {
   // RENDER
   // ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ──
   return (
-    <div className="w-64 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 shadow-[-2px_0_15px_-3px_rgba(0,0,0,0.05)]">
+    <div className="w-80 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 shadow-[-2px_0_15px_-3px_rgba(0,0,0,0.05)]">
       {/* Panel Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
         <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{panelTitle()}</span>
