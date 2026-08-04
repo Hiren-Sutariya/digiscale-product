@@ -87,6 +87,7 @@ import {
   Printer,
   Phone,
   Copy,
+  Columns,
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
@@ -167,6 +168,7 @@ function CollectionsPageContent() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [collectionLayout, setCollectionLayout] = useState<"split" | "combined">("split");
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCopyDropdownOpen, setIsCopyDropdownOpen] = useState(false);
@@ -2238,6 +2240,36 @@ ${rows}
   };
 
   const renderCollectionsContent = () => {
+    if (collectionLayout === "combined") {
+      return (
+        <div className="flex flex-col min-h-0 h-full">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-1 bg-indigo-500 rounded-full" />
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                All Collections
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-full">
+              {filteredCollections.length} {filteredCollections.length === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+            {filteredCollections.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+                No collections found
+              </div>
+            ) : (
+              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
+                {filteredCollections.map(c => renderCollectionCard(c))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     const codeCols = filteredCollections.filter(c => isCodeCollection(c));
     const namedCols = filteredCollections.filter(c => !isCodeCollection(c));
 
@@ -2999,6 +3031,31 @@ ${rows}
 
                     {/* View Toggle and Action Button */}
                     <div className="flex items-center gap-3">
+                      {/* Layout Switcher (Split vs Combined) */}
+                      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                        <button
+                          onClick={() => setCollectionLayout("split")}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${collectionLayout === "split"
+                            ? "bg-slate-100 text-slate-900 shadow-sm"
+                            : "text-slate-400 hover:text-slate-650"
+                            }`}
+                        >
+                          <Columns className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Split View</span>
+                        </button>
+
+                        <button
+                          onClick={() => setCollectionLayout("combined")}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${collectionLayout === "combined"
+                            ? "bg-slate-100 text-slate-900 shadow-sm"
+                            : "text-slate-400 hover:text-slate-650"
+                            }`}
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Combined View</span>
+                        </button>
+                      </div>
+
                       <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
                         <button
                           onClick={() => setViewMode("grid")}
