@@ -8,6 +8,153 @@ import {
   ShoppingBag, Camera, Share2, MessageCircle, Globe, Shirt, Maximize
 } from "lucide-react";
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    workspaceDesigns: "Workspace Designs",
+    manageDesigns: "Manage your graphic designs",
+    allDesigns: "All Designs",
+    favoriteDesigns: "Favorite Designs",
+    folders: "Folders",
+    createNewFolder: "Create New Folder",
+    noFoldersYet: "No folders created yet",
+    searchPlaceholder: "Search designs by title...",
+    createNewDesign: "Create New Design",
+    untitledDesign: "Untitled Design",
+    untitledProject: "Untitled Project",
+    confirmDeleteFolder: "Are you sure you want to delete this folder? All projects inside will be moved to root.",
+    deleteFolderTitle: "Delete Folder",
+    folder: "Folder",
+    showingCategorized: "Showing projects categorized in this folder",
+    templates: "Templates",
+    startFromScratch: "Start from scratch or use standard dimensions templates",
+    width: "Width (px)",
+    height: "Height (px)",
+    designTitle: "Design Title",
+    orSelectPreset: "Or select template preset",
+    startDesigning: "Start Designing",
+    folderName: "Folder Name",
+    createFolderBtn: "Create Folder",
+    newFolderHeader: "Create New Folder",
+    category: "Category",
+    dimensions: "Dimensions",
+    canvasColor: "Canvas Color",
+    whiteColor: "White (#ffffff)",
+    cancel: "Cancel",
+    noDesignsFound: "No designs found",
+    noDesignsMatching: "We couldn't find any designs matching your search term.",
+    favoritesEmpty: "Star your favorite designs to see them grouped in this tab.",
+    allEmpty: "Create your first canvas template project to get started.",
+  },
+  gu: {
+    workspaceDesigns: "વર્કસ્પેસ ડિઝાઇન",
+    manageDesigns: "તમારી ગ્રાફિક ડિઝાઇન્સ સંચાલિત કરો",
+    allDesigns: "બધી ડિઝાઇન્સ",
+    favoriteDesigns: "મનપસંદ ડિઝાઇન્સ",
+    folders: "ફોલ્ડર્સ",
+    createNewFolder: "નવું ફોલ્ડર બનાવો",
+    noFoldersYet: "હજુ સુધી કોઈ ફોલ્ડર્સ બનાવેલ નથી",
+    searchPlaceholder: "શીર્ષક દ્વારા ડિઝાઇન્સ શોધો...",
+    createNewDesign: "નવી ડિઝાઇન બનાવો",
+    untitledDesign: "બિનશીર્ષક ડિઝાઇન",
+    untitledProject: "બિનશીર્ષક પ્રોજેક્ટ",
+    confirmDeleteFolder: "શું તમે ખરેખર આ ફોલ્ડર કાઢી નાખવા માંગો છો? અંદરના તમામ પ્રોજેક્ટ્સ રુટમાં ખસેડવામાં આવશે.",
+    deleteFolderTitle: "ફોલ્ડર કાઢી નાખો",
+    folder: "ફોલ્ડર",
+    showingCategorized: "આ ફોલ્ડરમાં વર્ગીકૃત થયેલા પ્રોજેક્ટ્સ દર્શાવે છે",
+    templates: "ટેમ્પલેટ્સ",
+    startFromScratch: "નવી શરૂઆત કરો અથવા પ્રમાણભૂત કદના ટેમ્પલેટ્સનો ઉપયોગ કરો",
+    width: "પહોળાઈ (px)",
+    height: "ઊંચાઈ (px)",
+    designTitle: "ડિઝાઇન શીર્ષક",
+    orSelectPreset: "અથવા ટેમ્પલેટ પ્રીસેટ પસંદ કરો",
+    startDesigning: "ડિઝાઇન શરૂ કરો",
+    folderName: "ફોલ્ડર નામ",
+    createFolderBtn: "ફોલ્ડર બનાવો",
+    newFolderHeader: "નવું ફોલ્ડર બનાવો",
+    category: "કેટેગરી",
+    dimensions: "પરિમાણો",
+    canvasColor: "કેનવાસ રંગ",
+    whiteColor: "સફેદ (#ffffff)",
+    cancel: "રદ કરો",
+    noDesignsFound: "કોઈ ડિઝાઇન મળી નથી",
+    noDesignsMatching: "તમારા શોધ શબ્દ સાથે મેળ ખાતી કોઈ ડિઝાઇન અમને મળી શકી નથી.",
+    favoritesEmpty: "આ ટેબમાં તમારા મનપસંદ ડિઝાઇન જોવા માટે તેને સ્ટાર કરો.",
+    allEmpty: "શરૂ કરવા માટે તમારો પ્રથમ કેનવાસ પ્રોજેક્ટ બનાવો.",
+  },
+  hi: {
+    workspaceDesigns: "कार्यक्षेत्र डिज़ाइन",
+    manageDesigns: "अपने ग्राफिक डिज़ाइन प्रबंधित करें",
+    allDesigns: "सभी डिज़ाइन",
+    favoriteDesigns: "पसंदीदा डिज़ाइन",
+    folders: "फ़ोल्डर",
+    createNewFolder: "नया फ़ोल्डर बनाएं",
+    noFoldersYet: "अभी तक कोई फ़ोल्डर नहीं बनाया गया है",
+    searchPlaceholder: "शीर्षक द्वारा डिज़ाइन खोजें...",
+    createNewDesign: "नई डिज़ाइन बनाएं",
+    untitledDesign: "बिना शीर्षक वाला डिज़ाइन",
+    untitledProject: "बिना शीर्षक वाली परियोजना",
+    confirmDeleteFolder: "क्या आप वाकई इस फ़ोल्डर को हटाना चाहते हैं? इसके अंदर के सभी प्रोजेक्ट मुख्य रूट में चले जाएंगे।",
+    deleteFolderTitle: "फ़ोल्डर हटाएं",
+    folder: "फ़ोल्डर",
+    showingCategorized: "इस फ़ोल्डर में वर्गीकृत परियोजनाओं को दिखा रहा है",
+    templates: "टेम्पलेट्स",
+    startFromScratch: "शुरुआत से शुरू करें या मानक आकार के टेम्पलेट्स का उपयोग करें",
+    width: "चौड़ाई (px)",
+    height: "ऊंचाई (px)",
+    designTitle: "डिज़ाइन का शीर्षक",
+    orSelectPreset: "या टेम्पलेट प्रीसेट चुनें",
+    startDesigning: "डिज़ाइन शुरू करें",
+    folderName: "फ़ोल्डर का नाम",
+    createFolderBtn: "फ़ोल्डर बनाएं",
+    newFolderHeader: "नया फ़ोल्डर बनाएं",
+    category: "श्रेणी",
+    dimensions: "आयाम",
+    canvasColor: "कैनवास रंग",
+    whiteColor: "सफेद (#ffffff)",
+    cancel: "रद्द करें",
+    noDesignsFound: "कोई डिज़ाइन नहीं मिला",
+    noDesignsMatching: "हमें आपकी खोज से मेल खाने वाला कोई डिज़ाइन नहीं मिला।",
+    favoritesEmpty: "इस टैब में अपने पसंदीदा डिज़ाइनों को देखने के लिए उन्हें स्टार करें।",
+    allEmpty: "आरंभ करने के लिए अपना पहला कैनवास प्रोजेक्ट बनाएं।",
+  },
+  es: {
+    workspaceDesigns: "Diseños de Espacio",
+    manageDesigns: "Administre sus diseños gráficos",
+    allDesigns: "Todos los diseños",
+    favoriteDesigns: "Diseños favoritos",
+    folders: "Carpetas",
+    createNewFolder: "Crear nueva carpeta",
+    noFoldersYet: "Aún no se han creado carpetas",
+    searchPlaceholder: "Buscar diseños por título...",
+    createNewDesign: "Crear nuevo diseño",
+    untitledDesign: "Diseño sin título",
+    untitledProject: "Proyecto sin título",
+    confirmDeleteFolder: "¿Está seguro de que desea eliminar esta carpeta? Todos los proyectos dentro se moverán a la raíz.",
+    deleteFolderTitle: "Eliminar carpeta",
+    folder: "Carpeta",
+    showingCategorized: "Mostrando proyectos categorizados en esta carpeta",
+    templates: "Plantillas",
+    startFromScratch: "Comience desde cero o use plantillas de dimensiones estándar",
+    width: "Ancho (px)",
+    height: "Alto (px)",
+    designTitle: "Título del diseño",
+    orSelectPreset: "O seleccione plantilla preestablecida",
+    startDesigning: "Comenzar a diseñar",
+    folderName: "Nombre de la carpeta",
+    createFolderBtn: "Crear carpeta",
+    newFolderHeader: "Crear nueva carpeta",
+    category: "Categoría",
+    dimensions: "Dimensiones",
+    canvasColor: "Color del lienzo",
+    whiteColor: "Blanco (#ffffff)",
+    cancel: "Cancelar",
+    noDesignsFound: "No se encontraron diseños",
+    noDesignsMatching: "No pudimos encontrar ningún diseño que coincida con su búsqueda.",
+    favoritesEmpty: "Marque sus diseños favoritos para verlos agrupados aquí.",
+    allEmpty: "Cree su primer proyecto de diseño para comenzar.",
+  }
+};
+
 export const WorkspaceDashboard = () => {
   const {
     projects,
@@ -22,6 +169,16 @@ export const WorkspaceDashboard = () => {
     createFolder,
     deleteFolder,
   } = useWorkspace();
+
+  const [lang, setLang] = useState<string>("en");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
   // Navigation state: 'all' | 'favorites' | { type: 'folder'; folderId: string }
   const [currentTab, setCurrentTab] = useState<string>("all");
@@ -161,9 +318,9 @@ export const WorkspaceDashboard = () => {
           <div>
             <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Layout className="w-5 h-5 text-blue-600" />
-              Workspace Designs
+              {t("workspaceDesigns")}
             </h1>
-            <p className="text-[11px] text-slate-400 mt-0.5">Manage your graphic designs</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{t("manageDesigns")}</p>
           </div>
 
           {/* Navigation Links */}
@@ -180,7 +337,7 @@ export const WorkspaceDashboard = () => {
               }`}
             >
               <Layout className="w-4 h-4" />
-              All Designs
+              {t("allDesigns")}
             </button>
 
             <button
@@ -195,18 +352,18 @@ export const WorkspaceDashboard = () => {
               }`}
             >
               <Star className="w-4 h-4" />
-              Favorite Designs
+              {t("favoriteDesigns")}
             </button>
           </div>
 
           {/* Folders Section */}
           <div className="space-y-2 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between px-3">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Folders</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("folders")}</span>
               <button 
                 onClick={() => setIsFolderModalOpen(true)}
                 className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 transition cursor-pointer"
-                title="Create New Folder"
+                title={t("createNewFolder")}
               >
                 <FolderPlus className="w-4 h-4" />
               </button>
@@ -231,7 +388,7 @@ export const WorkspaceDashboard = () => {
                   </button>
                   <button 
                     onClick={() => {
-                      if (confirm("Are you sure you want to delete this folder? All projects inside will be moved to root.")) {
+                      if (confirm(t("confirmDeleteFolder"))) {
                         deleteFolder(f.id);
                         if (activeFolderId === f.id) {
                           setCurrentTab("all");
@@ -240,7 +397,7 @@ export const WorkspaceDashboard = () => {
                       }
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1.5 mr-2 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                    title="Delete Folder"
+                    title={t("deleteFolderTitle")}
                   >
                     <FolderMinus className="w-3.5 h-3.5" />
                   </button>
@@ -250,7 +407,7 @@ export const WorkspaceDashboard = () => {
               {folders.length === 0 && (
                 <div className="px-3 py-4 text-center border border-dashed border-slate-200 rounded-xl">
                   <Folder className="w-6 h-6 text-slate-300 mx-auto" />
-                  <p className="text-[10px] text-slate-400 mt-1">No folders created yet</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{t("noFoldersYet")}</p>
                 </div>
               )}
             </div>
@@ -272,7 +429,7 @@ export const WorkspaceDashboard = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search designs by title..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-4 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 transition"
@@ -292,7 +449,7 @@ export const WorkspaceDashboard = () => {
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm hover:shadow active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Create New Design
+            <Plus className="w-4 h-4" /> {t("createNewDesign")}
           </button>
         </header>
 
@@ -306,9 +463,9 @@ export const WorkspaceDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <Layout className="w-4 h-4 text-blue-600" /> Start with a Template Preset
+                      <Layout className="w-4 h-4 text-blue-600" /> {lang === "gu" ? "ટેમ્પલેટ પ્રીસેટ સાથે શરૂ કરો" : lang === "hi" ? "टैम्पलेट प्रीसेट के साथ शुरू करें" : lang === "es" ? "Comenzar con una Plantilla" : "Start with a Template Preset"}
                     </h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Select a pre-sized white template to quickly launch a new graphic design project</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{lang === "gu" ? "નવો ગ્રાફિક ડિઝાઇન પ્રોજેક્ટ ઝડપથી શરૂ કરવા માટે પૂર્વ-કદના ટેમ્પલેટ પસંદ કરો" : lang === "hi" ? "नया ग्राफिक डिज़ाइन प्रोजेक्ट तेज़ी से लॉन्च करने के लिए पहले से निर्धारित आकार का टेम्पलेट चुनें" : lang === "es" ? "Seleccione una plantilla preestablecida para iniciar rápidamente" : "Select a pre-sized white template to quickly launch a new graphic design project"}</p>
                   </div>
                 </div>
 
@@ -349,10 +506,10 @@ export const WorkspaceDashboard = () => {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-slate-800">
-                    {folders.find(f => f.id === activeFolderId)?.name || "Folder"}
+                    {folders.find(f => f.id === activeFolderId)?.name || t("folder")}
                   </h2>
                   <p className="text-xs text-slate-400">
-                    Showing projects categorized in this folder
+                    {t("showingCategorized")}
                   </p>
                 </div>
               </div>
@@ -361,7 +518,7 @@ export const WorkspaceDashboard = () => {
             {/* Folder shortcuts on All Designs tab */}
             {currentTab === "all" && searchQuery === "" && folders.length > 0 && (
               <div className="space-y-2.5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Folders</h3>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("folders")}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {folders.map(f => {
                     const count = projects.filter(p => p.folderId === f.id).length;
@@ -570,19 +727,19 @@ export const WorkspaceDashboard = () => {
                     <div className="w-16 h-16 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mb-4">
                       <Layout className="w-8 h-8" />
                     </div>
-                    <h4 className="text-sm font-bold text-slate-700">No designs found</h4>
+                    <h4 className="text-sm font-bold text-slate-700">{t("noDesignsFound")}</h4>
                     <p className="text-xs text-slate-400 mt-1 max-w-[280px]">
                       {searchQuery 
-                        ? "We couldn't find any designs matching your search term."
+                        ? t("noDesignsMatching")
                         : currentTab === "favorites"
-                          ? "Star your favorite designs to see them grouped in this tab."
-                          : "Create your first canvas template project to get started."}
+                          ? t("favoritesEmpty")
+                          : t("allEmpty")}
                     </p>
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
                       className="mt-4 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Create New Design
+                      <Plus className="w-3.5 h-3.5" /> {t("createNewDesign")}
                     </button>
                   </div>
                 )}
@@ -598,7 +755,7 @@ export const WorkspaceDashboard = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800">Create New Canvas Design</h3>
+              <h3 className="text-sm font-bold text-slate-800">{t("createNewDesign")}</h3>
               <button 
                 onClick={() => setIsCreateModalOpen(false)}
                 className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
@@ -610,7 +767,7 @@ export const WorkspaceDashboard = () => {
             <form onSubmit={handleCreateProjectSubmit} className="p-6 space-y-4">
               {/* Name */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Design Title</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("designTitle")}</label>
                 <input
                   type="text"
                   required
@@ -624,7 +781,7 @@ export const WorkspaceDashboard = () => {
               {/* Dimensions Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Width (px)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("width")}</label>
                   <input
                     type="number"
                     min={100}
@@ -636,7 +793,7 @@ export const WorkspaceDashboard = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Height (px)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("height")}</label>
                   <input
                     type="number"
                     min={100}
@@ -651,7 +808,7 @@ export const WorkspaceDashboard = () => {
 
               {/* Preset Templates Grid */}
               <div className="space-y-2 pt-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or select template preset</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("orSelectPreset")}</span>
                 <div className="grid grid-cols-2 gap-2">
                   {PRESETS.map(p => (
                     <button
@@ -675,7 +832,7 @@ export const WorkspaceDashboard = () => {
                   type="submit"
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow active:scale-[0.98] cursor-pointer"
                 >
-                  Start Designing
+                  {t("startDesigning")}
                 </button>
               </div>
             </form>
@@ -688,7 +845,7 @@ export const WorkspaceDashboard = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800">Create New Folder</h3>
+              <h3 className="text-sm font-bold text-slate-800">{t("newFolderHeader")}</h3>
               <button 
                 onClick={() => setIsFolderModalOpen(false)}
                 className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
@@ -699,7 +856,7 @@ export const WorkspaceDashboard = () => {
 
             <form onSubmit={handleCreateFolderSubmit} className="p-6 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Folder Name</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("folderName")}</label>
                 <input
                   type="text"
                   required
@@ -715,7 +872,7 @@ export const WorkspaceDashboard = () => {
                   type="submit"
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow active:scale-[0.98] cursor-pointer"
                 >
-                  Create Folder
+                  {t("createFolderBtn")}
                 </button>
               </div>
             </form>
@@ -728,7 +885,9 @@ export const WorkspaceDashboard = () => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">New {selectedTemplate.name}</h3>
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                {lang === "gu" ? "નવું" : lang === "hi" ? "नया" : lang === "es" ? "Nuevo" : "New"} {selectedTemplate.name}
+              </h3>
               <button 
                 onClick={() => setSelectedTemplate(null)}
                 className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition cursor-pointer"
@@ -739,7 +898,7 @@ export const WorkspaceDashboard = () => {
 
             <form onSubmit={handleConfirmTemplateSubmit} className="p-5 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Design Title</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("designTitle")}</label>
                 <input
                   type="text"
                   required
@@ -752,9 +911,18 @@ export const WorkspaceDashboard = () => {
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-500 space-y-1">
-                <div className="flex justify-between"><span className="font-medium">Category:</span> <span className="font-bold text-slate-700 uppercase">{selectedTemplate.badge}</span></div>
-                <div className="flex justify-between"><span className="font-medium">Dimensions:</span> <span className="font-bold text-slate-700">{selectedTemplate.w} × {selectedTemplate.h} px</span></div>
-                <div className="flex justify-between"><span className="font-medium">Canvas Color:</span> <span className="font-bold text-slate-700">White (#ffffff)</span></div>
+                <div className="flex justify-between">
+                  <span className="font-medium">{t("category")}:</span> 
+                  <span className="font-bold text-slate-700 uppercase">{selectedTemplate.badge}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">{t("dimensions")}:</span> 
+                  <span className="font-bold text-slate-700">{selectedTemplate.w} × {selectedTemplate.h} px</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">{t("canvasColor")}:</span> 
+                  <span className="font-bold text-slate-700">{t("whiteColor")}</span>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -763,13 +931,13 @@ export const WorkspaceDashboard = () => {
                   onClick={() => setSelectedTemplate(null)}
                   className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow active:scale-[0.98] cursor-pointer"
                 >
-                  Start Designing
+                  {t("startDesigning")}
                 </button>
               </div>
             </form>

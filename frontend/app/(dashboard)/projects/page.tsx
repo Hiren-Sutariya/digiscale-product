@@ -86,6 +86,7 @@ import {
   Minus,
   Printer,
   Phone,
+  Copy,
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
@@ -144,9 +145,20 @@ interface Collection {
   status?: ProjectStatus;
   createdAt?: string;
   created_at?: string; // from backend
+  collection_type?: "code" | "named";
 }
 
 function CollectionsPageContent() {
+  const isCodeCollection = (nameOrCol: string | Collection) => {
+    if (typeof nameOrCol === 'object') {
+      if (nameOrCol.collection_type) return nameOrCol.collection_type === 'code';
+      const name = nameOrCol.name;
+      if (!name) return false;
+      return /^[A-Z]{3}-\d+-\d+/.test(name) || name.startsWith("PJD");
+    }
+    if (!nameOrCol) return false;
+    return /^[A-Z]{3}-\d+-\d+/.test(nameOrCol) || nameOrCol.startsWith("PJD");
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -157,7 +169,20 @@ function CollectionsPageContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCopyDropdownOpen, setIsCopyDropdownOpen] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "warning" | "error";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success"
+  });
   const [newCollectionName, setNewCollectionName] = useState("");
+  const [newCollectionType, setNewCollectionType] = useState<"code" | "named">("code");
   const [isCreating, setIsCreating] = useState(false);
 
   // Detail View State
@@ -548,11 +573,19 @@ function CollectionsPageContent() {
       setIsCreating(true);
       const newId = 'COL-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
-      const { error } = await supabase
+      // Try with collection_type first, fallback without if column doesn't exist
+      let insertResult = await supabase
         .from('collections')
-        .insert([{ id: newId, name: newCollectionName.trim(), user_id: currentUserId }]);
+        .insert([{ id: newId, name: newCollectionName.trim(), user_id: currentUserId, collection_type: newCollectionType }]);
 
-      if (error) throw error;
+      if (insertResult.error) {
+        // Column might not exist yet, retry without collection_type
+        insertResult = await supabase
+          .from('collections')
+          .insert([{ id: newId, name: newCollectionName.trim(), user_id: currentUserId }]);
+        
+        if (insertResult.error) throw insertResult.error;
+      }
 
       const newCol: Collection = {
         id: newId,
@@ -560,10 +593,12 @@ function CollectionsPageContent() {
         images: [],
         status: "completed",
         createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        collection_type: newCollectionType,
       };
 
       setCollections((prev) => [newCol, ...prev]);
       setNewCollectionName("");
+      setNewCollectionType("code");
       setIsModalOpen(false);
     } catch (err: any) {
       console.error("Failed to create collection in Supabase:", err?.message || err);
@@ -627,6 +662,7 @@ function CollectionsPageContent() {
     setSelectedCol(col);
     setDetailImages([]);
     setActiveTab("products");
+    setSelectedProductIds(new Set());
 
     if (!skipPushState && typeof window !== "undefined") {
       window.history.pushState(null, "", "?tab=collections&colId=" + col.id);
@@ -1535,6 +1571,131 @@ ${rows}
     }
   };
 
+  const performCopyProducts = async (selectedProducts: Product[], targetColId: string, targetColName: string) => {
+    try {
+      const newProductsPayload = selectedProducts.map(p => {
+        const newId = 'PRD-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        return {
+          id: newId,
+          name: p.name || "",
+          stock: p.stock || 0,
+          cartonQty: p.cartonQty || 1,
+          rate: p.rate || "",
+          length: p.length || "",
+          color: p.color || "",
+          unit_type: p.unit_type || "pcs",
+          description: p.description || "",
+          photoUrl: p.photoUrl || "",
+          warehouse: p.warehouse || "",
+          collection_id: targetColId,
+          user_id: currentUserId
+        };
+      });
+
+      const { error } = await supabase
+        .from('products')
+        .insert(newProductsPayload);
+
+      if (error) throw error;
+
+      // Update cache in localStorage for the target collection
+      const targetCachedStr = localStorage.getItem(`digiscale_products_${targetColId}`);
+      if (targetCachedStr) {
+        try {
+          const targetProducts = JSON.parse(targetCachedStr);
+          const newProductsForState = newProductsPayload.map(np => ({
+            id: np.id,
+            name: np.name,
+            stock: np.stock,
+            cartonQty: np.cartonQty,
+            rate: np.rate,
+            length: np.length,
+            color: np.color,
+            unit_type: np.unit_type,
+            description: np.description,
+            photoUrl: np.photoUrl,
+            collectionId: targetColId,
+            createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          }));
+          localStorage.setItem(`digiscale_products_${targetColId}`, JSON.stringify([...newProductsForState, ...targetProducts]));
+        } catch (e) {}
+      }
+
+      setSelectedProductIds(new Set());
+      await refreshAllProducts(currentUserId || "");
+      
+      setAlertModal({
+        isOpen: true,
+        title: "Copied Successfully",
+        message: `Successfully copied ${selectedProducts.length} product(s) to "${targetColName}".`,
+        type: "success"
+      });
+    } catch (err) {
+      console.error("Failed to copy products to collection:", err);
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to copy products.",
+        type: "error"
+      });
+    }
+  };
+
+  const handleAssignSelectedProductsToCollection = async (targetColId: string) => {
+    if (!selectedCol || selectedProductIds.size === 0 || !targetColId) return;
+
+    try {
+      const targetCol = collections.find(c => c.id === targetColId);
+      if (!targetCol) return;
+
+      const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+      if (selectedProducts.length === 0) return;
+
+      // Fetch all products currently in the target collection
+      const targetProducts = allProducts.filter(p => p.collectionId === targetColId || (p as any).collection_id === targetColId);
+      const targetProductNames = new Set(targetProducts.map(p => p.name?.trim().toLowerCase()).filter(Boolean));
+
+      const duplicates = selectedProducts.filter(p => p.name && targetProductNames.has(p.name.trim().toLowerCase()));
+      const newProductsToCopy = selectedProducts.filter(p => !p.name || !targetProductNames.has(p.name.trim().toLowerCase()));
+
+      if (duplicates.length > 0) {
+        if (newProductsToCopy.length === 0) {
+          setAlertModal({
+            isOpen: true,
+            title: "Already Added",
+            message: `${duplicates.length} product(s) are already added to "${targetCol.name}".`,
+            type: "warning"
+          });
+          return;
+        } else {
+          setConfirmModal({
+            isOpen: true,
+            title: "Duplicate Products Found",
+            message: `${duplicates.length} of the selected product(s) are already in "${targetCol.name}". Do you want to skip duplicates and copy only the remaining ${newProductsToCopy.length} new product(s)?`,
+            confirmText: "Copy New Only",
+            cancelText: "Cancel",
+            isDanger: false,
+            onConfirm: async () => {
+              setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+              await performCopyProducts(newProductsToCopy, targetColId, targetCol.name);
+            }
+          });
+          return;
+        }
+      }
+
+      await performCopyProducts(selectedProducts, targetColId, targetCol.name);
+    } catch (err) {
+      console.error("Failed to copy products:", err);
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to process copy request.",
+        type: "error"
+      });
+    }
+  };
+
   const handleAddSlot = (row: string) => {
     const current = getSlotsForRow(row);
     const nextNum = current.length > 0 ? Math.max(...current) + 1 : 1;
@@ -1936,6 +2097,209 @@ ${rows}
     return locationsByRow;
   }, [warehouseRows, warehouseSlots]);
 
+  const renderCollectionCard = (col: Collection) => {
+    const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
+    const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
+
+    return viewMode === "grid" ? (
+      /* Grid Card */
+      <div
+        key={col.id}
+        onClick={() => handleOpenCollectionDetail(col)}
+        className="group relative flex flex-col rounded-[22px] border border-slate-200/70 bg-white p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto animate-fade-in"
+      >
+        {/* Folder Icon / Preview Area */}
+        <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[16px]" />
+
+          <div className="relative transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1 z-10">
+            <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <Folder className="relative h-14 w-14 text-blue-500 fill-blue-50/50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
+          </div>
+
+          {/* Options Button */}
+          <div className="absolute top-2.5 right-2.5 z-50">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
+              }}
+              className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-405 opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {activeDropdownId === col.id && (
+              <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenamingCol(col);
+                    setRenameValue(col.name);
+                    setActiveDropdownId(null);
+                  }}
+                  className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={(e) => handleDeleteCollection(col.id, e)}
+                  className="w-full text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg px-3 py-2 transition mt-0.5"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Info Area */}
+        <div className="mt-4 px-2.5 flex flex-col justify-end shrink-0 pb-1 z-20">
+          <div>
+            <h3 className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors text-[15px] truncate pr-2">
+              {col.name}
+            </h3>
+            <div className="mt-1 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <div className="h-[4.5px] w-[4.5px] rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors" />
+                  {productCount} {productCount === 1 ? 'product' : 'products'}
+                </span>
+                <span className="text-slate-300 font-normal">·</span>
+                <span>{dateStr}</span>
+              </div>
+              <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
+                <ChevronRight className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : (
+      /* List Row */
+      <div
+        key={col.id}
+        onClick={() => handleOpenCollectionDetail(col)}
+        className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 transition hover:border-blue-200 hover:shadow-sm cursor-pointer animate-fade-in"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
+            <Folder className="h-6 w-6 text-blue-550/80 fill-blue-50/50" />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+              {col.name}
+            </h3>
+
+            <p className="text-xs text-slate-400 font-semibold">
+              {productCount} products · {dateStr}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
+              }}
+              className="rounded-lg p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-655 group-hover:opacity-100"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {activeDropdownId === col.id && (
+              <div className="absolute right-0 top-full mt-1 z-10 w-32 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenamingCol(col);
+                    setRenameValue(col.name);
+                    setActiveDropdownId(null);
+                  }}
+                  className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={(e) => handleDeleteCollection(col.id, e)}
+                  className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-655 hover:bg-red-50 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCollectionsContent = () => {
+    const codeCols = filteredCollections.filter(c => isCodeCollection(c));
+    const namedCols = filteredCollections.filter(c => !isCodeCollection(c));
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+        {/* Code Collections Column */}
+        <div className="flex flex-col min-h-0 h-full">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-1 bg-blue-600 rounded-full" />
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                Code Collections
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              {codeCols.length} {codeCols.length === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+            {codeCols.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+                No code collections found
+              </div>
+            ) : (
+              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
+                {codeCols.map(c => renderCollectionCard(c))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Named Collections Column */}
+        <div className="flex flex-col min-h-0 h-full">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-1 bg-emerald-500 rounded-full" />
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                Named Collections
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              {namedCols.length} {namedCols.length === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+            {namedCols.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+                No named collections found
+              </div>
+            ) : (
+              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
+                {namedCols.map(c => renderCollectionCard(c))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
@@ -1960,6 +2324,7 @@ ${rows}
             <button
             onClick={() => {
               setSelectedCol(null);
+              setSelectedProductIds(new Set());
               if (typeof window !== "undefined") {
                 window.history.pushState(null, "", "?tab=collections");
               }
@@ -1980,21 +2345,80 @@ ${rows}
 
             <div className="flex items-center gap-3 flex-wrap">
               {selectedProductIds.size > 0 && (
+                <>
+                  <button
+                    onClick={handleBulkDeleteProducts}
+                    className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                  </button>
+
+                  {isCodeCollection(selectedCol) && (
+                    <div className="relative">
+                      {/* Trigger Button */}
+                      <button
+                        onClick={() => setIsCopyDropdownOpen(!isCopyDropdownOpen)}
+                        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95 cursor-pointer"
+                      >
+                        <Copy className="h-4 w-4 text-blue-600" />
+                        <span>Copy to Collection</span>
+                        <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${isCopyDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Popover Menu - Opens Downwards */}
+                      {isCopyDropdownOpen && (
+                        <>
+                          {/* Overlay backdrop to close dropdown on click outside */}
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsCopyDropdownOpen(false)}
+                          />
+                          <div className="absolute left-0 top-full mt-2 z-50 w-60 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-200/40 animate-in fade-in slide-in-from-top-2 duration-150">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3.5 py-2 border-b border-slate-100/60 mb-1">
+                              Named Collections
+                            </p>
+                            
+                            <div className="max-h-48 overflow-y-auto p-1.5 space-y-0.5">
+                              {collections.filter((c) => c.id !== selectedCol.id && !isCodeCollection(c)).length === 0 ? (
+                                <p className="text-xs text-slate-400 font-semibold text-center py-4">
+                                  No Named collections found
+                                </p>
+                              ) : (
+                                collections
+                                  .filter((c) => c.id !== selectedCol.id && !isCodeCollection(c))
+                                  .map((c) => (
+                                    <button
+                                      key={c.id}
+                                      onClick={() => {
+                                        handleAssignSelectedProductsToCollection(c.id);
+                                        setIsCopyDropdownOpen(false);
+                                      }}
+                                      className="w-full text-left flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
+                                    >
+                                      <Folder className="h-4 w-4 text-blue-500/70 fill-blue-50/50" />
+                                      <span className="truncate">{c.name}</span>
+                                    </button>
+                                  ))
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {isCodeCollection(selectedCol) && (
                 <button
-                  onClick={handleBulkDeleteProducts}
-                  className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                  onClick={() => {
+                    setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
                 >
-                  <Trash2 className="h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                  <Plus className="h-4 w-4" /> Add Product
                 </button>
               )}
-              <button
-                onClick={() => {
-                  setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
-                }}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
-              >
-                <Plus className="h-4 w-4" /> Add Product
-              </button>
 
               <button
                 onClick={() => setShowPdfModal(true)}
@@ -2003,29 +2427,33 @@ ${rows}
                 <Printer className="h-4 w-4" /> Download PDF
               </button>
 
-              {/* Excel Import */}
-              <button
-                onClick={() => excelImportRef.current?.click()}
-                className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-5 py-3 text-xs font-bold text-emerald-700 transition shadow-sm active:scale-95"
-                title="Import products from Excel/CSV file"
-              >
-                <Download className="h-4 w-4 rotate-180" /> Import from Excel
-              </button>
-              <input
-                ref={excelImportRef}
-                type="file"
-                accept=".csv,.xlsx,.xls,.txt"
-                className="hidden"
-                onChange={handleExcelImport}
-              />
+              {isCodeCollection(selectedCol) && (
+                <>
+                  {/* Excel Import */}
+                  <button
+                    onClick={() => excelImportRef.current?.click()}
+                    className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-5 py-3 text-xs font-bold text-emerald-700 transition shadow-sm active:scale-95"
+                    title="Import products from Excel/CSV file"
+                  >
+                    <Download className="h-4 w-4 rotate-180" /> Import from Excel
+                  </button>
+                  <input
+                    ref={excelImportRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls,.txt"
+                    className="hidden"
+                    onChange={handleExcelImport}
+                  />
 
-              {/* Excel Template Download */}
-              <button
-                onClick={downloadExcelTemplate}
-                className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95"
-              >
-                <Download className="h-4 w-4" /> Get Template
-              </button>
+                  {/* Excel Template Download */}
+                  <button
+                    onClick={downloadExcelTemplate}
+                    className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95"
+                  >
+                    <Download className="h-4 w-4" /> Get Template
+                  </button>
+                </>
+              )}
 
             </div>
           </div>
@@ -2044,47 +2472,24 @@ ${rows}
             </div>
           )}
 
-          {/* Tabs header */}
-          <div className="flex border-b border-slate-200">
-            <button
-              onClick={() => setActiveTab("products")}
-              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "products"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-405 hover:text-slate-700"
-                }`}
-            >
-              Products Catalog ({filteredProducts.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("assets")}
-              className={`px-6 py-3 text-xs font-bold border-b-2 transition ${activeTab === "assets"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-405 hover:text-slate-700"
-                }`}
-            >
-              Workspace Images ({detailImages.length})
-            </button>
-          </div>
+
         </div>
 
         {/* Static Product Search Bar */}
-        {activeTab === "products" && (
-          <div className="shrink-0 px-0 pt-3 pb-2">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search products by name or color..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </div>
+        <div className="shrink-0 px-0 pt-3 pb-2">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Search products by name or color..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+            />
           </div>
-        )}
+        </div>
 
-        <div className={`flex-1 min-h-0 ${activeTab === "products" ? "flex flex-col overflow-hidden" : "overflow-y-auto pr-1 pb-6 space-y-6"}`}>
-          {activeTab === "products" && (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div
             className="flex-1 overflow-hidden min-h-0 flex flex-col space-y-4 rounded-2xl transition-all duration-200"
               onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("bg-blue-50/40", "ring-4", "ring-blue-100", "p-4"); }}
@@ -2541,90 +2946,6 @@ ${rows}
                 </div>
               )}
             </div>
-          )}
-
-          {/* TAB CONTENT: WORKSPACE ASSETS */}
-          {activeTab === "assets" && (
-            <div className="space-y-4">
-              <p className="text-xs text-slate-400 font-medium">
-                These are transparent backdrop images processed in the studio. You can click "Create Product" to easily convert them into catalog listings.
-              </p>
-
-              {loadingDetail ? (
-                <div className="py-16 flex flex-col items-center justify-center">
-                  <Loader2 className="h-8 w-8 text-blue-655 animate-spin" />
-                  <p className="mt-2 text-xs text-slate-405 font-semibold animate-pulse">Loading gallery assets...</p>
-                </div>
-              ) : detailImages.length === 0 ? (
-                <div className="py-16 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 bg-white">
-                  <ImageIcon className="h-10 w-10 text-slate-300 mb-3" />
-                  <h4 className="font-bold text-slate-800 text-sm">No Canvas Assets</h4>
-                  <p className="text-xs text-slate-400 mt-1 max-w-[280px]">
-                    Work on backgrounds inside the studio editor and save your exports here.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {detailImages.map((img, idx) => {
-                    const imgPath = img.processed_path?.startsWith("data:") || img.processed_path?.startsWith("http")
-                      ? img.processed_path
-                      : `${API_BASE_URL}/${img.processed_path || img.original_path}`;
-
-                    return (
-                      <div
-                        key={img.id || idx}
-                        className="group relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:border-blue-200 hover:shadow-md transition duration-205 flex flex-col"
-                      >
-                        <div className="relative h-48 bg-slate-50 border-b border-slate-100 flex items-center justify-center p-3 select-none">
-                          <img
-                            src={imgPath}
-                            alt={`Asset ${idx + 1}`}
-                            className="max-h-full max-w-full object-contain pointer-events-none transition group-hover:scale-105 duration-300"
-                          />
-                          <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2.5">
-                            <a
-                              href={imgPath}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-2 rounded-full bg-white hover:bg-slate-100 text-slate-805 transition"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                            <a
-                              href={imgPath}
-                              download={`asset_${idx}.png`}
-                              className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition"
-                            >
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Asset ID</p>
-                              <p className="text-xs font-bold text-slate-800">Asset #{img.id || idx + 1}</p>
-                            </div>
-                            <span className="text-[9px] font-bold text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full uppercase tracking-widest">
-                              Ready
-                            </span>
-                          </div>
-
-                          <button
-                            onClick={() => handleCreateProductFromAsset(imgPath)}
-                            className="w-full py-2 bg-slate-100 hover:bg-blue-600 hover:text-white rounded-xl text-center text-xs font-bold text-slate-700 transition"
-                          >
-                            Create Product
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
       ) : (
@@ -2713,176 +3034,9 @@ ${rows}
                   <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1">
                     {globalSearchQuery.trim() !== "" ? (
                       renderGlobalSearchResults()
-                  ) : (
-                    <>
-                      {filteredCollections.length === 0 ? (
-                        <div className="mt-16 flex flex-col items-center text-center">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                            <Folder className="h-8 w-8 text-slate-400" />
-                          </div>
-                          <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                            No collections found
-                          </h3>
-                          <p className="mt-2 text-slate-550">
-                            {search
-                              ? "Try a different search term."
-                              : "Create your first collection to catalog multiple items."}
-                          </p>
-                        </div>
-                      ) : (
-                        <div
-                          className={`mt-6 ${viewMode === "grid"
-                            ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]"
-                            : "space-y-3"
-                            }`}
-                        >
-                          {filteredCollections.map((col) => {
-                            // Format creation date
-                            const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
-
-                            // Get products count for this collection from Supabase allProducts state
-                            const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
-
-                            return viewMode === "grid" ? (
-                              /* Grid Card */
-                              <div
-                                key={col.id}
-                                onClick={() => handleOpenCollectionDetail(col)}
-                                className="group relative flex flex-col rounded-[22px] border border-slate-200/70 bg-white p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto"
-                              >
-                                {/* Folder Icon / Preview Area */}
-                                <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
-                                  {/* Decorative background blur */}
-                                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[16px]" />
-
-                                  <div className="relative transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1 z-10">
-                                    <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                    <Folder className="relative h-14 w-14 text-blue-500/70 fill-blue-50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
-                                  </div>
-
-                                  {/* Options Button */}
-                                  <div className="absolute top-2.5 right-2.5 z-50">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
-                                      }}
-                                      className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-400 opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
-                                    >
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </button>
-
-                                    {activeDropdownId === col.id && (
-                                      <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRenamingCol(col);
-                                            setRenameValue(col.name);
-                                            setActiveDropdownId(null);
-                                          }}
-                                          className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-                                        >
-                                          Rename
-                                        </button>
-                                        <button
-                                          onClick={(e) => handleDeleteCollection(col.id, e)}
-                                          className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition mt-0.5"
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Info Area */}
-                                <div className="mt-4 px-2.5 flex flex-col justify-end shrink-0 pb-1 z-20">
-                                  <div>
-                                    <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-[15px] truncate pr-2">
-                                      {col.name}
-                                    </h3>
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
-                                        <span className="flex items-center gap-1.5">
-                                          <div className="h-[4.5px] w-[4.5px] rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors" />
-                                          {productCount} {productCount === 1 ? 'product' : 'products'}
-                                        </span>
-                                        <span className="text-slate-300 font-normal">·</span>
-                                        <span>{dateStr}</span>
-                                      </div>
-                                      <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
-                                        <ChevronRight className="h-3.5 w-3.5" />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              /* List Row */
-                              <div
-                                key={col.id}
-                                onClick={() => handleOpenCollectionDetail(col)}
-                                className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 transition hover:border-blue-200 hover:shadow-sm cursor-pointer"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 border border-slate-100">
-                                    <Folder className="h-6 w-6 text-blue-550/80 fill-blue-50/50" />
-                                  </div>
-
-                                  <div>
-                                    <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                      {col.name}
-                                    </h3>
-
-                                    <p className="text-xs text-slate-400 font-semibold">
-                                      {productCount} products · {dateStr}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <div className="relative">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
-                                      }}
-                                      className="rounded-lg p-2 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
-                                    >
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </button>
-
-                                    {activeDropdownId === col.id && (
-                                      <div className="absolute right-0 top-full mt-1 z-10 w-32 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRenamingCol(col);
-                                            setRenameValue(col.name);
-                                            setActiveDropdownId(null);
-                                          }}
-                                          className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-                                        >
-                                          Rename
-                                        </button>
-                                        <button
-                                          onClick={(e) => handleDeleteCollection(col.id, e)}
-                                          className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-655 hover:bg-red-50 transition"
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  )}
+                    ) : (
+                      renderCollectionsContent()
+                    )}
                   </div>
                 </div>
               ) : currentTopTab === "warehouse" ? (
@@ -3322,6 +3476,7 @@ ${rows}
                 onClick={() => {
                   setIsModalOpen(false);
                   setNewCollectionName("");
+                  setNewCollectionType("code");
                 }}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
               >
@@ -3344,12 +3499,60 @@ ${rows}
                 />
               </div>
 
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                  Collection Type
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewCollectionType("code")}
+                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-left transition ${
+                      newCollectionType === "code"
+                        ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/15"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className={`h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      newCollectionType === "code" ? "border-blue-500" : "border-slate-300"
+                    }`}>
+                      {newCollectionType === "code" && <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                    </div>
+                    <div>
+                      <div className={`text-xs font-bold ${newCollectionType === "code" ? "text-blue-700" : "text-slate-600"}`}>Code Collection</div>
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">Product code based</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNewCollectionType("named")}
+                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-left transition ${
+                      newCollectionType === "named"
+                        ? "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/15"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className={`h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      newCollectionType === "named" ? "border-emerald-500" : "border-slate-300"
+                    }`}>
+                      {newCollectionType === "named" && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                    </div>
+                    <div>
+                      <div className={`text-xs font-bold ${newCollectionType === "named" ? "text-emerald-700" : "text-slate-600"}`}>Named Collection</div>
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">Custom name based</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setIsModalOpen(false);
                     setNewCollectionName("");
+                    setNewCollectionType("code");
                   }}
                   className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-55 transition"
                 >
@@ -3550,6 +3753,53 @@ ${rows}
             onChange={handlePhotoAssignFileChange}
             className="hidden"
           />
+        </div>
+      )}
+
+      {/* CUSTOM ALERT MODAL */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex flex-col items-center text-center">
+              <div className={`rounded-full p-3.5 ${
+                alertModal.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50' 
+                  : alertModal.type === 'warning'
+                  ? 'bg-amber-50 text-amber-600 border border-amber-100/50'
+                  : 'bg-red-50 text-red-650 border border-red-100/50'
+              }`}>
+                {alertModal.type === 'success' ? (
+                  <Check className="h-6 w-6" />
+                ) : alertModal.type === 'warning' ? (
+                  <AlertCircle className="h-6 w-6" />
+                ) : (
+                  <X className="h-6 w-6" />
+                )}
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 mt-4">
+                {alertModal.title}
+              </h3>
+              <p className="text-xs text-slate-500 mt-2 font-semibold leading-relaxed max-w-[280px]">
+                {alertModal.message}
+              </p>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 mt-6">
+              <button
+                type="button"
+                onClick={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+                className={`w-full rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${
+                  alertModal.type === 'success' 
+                    ? "bg-emerald-600 hover:bg-emerald-700" 
+                    : alertModal.type === 'warning'
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

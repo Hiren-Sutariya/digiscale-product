@@ -422,12 +422,12 @@ function SettingsPageContent() {
   const tabs = [
     { id: "profile",      label: t("profile"),            icon: User },
     { id: "company",      label: t("company"),            icon: Building },
-    { id: "theme",        label: t("theme"),              icon: Paintbrush },
-    { id: "language",     label: t("language"),           icon: Languages },
-    { id: "shortcuts",    label: t("shortcuts"),          icon: Keyboard },
-    { id: "storage",      label: t("storage"),            icon: HardDrive },
-    { id: "billing",      label: t("billing"),            icon: CreditCard },
     { id: "security",     label: t("security"),           icon: Shield },
+    { id: "language",     label: t("language"),           icon: Languages },
+    { id: "theme",        label: t("theme"),              icon: Paintbrush },
+    { id: "shortcuts",    label: t("shortcuts"),          icon: Keyboard },
+    { id: "billing",      label: t("billing"),            icon: CreditCard },
+    { id: "storage",      label: t("storage"),            icon: HardDrive },
     { id: "backup",       label: t("backup"),             icon: HardDrive },
   ];
 

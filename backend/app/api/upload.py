@@ -12,15 +12,16 @@ from app.config import settings
 from app.models.user import User
 from app.api.deps import get_optional_user
 
-try:
-    from rembg import remove, new_session
-    # Initialize the session globally to avoid reloading the model on every request
-    bg_session = new_session("birefnet-general")
-    REMBG_AVAILABLE = True
-except ImportError:
-    print("Warning: rembg not installed. Background removal will be skipped.")
-    bg_session = None
-    REMBG_AVAILABLE = False
+# rembg and heavy birefnet-general model disabled to support live deployment on Render
+# try:
+#     from rembg import remove, new_session
+#     # Initialize the session globally to avoid reloading the model on every request
+#     bg_session = new_session("birefnet-general")
+#     REMBG_AVAILABLE = True
+# except ImportError:
+#     print("Warning: rembg not installed. Background removal will be skipped.")
+bg_session = None
+REMBG_AVAILABLE = False
 
 router = APIRouter(tags=["upload"])
 

@@ -132,6 +132,190 @@ interface CompanyInfo {
 }
 
 export default function QuotationView() {
+  const [lang, setLang] = useState("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const TRANSLATIONS: Record<string, Record<string, string>> = {
+    en: {
+      followUp: "Follow Up",
+      done: "Done",
+      savedQuotesHistory: "Saved Quotations History",
+      manageQuotesDesc: "Manage and load previously generated quotation bills.",
+      noQuotesFound: "No saved quotations found",
+      startCreatingDesc: "Start by creating and saving your first quotation bill.",
+      refNo: "Ref No.",
+      clientCompany: "Client / Company",
+      quoteDateLabel: "Quote Date",
+      items: "Items",
+      grandTotal: "Grand Total",
+      status: "Status",
+      actions: "Actions",
+      searchSavedQuotes: "Search saved quotes (Client, ID)...",
+      createQuotation: "Create Quotation",
+      savedHistory: "Saved History",
+      saveQuotation: "Save Quotation",
+      printExportPdf: "Print / Export PDF",
+      quotationSettings: "1. QUOTATION SETTINGS",
+      quoteRefNo: "QUOTE REF NO",
+      quoteDate: "QUOTE DATE",
+      includeBankDetails: "Include Bank Details on PDF",
+      includeAuthorizedSign: "Include Authorized Sign Line",
+      applyEventPriceMarkup: "APPLY EVENT PRICE MARKUP",
+      clientDetailsOptional: "2. CLIENT DETAILS (OPTIONAL)",
+      searchAddProducts: "3. SEARCH & ADD PRODUCTS",
+      searchProductsPlaceholder: "Search products to add...",
+      searchResults: "SEARCH RESULTS",
+      searchHint: "Type product name, color, or code to search...",
+      documentPreview: "DOCUMENT PREVIEW",
+      previewHint: "* Renders final printed document dimensions below",
+      billingDetails: "BILLING DETAILS:",
+      noItemsSelected: "No items selected. Search and check boxes in the left list to add items.",
+      selectPreSavedClient: "SELECT PRE-SAVED CLIENT...",
+      clientName: "CLIENT NAME",
+      companyName: "COMPANY NAME",
+      contactDetails: "CONTACT DETAILS",
+      address: "ADDRESS",
+      additionalRemarks: "ADDITIONAL REMARKS / NOTE",
+      enterRemarks: "Enter remarks...",
+      phoneOrEmail: "Phone or Email",
+      fullBusinessAddress: "Full business address",
+      loadingQuotes: "Loading quotes...",
+      savingQuotation: "Saving quotation...",
+    },
+    gu: {
+      followUp: "ફોલો અપ",
+      done: "પૂર્ણ",
+      savedQuotesHistory: "સાચવેલા કોટેશનનો ઇતિહાસ",
+      manageQuotesDesc: "અગાઉ જનરેટ કરેલા કોટેશન બિલનું સંચાલન અને લોડ કરો.",
+      noQuotesFound: "કોઈ સાચવેલા કોટેશનો મળ્યા નથી",
+      startCreatingDesc: "તમારું પ્રથમ કોટેશન બિલ બનાવીને અને સાચવીને પ્રારંભ કરો.",
+      refNo: "સંદર્ભ નંબર",
+      clientCompany: "ગ્રાહક / કંપની",
+      quoteDateLabel: "કોટેશન તારીખ",
+      items: "વસ્તુઓ",
+      grandTotal: "કુલ સરવાળો",
+      status: "સ્થિતિ",
+      actions: "ક્રિયાઓ",
+      searchSavedQuotes: "સાચવેલા કોટેશન શોધો (ગ્રાહક, આઈડી)...",
+      createQuotation: "કોટેશન બનાવો",
+      savedHistory: "સાચવેલો ઇતિહાસ",
+      saveQuotation: "કોટેશન સાચવો",
+      printExportPdf: "પીડીએફ પ્રિન્ટ / એક્સપોર્ટ",
+      quotationSettings: "૧. કોટેશન સેટિંગ્સ",
+      quoteRefNo: "કોટેશન સંદર્ભ નંબર",
+      quoteDate: "કોટેશન તારીખ",
+      includeBankDetails: "પીડીએફ પર બેંક વિગતો શામેલ કરો",
+      includeAuthorizedSign: "અધિકૃત સહી લાઇન શામેલ કરો",
+      applyEventPriceMarkup: "ઇવેન્ટ ભાવ માર્કઅપ લાગુ કરો",
+      clientDetailsOptional: "૨. ગ્રાહક વિગતો (વૈકલ્પિક)",
+      searchAddProducts: "૩. ઉત્પાદનો શોધો અને ઉમેરો",
+      searchProductsPlaceholder: "ઉમેરવા માટે ઉત્પાદનો શોધો...",
+      searchResults: "શોધ પરિણામો",
+      searchHint: "શોધવા માટે ઉત્પાદનનું નામ, રંગ અથવા કોડ લખો...",
+      documentPreview: "દસ્તાવેજ પૂર્વાવલોકન",
+      previewHint: "* અંતિમ મુદ્રિત દસ્તાવેજના પરિમાણો નીચે દર્શાવે છે",
+      billingDetails: "બિલિંગ વિગતો:",
+      noItemsSelected: "કોઈ વસ્તુ પસંદ કરેલ નથી. આઇટમ્સ ઉમેરવા માટે ડાબી બાજુની સૂચિમાં સર્ચ કરો અને બોક્સ ચેક કરો.",
+      selectPreSavedClient: "પહેલાથી સાચવેલ ગ્રાહક પસંદ કરો...",
+      clientName: "ગ્રાહકનું નામ",
+      companyName: "કંપનીનું નામ",
+      contactDetails: "સંપર્ક વિગતો",
+      address: "સરનામું",
+      additionalRemarks: "વધારાની નોંધો",
+      enterRemarks: "નોંધો દાખલ કરો...",
+      phoneOrEmail: "ફોન અથવા ઈમેલ",
+      fullBusinessAddress: "સંપૂર્ણ ધંધાકીય સરનામું",
+      loadingQuotes: "કોટેશન લોડ થઈ રહ્યા છે...",
+      savingQuotation: "કોટેશન સાચવવામાં આવી રહ્યું છે...",
+    },
+    hi: {
+      followUp: "फॉलो अप",
+      done: "पूरा",
+      savedQuotesHistory: "सहेजे गए कोटेशन का इतिहास",
+      manageQuotesDesc: "पहले जेनरेट किए गए कोटेशन बिल का प्रबंधन और लोड करें।",
+      noQuotesFound: "कोई सहेजा गया कोटेशन नहीं मिला",
+      startCreatingDesc: "अपना पहला कोटेशन बिल बनाकर और सहेजकर शुरुआत करें।",
+      refNo: "संदर्भ संख्या",
+      clientCompany: "ग्राहक / कंपनी",
+      quoteDateLabel: "कोटेशन तिथि",
+      items: "आइटम",
+      grandTotal: "कुल योग",
+      status: "स्थिति",
+      actions: "कार्रवाई",
+      searchSavedQuotes: "सहेजे गए कोटेशन खोजें (ग्राहक, आईडी)...",
+      createQuotation: "कोटेशन बनाएं",
+      savedHistory: "सहेजा गया इतिहास",
+      saveQuotation: "कोटेशन सहेजें",
+      printExportPdf: "पीडीएफ प्रिंट / निर्यात",
+      quotationSettings: "1. कोटेशन सेटिंग्स",
+      quoteRefNo: "कोटेशन संदर्भ संख्या",
+      quoteDate: "कोटेशन दिनांक",
+      includeBankDetails: "पीडीएफ पर बैंक विवरण शामिल करें",
+      includeAuthorizedSign: "अधिकृत हस्ताक्षर लाइन शामिल करें",
+      applyEventPriceMarkup: "इवेंट मूल्य मार्कअप लागू करें",
+      clientDetailsOptional: "2. ग्राहक विवरण (वैकल्पिक)",
+      searchAddProducts: "3. उत्पाद खोजें और जोड़ें",
+      searchProductsPlaceholder: "जोड़ने के लिए उत्पाद खोजें...",
+      searchResults: "खोज परिणाम",
+      searchHint: "खोजने के लिए उत्पाद का नाम, रंग या कोड लिखें...",
+      documentPreview: "दस्तावेज़ पूर्वावलोकन",
+      previewHint: "* अंतिम मुद्रित दस्तावेज़ आयाम नीचे प्रदर्शित करता है",
+      billingDetails: "बिलिंग विवरण:",
+      noItemsSelected: "कोई आइटम चयनित नहीं है। आइटम जोड़ने के लिए बाईं सूची में खोजें और बक्से जांचें।",
+      selectPreSavedClient: "पहले से सहेजे गए ग्राहक का चयन करें...",
+      clientName: "ग्राहक का नाम",
+      companyName: "कंपनी का नाम",
+      contactDetails: "संपर्क विवरण",
+      address: "पता",
+      additionalRemarks: "अतिरिक्त टिप्पणी / नोट",
+      enterRemarks: "अतिरिक्त टिप्पणी दर्ज करें...",
+      phoneOrEmail: "फोन या ईमेल",
+      fullBusinessAddress: "व्यवसाय का पूरा पता",
+      loadingQuotes: "कोटेशन लोड हो रहे हैं...",
+      savingQuotation: "कोटेशन सहेजा जा रहा है...",
+    },
+    es: {
+      searchSavedQuotes: "Buscar cotizaciones guardadas (Cliente, ID)...",
+      createQuotation: "Crear Cotización",
+      savedHistory: "Historial Guardado",
+      saveQuotation: "Guardar Cotización",
+      printExportPdf: "Imprimir / Exportar PDF",
+      quotationSettings: "1. CONFIGURACIÓN DE COTIZACIÓN",
+      quoteRefNo: "Nº REF COTIZACIÓN",
+      quoteDate: "FECHA COTIZACIÓN",
+      includeBankDetails: "Incluir Datos Bancarios en PDF",
+      includeAuthorizedSign: "Incluir Línea de Firma Autorizada",
+      applyEventPriceMarkup: "APLICAR RECARGO DE EVENTO",
+      clientDetailsOptional: "2. DETALLES DEL CLIENTE (OPCIONAL)",
+      searchAddProducts: "3. BUSCAR Y AGREGAR PRODUCTOS",
+      searchProductsPlaceholder: "Buscar productos para agregar...",
+      searchResults: "RESULTADOS DE BÚSQUEDA",
+      searchHint: "Escriba nombre, color o código del producto para buscar...",
+      documentPreview: "VISTA PREVIA DEL DOCUMENTO",
+      previewHint: "* Muestra las dimensiones finales del documento impreso abajo",
+      billingDetails: "DATOS DE FACTURACIÓN:",
+      noItemsSelected: "No hay artículos seleccionados. Busque y marque las casillas en la lista izquierda para agregar.",
+      selectPreSavedClient: "SELECCIONAR CLIENTE PREVIO...",
+      clientName: "NOMBRE DEL CLIENTE",
+      companyName: "NOMBRE DE LA EMPRESA",
+      contactDetails: "DETALLES DE CONTACTO",
+      address: "DIRECCIÓN",
+      additionalRemarks: "OBSERVACIONES / NOTA ADICIONAL",
+      enterRemarks: "Introducir observaciones...",
+      phoneOrEmail: "Teléfono o Correo",
+      fullBusinessAddress: "Dirección comercial completa",
+      loadingQuotes: "Cargando cotizaciones...",
+      savingQuotation: "Guardando cotización...",
+    }
+  };
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -1044,14 +1228,14 @@ export default function QuotationView() {
                   setActiveSubView("history");
                 }
               }}
-              placeholder="Search saved quotes (Client, ID)..."
+              placeholder={t("searchSavedQuotes")}
               className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
             />
             {historySearchQuery && (
               <button
                 type="button"
                 onClick={() => setHistorySearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1065,24 +1249,24 @@ export default function QuotationView() {
             <button
               onClick={handleSaveQuotation}
               disabled={selectedItems.length === 0 || isSaving}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0 cursor-pointer"
             >
               {isSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
               ) : (
                 <Check className="h-4 w-4" />
               )}
-              {isSaving ? "Saving..." : "Save Quotation"}
+              {isSaving ? t("savingQuotation") : t("saveQuotation")}
             </button>
           )}
 
           <button
             onClick={handlePrint}
             disabled={selectedItems.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0 cursor-pointer"
           >
             <Printer className="h-4 w-4" />
-            Print / Export PDF
+            {t("printExportPdf")}
           </button>
         </div>
       </div>
@@ -1091,23 +1275,23 @@ export default function QuotationView() {
       <div className="no-print flex gap-2 mb-6">
         <button
           onClick={handleCreateNew}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "create"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
           }`}
         >
-          📝 Create Quotation
+          📝 {t("createQuotation")}
         </button>
         <button
           onClick={() => setActiveSubView("history")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm ${
+          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "history"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
           }`}
         >
-          📜 Saved History ({savedQuotes.length})
+          📜 {t("savedHistory")} ({savedQuotes.length})
         </button>
       </div>
 
@@ -1118,7 +1302,7 @@ export default function QuotationView() {
             <Check className="h-4 w-4" />
             {saveSuccessMessage}
           </div>
-          <button onClick={() => setSaveSuccessMessage(null)} className="text-emerald-600 hover:text-emerald-850">
+          <button onClick={() => setSaveSuccessMessage(null)} className="text-emerald-600 hover:text-emerald-850 cursor-pointer">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1272,11 +1456,11 @@ export default function QuotationView() {
             <button
               type="button"
               onClick={() => setSettingsOpen(!settingsOpen)}
-              className="w-full flex items-center justify-between bg-slate-55/40 hover:bg-slate-100/60 px-5 py-4 transition text-left border-b border-slate-250/30"
+              className="w-full flex items-center justify-between bg-slate-55/40 hover:bg-slate-100/60 px-5 py-4 transition text-left border-b border-slate-250/30 cursor-pointer"
             >
               <span className="text-[10px] font-black tracking-widest text-slate-500 flex items-center gap-2 uppercase">
                 <Settings className="h-4 w-4 text-slate-400" />
-                1. Quotation Settings
+                {t("quotationSettings")}
               </span>
               {settingsOpen ? (
                 <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -1290,7 +1474,7 @@ export default function QuotationView() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Quote Ref No
+                      {t("quoteRefNo")}
                     </label>
                     <div className="relative">
                       <input
@@ -1304,7 +1488,7 @@ export default function QuotationView() {
                         <button
                           type="button"
                           onClick={() => setQuoteNumber("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-700 font-extrabold text-xs"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-700 font-extrabold text-xs cursor-pointer"
                         >
                           ×
                         </button>
@@ -1314,7 +1498,7 @@ export default function QuotationView() {
 
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Quote Date
+                      {t("quoteDate")}
                     </label>
                     <div className="relative">
                       <input
@@ -1327,7 +1511,7 @@ export default function QuotationView() {
                         <button
                           type="button"
                           onClick={() => setQuoteDate("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-700 font-extrabold text-xs"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-700 font-extrabold text-xs cursor-pointer"
                         >
                           ×
                         </button>
@@ -1346,10 +1530,10 @@ export default function QuotationView() {
                         id="showBank"
                         checked={showBankDetails}
                         onChange={(e) => setShowBankDetails(e.target.checked)}
-                        className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4"
+                        className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4 cursor-pointer"
                       />
                       <label htmlFor="showBank" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
-                        Include Bank Details on PDF
+                        {t("includeBankDetails")}
                       </label>
                     </div>
                   )}
@@ -1360,10 +1544,10 @@ export default function QuotationView() {
                       id="showAuthSignCheckbox"
                       checked={showAuthSign}
                       onChange={(e) => setShowAuthSign(e.target.checked)}
-                      className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4"
+                      className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4 cursor-pointer"
                     />
                     <label htmlFor="showAuthSignCheckbox" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
-                      Include Authorized Sign Line
+                      {t("includeAuthorizedSign")}
                     </label>
                   </div>
 
@@ -1378,10 +1562,10 @@ export default function QuotationView() {
                             setApplyEventMarkup(e.target.checked);
                             localStorage.setItem("digiscale_apply_event_markup", e.target.checked.toString());
                           }}
-                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4"
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/10 h-4 w-4 cursor-pointer"
                         />
                         <label htmlFor="applyEventMarkupCheckbox" className="text-xs font-black text-slate-700 cursor-pointer select-none uppercase tracking-wider">
-                          Apply Event Price Markup
+                          {t("applyEventPriceMarkup")}
                         </label>
                       </div>
                       
@@ -1412,11 +1596,11 @@ export default function QuotationView() {
             <button
               type="button"
               onClick={() => setClientOpen(!clientOpen)}
-              className="w-full flex items-center justify-between bg-slate-55/40 hover:bg-slate-100/60 px-5 py-4 transition text-left border-b border-slate-250/30"
+              className="w-full flex items-center justify-between bg-slate-55/40 hover:bg-slate-100/60 px-5 py-4 transition text-left border-b border-slate-250/30 cursor-pointer"
             >
               <span className="text-[10px] font-black tracking-widest text-slate-500 flex items-center gap-2 uppercase">
                 <User className="h-4 w-4 text-slate-400" />
-                2. Client Details (Optional)
+                {t("clientDetailsOptional")}
               </span>
               {clientOpen ? (
                 <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -1432,13 +1616,13 @@ export default function QuotationView() {
                   {/* Search Existing Clients */}
                   <div className="relative mb-4 pb-4 border-b border-slate-100">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Search Saved Clients
+                      {lang === "gu" ? "સાચવેલા ગ્રાહકો શોધો" : lang === "hi" ? "सहेजे गए ग्राहक खोजें" : "Search Saved Clients"}
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-blue-500" />
                       <input
                         type="text"
-                        placeholder="Search by name or company..."
+                        placeholder={lang === "gu" ? "નામ અથવા કંપની દ્વારા શોધો..." : lang === "hi" ? "नाम या कंपनी से खोजें..." : "Search by name or company..."}
                         value={clientSearchQuery}
                         onChange={(e) => {
                           setClientSearchQuery(e.target.value);
@@ -1482,13 +1666,13 @@ export default function QuotationView() {
 
                   <div className="relative">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Customer Name
+                      {lang === "gu" ? "ગ્રાહકનું નામ" : lang === "hi" ? "ग्राहक का नाम" : "Customer Name"}
                     </label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. Vraj Sutariya"
+                        placeholder={lang === "gu" ? "દા.ત. વ્રજ સુતરીયા" : lang === "hi" ? "जैसे राहुल कुमार" : "e.g. Vraj Sutariya"}
                         value={clientName}
                         onChange={(e) => setClientName(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
@@ -1498,13 +1682,13 @@ export default function QuotationView() {
 
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Company Name
+                      {lang === "gu" ? "કંપનીનું નામ" : lang === "hi" ? "कंपनी का नाम" : "Company Name"}
                     </label>
                     <div className="relative">
                       <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. Kumar Textile Industries"
+                        placeholder={lang === "gu" ? "દા.ત. કુમાર ટેક્સટાઇલ ઇન્ડસ્ટ્રીઝ" : lang === "hi" ? "जैसे एक्मे कॉर्प" : "e.g. Kumar Textile Industries"}
                         value={clientCompany}
                         onChange={(e) => setClientCompany(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
@@ -1514,11 +1698,11 @@ export default function QuotationView() {
 
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Address
+                      {lang === "gu" ? "સરનામું" : lang === "hi" ? "पता" : "Address"}
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="e.g. 104, Ring Road, Surat, Gujarat"
+                      placeholder={lang === "gu" ? "દા.ત. ૧૦૪, રિંગ રોડ, સુરત, ગુજરાત" : lang === "hi" ? "जैसे १०४, रिंग रोड, सूरत, गुजरात" : "e.g. 104, Ring Road, Surat, Gujarat"}
                       value={clientAddress}
                       onChange={(e) => setClientAddress(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500 resize-none"
@@ -1526,13 +1710,13 @@ export default function QuotationView() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Contact Number
+                      {lang === "gu" ? "સંપર્ક નંબર" : lang === "hi" ? "संपर्क संख्या" : "Contact Number"}
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. +91 90000 00000"
+                        placeholder={lang === "gu" ? "દા.ત. +91 90000 00000" : lang === "hi" ? "जैसे +91 90000 00000" : "e.g. +91 90000 00000"}
                         value={clientContact}
                         onChange={(e) => setClientContact(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
@@ -1541,13 +1725,13 @@ export default function QuotationView() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Additional Notes
+                      {lang === "gu" ? "વધારાની નોંધો" : lang === "hi" ? "अतिरिक्त टिप्पणी / नोट" : "Additional Notes"}
                     </label>
                     <div className="relative">
                       <AlignLeft className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" />
                       <textarea
                         rows={2}
-                        placeholder="e.g. Include specific details for this quote..."
+                        placeholder={lang === "gu" ? "દા.ત. આ કોટેશન માટે વિશિષ્ટ વિગતો શામેલ કરો..." : lang === "hi" ? "जैसे इस कोट के लिए विशिष्ट विवरण शामिल करें..." : "e.g. Include specific details for this quote..."}
                         value={additionalNotes}
                         onChange={(e) => setAdditionalNotes(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500 resize-none"
@@ -1563,14 +1747,14 @@ export default function QuotationView() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
             <div>
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-450 block mb-2">
-                3. Search & Add Products
+                {t("searchAddProducts")}
               </h3>
               
               <div className="relative mt-2">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search products to add..."
+                  placeholder={t("searchProductsPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
@@ -1579,7 +1763,7 @@ export default function QuotationView() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -1589,16 +1773,16 @@ export default function QuotationView() {
 
             <div className="border-t border-slate-100 pt-3">
               <p className="text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-2.5">
-                Search Results
+                {t("searchResults")}
               </p>
 
               {searchQuery.trim() === "" ? (
                 <p className="text-xs text-slate-400 italic py-5 text-center font-medium">
-                  Type product name, color, or code to search...
+                  {t("searchHint")}
                 </p>
               ) : filteredProducts.length === 0 ? (
                 <p className="text-xs text-slate-400 italic py-5 text-center font-medium">
-                  No products found matching your search.
+                  {lang === "gu" ? "તમારી શોધ સાથે મેળ ખાતી કોઈ પ્રોડક્ટ્સ મળી નથી." : lang === "hi" ? "आपकी खोज से मेल खाने वाले कोई उत्पाद नहीं मिले।" : "No products found matching your search."}
                 </p>
               ) : (
                 <div className="space-y-2 pr-1 animate-in fade-in duration-100">
@@ -1666,10 +1850,10 @@ export default function QuotationView() {
           
           <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Document Preview
+              {t("documentPreview")}
             </p>
             <p className="text-[10px] text-slate-400 font-semibold italic">
-              * Renders final printed document dimensions below
+              {t("previewHint")}
             </p>
           </div>
 
@@ -1777,23 +1961,23 @@ export default function QuotationView() {
             <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
               {/* Left Side: Customer Billing Details */}
               <div className="sm:w-1/2">
-                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
+                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{t("billingDetails")}</p>
                 <p className="text-slate-900 font-extrabold">{clientCompany || "-"}</p>
                 <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress || "-"}</p>
-                <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `Contact: ${clientContact}` : "-"}</p>
+                <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `${lang === "gu" ? "સંપર્ક" : lang === "hi" ? "संपर्क" : "Contact"}: ${clientContact}` : "-"}</p>
               </div>
 
               {/* Right Side: Quotation Info Metadata */}
               {(quoteNumber || quoteDate) && (
                 <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
-                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "gu" ? "કોટેશન માહિતી:" : lang === "hi" ? "कोटेशन जानकारी:" : "Quotation Info:"}</p>
                   <div className="mb-1.5">
                     <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
-                      B2B Quotation
+                      {lang === "gu" ? "B2B કોટેશન" : lang === "hi" ? "B2B कोटेशन" : "B2B Quotation"}
                     </span>
                   </div>
-                  {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
-                  {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
+                  {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">{lang === "gu" ? "કોટેશન સંદર્ભ:" : lang === "hi" ? "कोटेशन संदर्भ:" : "Quote Ref:"} <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
+                  {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">{lang === "gu" ? "તારીખ:" : lang === "hi" ? "दिनांक:" : "Date:"} <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
                 </div>
               )}
             </div>
@@ -1805,20 +1989,19 @@ export default function QuotationView() {
               {page.items.length === 0 && page.isFirst ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                   <FileText className="h-10 w-10 text-slate-200 mb-2" />
-                  <p className="text-xs italic font-medium">No items selected.</p>
-                  <p className="text-[10px] mt-1 text-slate-400">Search and check boxes in the left list to add items.</p>
+                  <p className="text-xs italic font-medium">{t("noItemsSelected")}</p>
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse border-2 border-slate-900">
                   <thead>
                     <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE</th>
-                      <th className="py-2.5 px-3 text-right w-28">TOTAL</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">{lang === "gu" ? "ક્રમ" : lang === "hi" ? "क्रम" : "SR."}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">{lang === "gu" ? "પ્રોડક્ટ ફોટો" : lang === "hi" ? "उत्पाद फोटो" : "PRODUCT PHOTO"}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">{lang === "gu" ? "વર્ણન" : lang === "hi" ? "विवरण" : "DESCRIPTION"}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">{lang === "gu" ? "કાર્ટન્સ" : lang === "hi" ? "कार्टन" : "CTNS"}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">{lang === "gu" ? "માત્રા" : lang === "hi" ? "मात्रा" : "QTY"}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">{lang === "gu" ? "ભાવ" : lang === "hi" ? "मूल्य" : "PRICE"}</th>
+                      <th className="py-2.5 px-3 text-right w-28">{lang === "gu" ? "કુલ" : lang === "hi" ? "कुल" : "TOTAL"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">

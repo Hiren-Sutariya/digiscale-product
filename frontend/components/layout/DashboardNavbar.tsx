@@ -24,6 +24,77 @@ import {
   HardDrive,
 } from "lucide-react";
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    workspace: "Workspace",
+    collections: "Collections",
+    warehouse: "Warehouse",
+    clients: "Clients",
+    quotation: "Quotation",
+    myProfile: "My Profile",
+    dataBackup: "Data & Backup",
+    settings: "Settings",
+    signOut: "Sign Out",
+    signIn: "Sign In",
+    trialDaysRemaining: "trial days remaining",
+    freePlan: "Free Plan",
+    starterPlan: "Starter Plan",
+    proPlan: "Pro Plan",
+    currentPlanSuffix: "Plan",
+  },
+  gu: {
+    workspace: "વર્કસ્પેસ",
+    collections: "કલેક્શન",
+    warehouse: "વેરહાઉસ",
+    clients: "ગ્રાહકો",
+    quotation: "કોટેશન",
+    myProfile: "મારી પ્રોફાઇલ",
+    dataBackup: "ડેટા અને બેકઅપ",
+    settings: "સેટિંગ્સ",
+    signOut: "સાઇન આઉટ",
+    signIn: "સાઇન ઇન",
+    trialDaysRemaining: "દિવસો ટ્રાયલ બાકી છે",
+    freePlan: "મફત પ્લાન",
+    starterPlan: "સ્ટાર્ટર પ્લાન",
+    proPlan: "પ્રો પ્લાન",
+    currentPlanSuffix: "પ્લાન",
+  },
+  hi: {
+    workspace: "कार्यक्षेत्र",
+    collections: "कलेक्शन",
+    warehouse: "गोदाम",
+    clients: "ग्राहक",
+    quotation: "कोटेशन",
+    myProfile: "मेरी प्रोफाइल",
+    dataBackup: "डेटा और बैकअप",
+    settings: "सेटिंग्स",
+    signOut: "साइन आउट",
+    signIn: "साइन इन",
+    trialDaysRemaining: "दिनों का परीक्षण शेष",
+    freePlan: "मुफ्त प्लान",
+    starterPlan: "स्टार्टर प्लान",
+    proPlan: "प्रो प्लान",
+    currentPlanSuffix: "प्लान",
+  },
+  es: {
+    workspace: "Espacio",
+    collections: "Colecciones",
+    warehouse: "Almacén",
+    clients: "Clientes",
+    quotation: "Cotización",
+    myProfile: "Mi Perfil",
+    dataBackup: "Datos y Respaldo",
+    settings: "Ajustes",
+    signOut: "Cerrar Sesión",
+    signIn: "Iniciar Sesión",
+    trialDaysRemaining: "días de prueba restantes",
+    freePlan: "Plan Gratuito",
+    starterPlan: "Plan Starter",
+    proPlan: "Plan Pro",
+    currentPlanSuffix: "Plan",
+  }
+};
+
 const navLinks = [
   { href: "/workspace", label: "Workspace", icon: Paintbrush },
   { href: "/projects", label: "Collections", icon: FolderOpen },
@@ -36,6 +107,16 @@ export default function DashboardNavbar() {
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [lang, setLang] = useState<string>("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window !== "undefined") {
       return !!localStorage.getItem("token");
@@ -151,7 +232,7 @@ export default function DashboardNavbar() {
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {link.label}
+                  {t(link.label.toLowerCase())}
                 </Link>
               );
             })}
@@ -192,7 +273,7 @@ export default function DashboardNavbar() {
                       </p>
                       <p className="text-[10px] mt-0.5 leading-none">
                         <span className="text-blue-600 font-semibold">
-                          {user?.plan || "Free"}
+                          {user?.plan === "Starter" ? t("starterPlan") : user?.plan === "Pro" ? t("proPlan") : t("freePlan")}
                         </span>
                       </p>
                     </div>
@@ -232,7 +313,9 @@ export default function DashboardNavbar() {
                       <div className="mt-3">
                         <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
                           <Zap className="h-3.5 w-3.5 text-blue-500 fill-blue-500" />
-                          <span className="text-xs font-bold text-blue-700">{user?.plan || "Free"} Plan</span>
+                          <span className="text-xs font-bold text-blue-700">
+                            {user?.plan === "Starter" ? t("starterPlan") : user?.plan === "Pro" ? t("proPlan") : t("freePlan")}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -247,7 +330,7 @@ export default function DashboardNavbar() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
                           <User className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        My Profile
+                        {t("myProfile")}
                       </Link>
 
                       <Link
@@ -258,7 +341,7 @@ export default function DashboardNavbar() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
                           <HardDrive className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        Data & Backup
+                        {t("dataBackup")}
                       </Link>
 
                       <Link
@@ -269,7 +352,7 @@ export default function DashboardNavbar() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
                           <Settings className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        Settings
+                        {t("settings")}
                       </Link>
                     </div>
 
@@ -287,7 +370,7 @@ export default function DashboardNavbar() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition">
                           <LogOut className="h-3.5 w-3.5 text-red-500" />
                         </div>
-                        Sign Out
+                        {t("signOut")}
                       </button>
                     </div>
                   </div>
@@ -299,7 +382,7 @@ export default function DashboardNavbar() {
               href="/login"
               className="h-10 flex items-center rounded-xl bg-blue-600 hover:bg-blue-700 px-5 text-sm font-semibold text-white transition shadow-sm active:scale-95 cursor-pointer"
             >
-              Sign In
+              {t("signIn")}
             </Link>
           )}
         </div>

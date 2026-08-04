@@ -91,6 +91,111 @@ interface Collection {
 
 export default function WarehousePage() {
   const router = useRouter();
+  const [lang, setLang] = useState<string>("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const TRANSLATIONS: Record<string, Record<string, string>> = {
+    en: {
+      createShelfRow: "Create Shelf Row",
+      shelfRowDesc: "Add a new alphabet code row (e.g. L, M, N) to the shelf list.",
+      cancel: "Cancel",
+      addRow: "Add Row",
+      searchShelfRows: "Search shelf rows...",
+      globalFinderPlaceholder: "Global Finder (Search all products)...",
+      totalRowsSlots: "Total Rows & Slots",
+      spaceOccupancy: "Space Occupancy",
+      productsAssigned: "Products Assigned",
+      availableSlots: "Available Slots",
+      globalFinderResults: "Global Finder Results",
+      globalFinderDesc: "Search across all products to locate their shelf.",
+      noItemsMatch: "No items match this query.",
+      rowShelf: "Row {row} Shelf",
+      slotsCount: "{count} slots",
+      unitsStocked: "{count} units stocked",
+      collapse: "Collapse",
+      openLayout: "Open Layout",
+      emptySlots: "{count} Empty Slots",
+      itemsStocked: "{count} items stocked",
+      occupiedOfTotal: "{occupied} of {total} occupied",
+    },
+    gu: {
+      createShelfRow: "નવી શેલ્ફ હરોળ બનાવો",
+      shelfRowDesc: "શેલ્ફ સૂચિમાં નવો મૂળાક્ષર કોડ હરોળ (દા.ત. L, M, N) ઉમેરો.",
+      cancel: "રદ કરો",
+      addRow: "હરોળ ઉમેરો",
+      searchShelfRows: "શેલ્ફ હરોળ શોધો...",
+      globalFinderPlaceholder: "ગ્લોબલ ફાઇન્ડર (બધી પ્રોડક્ટ્સ શોધો)...",
+      totalRowsSlots: "કુલ રો અને સ્લોટ્સ",
+      spaceOccupancy: "જગ્યા રોકાણ",
+      productsAssigned: "સોંપાયેલ ઉત્પાદનો",
+      availableSlots: "ઉપલબ્ધ સ્લોટ્સ",
+      globalFinderResults: "ગ્લોબલ ફાઇન્ડર પરિણામો",
+      globalFinderDesc: "બધી પ્રોડક્ટ્સમાં શોધીને તેમનો સેલ્ફ સ્લોટ શોધો.",
+      noItemsMatch: "આ ક્વેરી સાથે કોઈ આઇટમ્સ મેળ ખાતી નથી.",
+      rowShelf: "રો {row} સેલ્ફ",
+      slotsCount: "{count} સ્લોટ્સ",
+      unitsStocked: "{count} વસ્તુઓ સ્ટોક કરેલ",
+      collapse: "બંધ કરો",
+      openLayout: "લેઆઉટ ખોલો",
+      emptySlots: "{count} ખાલી સ્લોટ્સ",
+      itemsStocked: "{count} વસ્તુઓ સ્ટોક કરેલ",
+      occupiedOfTotal: "{occupied} માંથી {total} ભરેલ છે",
+    },
+    hi: {
+      createShelfRow: "शेल्फ पंक्ति बनाएं",
+      shelfRowDesc: "शेल्फ सूची में एक नया वर्णमाला कोड पंक्ति (जैसे L, M, N) जोड़ें।",
+      cancel: "रद्द करें",
+      addRow: "पंक्ति जोड़ें",
+      searchShelfRows: "शेल्फ पंक्तियाँ खोजें...",
+      globalFinderPlaceholder: "ग्लोबल फाइंडर (सभी उत्पाद खोजें)...",
+      totalRowsSlots: "कुल रो और स्लॉट",
+      spaceOccupancy: "स्थान अधिभोग",
+      productsAssigned: "आवंटित उत्पाद",
+      availableSlots: "उपलब्ध स्लॉट",
+      globalFinderResults: "ग्लोबल फाइंडर परिणाम",
+      globalFinderDesc: "उनके शेल्फ का पता लगाने के लिए सभी उत्पादों में खोजें।",
+      noItemsMatch: "इस प्रश्न से कोई आइटम मेल नहीं खाता।",
+      rowShelf: "रो {row} शेल्फ",
+      slotsCount: "{count} स्लॉट",
+      unitsStocked: "{count} आइटम स्टॉक में",
+      collapse: "સકુચિત કરે",
+      openLayout: "लेआउट खोलें",
+      emptySlots: "{count} खाली स्लॉट",
+      itemsStocked: "{count} आइटम स्टॉक में",
+      occupiedOfTotal: "{total} में से {occupied} कब्जे में है",
+    },
+    es: {
+      createShelfRow: "Crear Fila de Estante",
+      shelfRowDesc: "Agregue una nueva fila de código alfabético (por ejemplo, L, M, N) a la lista de estantes.",
+      cancel: "Cancelar",
+      addRow: "Agregar Fila",
+      searchShelfRows: "Buscar filas de estantes...",
+      globalFinderPlaceholder: "Buscador global (Buscar todos los productos)...",
+      totalRowsSlots: "Filas y Estantes Totales",
+      spaceOccupancy: "Ocupación de Espacio",
+      productsAssigned: "Productos Asignados",
+      availableSlots: "Estantes Disponibles",
+      globalFinderResults: "Resultados del Buscador Global",
+      globalFinderDesc: "Busque en todos los productos para ubicar su estante.",
+      noItemsMatch: "Ningún artículo coincide con esta consulta.",
+      rowShelf: "Fila {row} Estante",
+      slotsCount: "{count} ranuras",
+      unitsStocked: "{count} unidades almacenadas",
+      collapse: "Contraer",
+      openLayout: "Abrir Diseño",
+      emptySlots: "{count} Ranuras Vacías",
+      itemsStocked: "{count} unidades almacenadas",
+      occupiedOfTotal: "{occupied} de {total} ocupados",
+    }
+  };
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -597,7 +702,7 @@ export default function WarehousePage() {
                 type="text"
                 value={rowSearchQuery}
                 onChange={(e) => setRowSearchQuery(e.target.value)}
-                placeholder="Search shelf rows..."
+                placeholder={t("searchShelfRows")}
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               />
             </div>
@@ -608,7 +713,7 @@ export default function WarehousePage() {
                 type="text"
                 value={globalSearchQuery}
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                placeholder="Global Finder (Search all products)..."
+                placeholder={t("globalFinderPlaceholder")}
                 className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
               />
               {globalSearchQuery && (
@@ -625,10 +730,10 @@ export default function WarehousePage() {
           {/* Action Button */}
           <button
             onClick={() => setAddRowModal(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            Create Shelf Row
+            {t("createShelfRow")}
           </button>
         </div>
       </div>
@@ -645,9 +750,9 @@ export default function WarehousePage() {
                 <Layers className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Rows & Slots</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("totalRowsSlots")}</p>
                 <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                  {totalRows} Rows / {totalSlots} Slots
+                  {totalRows} {lang === "gu" ? "હરોળ" : lang === "hi" ? "पंक्तियाँ" : "Rows"} / {totalSlots} {lang === "gu" ? "સ્લોટ્સ" : lang === "hi" ? "स्लॉट" : "Slots"}
                 </h3>
               </div>
             </div>
@@ -657,11 +762,11 @@ export default function WarehousePage() {
                 <PieChart className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Space Occupancy</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("spaceOccupancy")}</p>
                 <div className="flex items-center justify-between mt-0.5">
                   <h3 className="text-xl font-black text-slate-800">{occupancyPercentage}%</h3>
                   <span className="text-[10px] text-slate-400 font-semibold">
-                    {occupiedSlots} of {totalSlots} occupied
+                    {t("occupiedOfTotal").replace("{occupied}", occupiedSlots.toString()).replace("{total}", totalSlots.toString())}
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
@@ -678,9 +783,9 @@ export default function WarehousePage() {
                 <Package className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Products Assigned</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("productsAssigned")}</p>
                 <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                  {totalAssignmentsCount} items stocked
+                  {t("itemsStocked").replace("{count}", totalAssignmentsCount.toString())}
                 </h3>
               </div>
             </div>
@@ -690,9 +795,9 @@ export default function WarehousePage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Available Slots</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("availableSlots")}</p>
                 <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                  {totalSlots - occupiedSlots} Empty Slots
+                  {t("emptySlots").replace("{count}", (totalSlots - occupiedSlots).toString())}
                 </h3>
               </div>
             </div>
@@ -813,14 +918,14 @@ export default function WarehousePage() {
                           {row}
                         </div>
                         <div>
-                          <h4 className="font-bold text-slate-900 text-sm leading-tight">Row {row} Shelf</h4>
+                          <h4 className="font-bold text-slate-900 text-sm leading-tight">{t("rowShelf").replace("{row}", row)}</h4>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-slate-400 font-semibold">{rowSlots.length} slots</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">{t("slotsCount").replace("{count}", rowSlots.length.toString())}</span>
                             {hasItems && (
                               <>
                                 <span className="text-slate-250 font-bold">·</span>
                                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
-                                  {assignedCount} units stocked
+                                  {t("unitsStocked").replace("{count}", assignedCount.toString())}
                                 </span>
                               </>
                             )}
@@ -832,7 +937,7 @@ export default function WarehousePage() {
                         <span className={`text-[10px] font-bold uppercase tracking-wider transition ${
                           isExpanded ? "text-blue-500" : "text-slate-400"
                         }`}>
-                          {isExpanded ? "Collapse" : "Open Layout"}
+                          {isExpanded ? t("collapse") : t("openLayout")}
                         </span>
                         <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${
                           isExpanded ? "rotate-90 text-blue-500" : "text-slate-350"
@@ -1145,16 +1250,16 @@ export default function WarehousePage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
           <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xl animate-in zoom-in-95 duration-150">
             <div>
-              <h3 className="text-sm font-black text-slate-800">Create Shelf Row</h3>
+              <h3 className="text-sm font-black text-slate-800">{t("createShelfRow")}</h3>
               <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                Add a new alphabet code row (e.g. L, M, N) to the shelf list.
+                {t("shelfRowDesc")}
               </p>
             </div>
             <input
               type="text"
               value={addRowName}
               onChange={(e) => setAddRowName(e.target.value.toUpperCase())}
-              placeholder="e.g. L"
+              placeholder={lang === "gu" ? "દા.ત. L" : lang === "hi" ? "जैसे L" : "e.g. L"}
               className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAddRow();
@@ -1166,13 +1271,13 @@ export default function WarehousePage() {
                 onClick={() => setAddRowModal(false)}
                 className="px-4 py-2 border border-slate-200 bg-white text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition active:scale-95 cursor-pointer"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleAddRow}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer"
               >
-                Add Row
+                {t("addRow")}
               </button>
             </div>
           </div>

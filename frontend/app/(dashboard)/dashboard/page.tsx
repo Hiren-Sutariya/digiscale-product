@@ -1,15 +1,81 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FolderOpen, FileText, Warehouse, Users, Paintbrush } from "lucide-react";
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    selectDestination: "Select a destination",
+    workspace: "Workspace",
+    workspaceDesc: "Design, annotate, and edit workspace images",
+    collections: "Collections",
+    collectionsDesc: "Browse, view, and organize your saved items",
+    warehouse: "Warehouse",
+    warehouseDesc: "Organize, locate, and map shelf layouts",
+    clients: "Clients",
+    clientsDesc: "Manage customers for quick access",
+    quotation: "Quotation",
+    quotationDesc: "Create and export professional quotes"
+  },
+  gu: {
+    selectDestination: "સ્થાન પસંદ કરો",
+    workspace: "વર્કસ્પેસ",
+    workspaceDesc: "વર્કસ્પેસ ઈમેજીસ ડીઝાઈન, એનોટેટ અને એડીટ કરો",
+    collections: "કલેક્શન",
+    collectionsDesc: "તમારી સાચવેલી વસ્તુઓ બ્રાઉઝ કરો, જુઓ અને ગોઠવો",
+    warehouse: "વેરહાઉસ",
+    warehouseDesc: "છાજલીઓની ગોઠવણ ગોઠવો, શોધો અને નકશો બનાવો",
+    clients: "ગ્રાહકો",
+    clientsDesc: "ઝડપી પ્રવેશ માટે ગ્રાહકોનું સંચાલણ કરો",
+    quotation: "કોટેશન",
+    quotationDesc: "વ્યવસાયિક અવતરણો બનાવો અને નિકાસ કરો"
+  },
+  hi: {
+    selectDestination: "गंतव्य चुनें",
+    workspace: "कार्यक्षेत्र",
+    workspaceDesc: "कार्यक्षेत्र छवियों को डिज़ाइन, व्याख्या और संपादित करें",
+    collections: "कलेक्शन",
+    collectionsDesc: "अपनी सहेजी गई वस्तुओं को ब्राउज़ करें, देखें और व्यवस्थित करें",
+    warehouse: "गोदाम",
+    warehouseDesc: "शेल्फ लेआउट को व्यवस्थित करें, ढूंढें और मैप करें",
+    clients: "ग्राहक",
+    clientsDesc: "त्वरित पहुँच के लिए ग्राहकों को प्रबंधित करें",
+    quotation: "कोटेशन",
+    quotationDesc: "पेशेवर कोटेशन बनाएं और निर्यात करें"
+  },
+  es: {
+    selectDestination: "Seleccione un destino",
+    workspace: "Espacio",
+    workspaceDesc: "Diseñar, anotar y editar imágenes del espacio de trabajo",
+    collections: "Colecciones",
+    collectionsDesc: "Explore, vea y organice sus artículos guardados",
+    warehouse: "Almacén",
+    warehouseDesc: "Organizar, ubicar y mapear diseños de estantes",
+    clients: "Clientes",
+    clientsDesc: "Administrar clientes para un acceso rápido",
+    quotation: "Cotización",
+    quotationDesc: "Crear y exportar cotizaciones profesionales"
+  }
+};
+
 export default function DashboardPage() {
+  const [lang, setLang] = useState<string>("en");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLang(localStorage.getItem("digiscale_language") || "en");
+    }
+  }, []);
+
+  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
   return (
     <div className="h-full bg-slate-50/50 flex flex-col items-center justify-center px-8 py-20 overflow-y-auto">
       <div className="w-full max-w-[1400px] mx-auto flex flex-col items-center">
 
         <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-12">
-          Select a destination
+          {t("selectDestination")}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 w-full max-w-[1300px]">
@@ -23,9 +89,9 @@ export default function DashboardPage() {
               <Paintbrush className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
             </div>
             <div>
-              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">Workspace</p>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("workspace")}</p>
               <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                Design, annotate, and edit workspace images
+                {t("workspaceDesc")}
               </p>
             </div>
           </Link>
@@ -39,9 +105,9 @@ export default function DashboardPage() {
               <FolderOpen className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
             </div>
             <div>
-              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">Collections</p>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("collections")}</p>
               <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                Browse, view, and organize your saved items
+                {t("collectionsDesc")}
               </p>
             </div>
           </Link>
@@ -55,9 +121,9 @@ export default function DashboardPage() {
               <Warehouse className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
             </div>
             <div>
-              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">Warehouse</p>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("warehouse")}</p>
               <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                Organize, locate, and map shelf layouts
+                {t("warehouseDesc")}
               </p>
             </div>
           </Link>
@@ -71,9 +137,9 @@ export default function DashboardPage() {
               <Users className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
             </div>
             <div>
-              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">Clients</p>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("clients")}</p>
               <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                Manage customers for quick access
+                {t("clientsDesc")}
               </p>
             </div>
           </Link>
@@ -87,9 +153,9 @@ export default function DashboardPage() {
               <FileText className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
             </div>
             <div>
-              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">Quotation</p>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("quotation")}</p>
               <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                Create and export professional quotes
+                {t("quotationDesc")}
               </p>
             </div>
           </Link>

@@ -59,6 +59,83 @@ interface WorkspaceContextType {
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
+class WorkspaceIndexedDB {
+  private dbName = "digiscale_workspace_db";
+  private storeName = "projects";
+  private db: IDBDatabase | null = null;
+
+  init(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (typeof window === "undefined" || !window.indexedDB) {
+        return reject("IndexedDB is not supported on this platform");
+      }
+      const request = indexedDB.open(this.dbName, 1);
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: "id" });
+        }
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  getAll(): Promise<WorkspaceProject[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.db) return resolve([]);
+      const transaction = this.db.transaction(this.storeName, "readonly");
+      const store = transaction.objectStore(this.storeName);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  saveAll(projects: WorkspaceProject[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.db) return reject("Database not initialized");
+      const transaction = this.db.transaction(this.storeName, "readwrite");
+      const store = transaction.objectStore(this.storeName);
+      
+      const clearRequest = store.clear();
+      clearRequest.onsuccess = () => {
+        if (projects.length === 0) {
+          resolve();
+          return;
+        }
+        let count = 0;
+        let errored = false;
+        projects.forEach(p => {
+          const addRequest = store.put(p);
+          addRequest.onsuccess = () => {
+            count++;
+            if (count === projects.length && !errored) {
+              resolve();
+            }
+          };
+          addRequest.onerror = () => {
+            if (!errored) {
+              errored = true;
+              reject(addRequest.error);
+            }
+          };
+        });
+      };
+      clearRequest.onerror = () => reject(clearRequest.error);
+    });
+  }
+}
+
+const dbHelper = new WorkspaceIndexedDB();
+
 export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) => {
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [activeObject, setActiveObject] = useState<fabric.Object | null>(null);
@@ -80,34 +157,97 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   const [projects, setProjects] = useState<WorkspaceProject[]>([]);
   const [folders, setFolders] = useState<WorkspaceFolder[]>([]);
 
+  // Update helper that sets state and updates IndexedDB / LocalStorage backup
+  const updateProjectsInStorage = async (updatedList: WorkspaceProject[]) => {
+    setProjects(updatedList);
+    try {
+      await dbHelper.saveAll(updatedList);
+    } catch (e) {
+      console.error("IndexedDB save failed:", e);
+    }
+    
+    // Fallback/minimized localStorage backup to prevent QuotaExceededError
+    try {
+      const minimized = updatedList.map(p => ({
+        ...p,
+        canvasData: p.canvasData.length > 30000 ? JSON.stringify({ version: "5.3.0", objects: [] }) : p.canvasData,
+        batchImages: p.batchImages.length > 0 ? [] : p.batchImages,
+        thumbnail: p.thumbnail && p.thumbnail.length > 30000 ? null : p.thumbnail
+      }));
+      localStorage.setItem("digiscale_workspace_projects", JSON.stringify(minimized));
+    } catch (err) {
+      console.warn("LocalStorage backup failed:", err);
+    }
+  };
+
   // Load projects and folders on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedProjects = localStorage.getItem("digiscale_workspace_projects");
-      if (savedProjects) {
-        try {
-          setProjects(JSON.parse(savedProjects));
-        } catch (e) {
-          console.error("Error parsing projects:", e);
+    const initAndLoad = async () => {
+      let loaded: WorkspaceProject[] = [];
+      try {
+        await dbHelper.init();
+        loaded = await dbHelper.getAll();
+        
+        // Migrate legacy projects from localStorage to IndexedDB if needed
+        if (loaded.length === 0 && typeof window !== "undefined") {
+          const savedProjects = localStorage.getItem("digiscale_workspace_projects");
+          if (savedProjects) {
+            try {
+              const parsed = JSON.parse(savedProjects) as WorkspaceProject[];
+              if (parsed.length > 0) {
+                await dbHelper.saveAll(parsed);
+                loaded = parsed;
+              }
+            } catch (e) {
+              console.error("Error migrating projects:", e);
+            }
+          }
+        }
+        
+        loaded.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        setProjects(loaded);
+      } catch (err) {
+        console.error("Failed to initialize IndexedDB:", err);
+        if (typeof window !== "undefined") {
+          const savedProjects = localStorage.getItem("digiscale_workspace_projects");
+          if (savedProjects) {
+            try {
+              const parsed = JSON.parse(savedProjects) as WorkspaceProject[];
+              setProjects(parsed);
+              loaded = parsed;
+            } catch (e) {
+              console.error("Error parsing projects fallback:", e);
+            }
+          }
         }
       }
       
-      const savedFolders = localStorage.getItem("digiscale_workspace_folders");
-      if (savedFolders) {
-        try {
-          setFolders(JSON.parse(savedFolders));
-        } catch (e) {
-          console.error("Error parsing folders:", e);
+      if (typeof window !== "undefined") {
+        const savedFolders = localStorage.getItem("digiscale_workspace_folders");
+        if (savedFolders) {
+          try {
+            setFolders(JSON.parse(savedFolders));
+          } catch (e) {
+            console.error("Error parsing folders:", e);
+          }
+        }
+
+        // Restore active project ID on mount if it exists
+        const savedActiveId = localStorage.getItem("digiscale_active_project_id");
+        if (savedActiveId && loaded.some(p => p.id === savedActiveId)) {
+          const target = loaded.find(p => p.id === savedActiveId)!;
+          setActiveProjectId(savedActiveId);
+          setProjectName(target.name);
+          setCanvasConfig(target.canvasConfig);
+          setBatchImages(target.batchImages);
+          setActiveBatchIdx(null);
+          setActiveTool("assets");
         }
       }
-    }
-  }, []);
+    };
 
-  // Update helper that sets state and updates localStorage
-  const updateProjectsInStorage = (updatedList: WorkspaceProject[]) => {
-    setProjects(updatedList);
-    localStorage.setItem("digiscale_workspace_projects", JSON.stringify(updatedList));
-  };
+    initAndLoad();
+  }, []);
 
   const updateFoldersInStorage = (updatedList: WorkspaceFolder[]) => {
     setFolders(updatedList);
@@ -125,24 +265,68 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   const [activeTool, setActiveTool] = useState<string | null>("assets");
   const isHistoryUpdate = useRef(false);
 
+  // Sync projects list to a ref to avoid dependency loop in auto-save Effect
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  const loadedProjectIdRef = useRef<string | null>(null);
+
+  // Sync activeProjectId to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (activeProjectId) {
+        localStorage.setItem("digiscale_active_project_id", activeProjectId);
+      } else {
+        localStorage.removeItem("digiscale_active_project_id");
+      }
+    }
+  }, [activeProjectId]);
+
+  // Load project data when canvas becomes available/changes and a project is active
+  useEffect(() => {
+    if (!canvas || !activeProjectId || loadedProjectIdRef.current === activeProjectId) return;
+    const target = projects.find(p => p.id === activeProjectId);
+    if (!target) return;
+
+    loadedProjectIdRef.current = activeProjectId;
+    isHistoryUpdate.current = true;
+    canvas.loadFromJSON(target.canvasData, () => {
+      canvas.renderAll();
+      isHistoryUpdate.current = false;
+      
+      historyRef.current = [JSON.stringify({
+        canvasJson: target.canvasData,
+        canvasConfig: target.canvasConfig
+      })];
+      historyIndexRef.current = 0;
+      setHistoryState({
+        history: historyRef.current,
+        historyIndex: 0
+      });
+    });
+  }, [canvas, activeProjectId, projects]);
+
   // Auto-save active project state when canvas, name, config, or batch changes
   useEffect(() => {
     if (!canvas || !activeProjectId || isHistoryUpdate.current) return;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       let dataUrl = null;
       try {
+        const canvasWidth = canvas.getWidth ? canvas.getWidth() : 0;
+        const multiplier = canvasWidth > 0 ? (360 / canvasWidth) : 0.25;
         dataUrl = canvas.toDataURL({
           format: "jpeg",
-          quality: 0.25,
-          multiplier: 0.1,
+          quality: 0.35,
+          multiplier: multiplier,
         });
       } catch (e) {
         console.warn("Could not generate auto-save thumbnail:", e);
       }
 
-      const saved = JSON.parse(localStorage.getItem("digiscale_workspace_projects") || "[]") as WorkspaceProject[];
-      const updated = saved.map(p => {
+      const updated = projectsRef.current.map(p => {
         if (p.id === activeProjectId) {
           return {
             ...p,
@@ -156,8 +340,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
         }
         return p;
       });
-      setProjects(updated);
-      localStorage.setItem("digiscale_workspace_projects", JSON.stringify(updated));
+      
+      await updateProjectsInStorage(updated);
     }, 1200);
 
     return () => clearTimeout(timer);
@@ -202,6 +386,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     setBatchImages(target.batchImages);
     setActiveBatchIdx(null);
     setActiveTool("assets");
+    loadedProjectIdRef.current = id;
 
     if (canvas) {
       canvas.loadFromJSON(target.canvasData, () => {
@@ -227,10 +412,12 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     if (canvas && activeProjectId) {
       let dataUrl = null;
       try {
+        const canvasWidth = canvas.getWidth ? canvas.getWidth() : 0;
+        const multiplier = canvasWidth > 0 ? (360 / canvasWidth) : 0.25;
         dataUrl = canvas.toDataURL({
           format: "jpeg",
-          quality: 0.25,
-          multiplier: 0.1,
+          quality: 0.35,
+          multiplier: multiplier,
         });
       } catch (e) {
         console.warn("Could not generate thumbnail on close:", e);
@@ -257,6 +444,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     setProjectName("Untitled Project");
     setBatchImages([]);
     setActiveBatchIdx(null);
+    loadedProjectIdRef.current = null;
     if (canvas) {
       canvas.clear();
       canvas.renderAll();
