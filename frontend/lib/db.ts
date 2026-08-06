@@ -100,7 +100,7 @@ export async function getBackupsFromIndexedDB(): Promise<any[]> {
 }
 
 /** Delete a backup payload from IndexedDB. */
-export async function deleteBackupFromIndexedDB(timestamp: string): Promise<void> {
+export async function deleteBackupFromIndexedDB(timestamp: any): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORE_NAME, "readwrite");

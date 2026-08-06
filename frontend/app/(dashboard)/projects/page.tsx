@@ -209,6 +209,14 @@ function CollectionsPageContent() {
   const [eventMarkupPercent, setEventMarkupPercent] = useState<string>("");
   const [activePdfMarkup, setActivePdfMarkup] = useState<number>(0); // 0 = no markup
 
+  // Label Download Modal States
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [labelMarkupPercent, setLabelMarkupPercent] = useState<string>("30"); // default 30% markup for event price
+  const [wholesalePrefix, setWholesalePrefix] = useState<string>("A9");      // default wholesale prefix
+  const [activeLabelMarkup, setActiveLabelMarkup] = useState<number | null>(null); // null = not printing labels
+  const [activeLabelProducts, setActiveLabelProducts] = useState<Product[] | null>(null);
+  const [labelSize, setLabelSize] = useState<"50x25" | "50x38">("50x38");
+
   // Warehouse & Quotation States
   const [currentTopTab, setCurrentTopTab] = useState<"collections" | "warehouse" | "quotation">("collections");
   const [isTabReady, setIsTabReady] = useState(true);
@@ -716,9 +724,11 @@ function CollectionsPageContent() {
           rate: p.rate || "",
           length: p.length || "",
           color: p.color || "",
+          unit_type: p.unit_type || "pcs",
           description: p.description || "",
           photoUrl: p.photoUrl || "",
           collection_id: p.collection_id,
+          warehouse: p.warehouse || "",
           createdAt: new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         }));
         setProducts(mappedProducts);
@@ -1138,6 +1148,31 @@ ${rows}
     }, 100);
   };
 
+  const handlePrintLabels = (markupOrProducts: number | Product[] = 30) => {
+    let markup = 30;
+    if (typeof markupOrProducts === "number") {
+      markup = markupOrProducts;
+      setActiveLabelProducts(null);
+    } else {
+      setActiveLabelProducts(markupOrProducts);
+    }
+    setActiveLabelMarkup(markup);
+    const originalTitle = document.title;
+    if (selectedCol?.name) {
+      document.title = `${selectedCol.name}-Labels`;
+    }
+    setTimeout(() => {
+      document.body.classList.add("is-printing-labels");
+      setTimeout(() => {
+        window.print();
+        document.body.classList.remove("is-printing-labels");
+        document.title = originalTitle;
+        setActiveLabelMarkup(null);
+        setActiveLabelProducts(null);
+      }, 300);
+    }, 100);
+  };
+
   // ── Excel / CSV Upload & Parse (supports .xlsx and .csv) ───────────
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1169,16 +1204,16 @@ ${rows}
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const colIdx = (keys: string[]) => headerRow.findIndex(h => keys.some(k => normalize(h).includes(normalize(k))));
 
-      const nameIdx = colIdx(["name", "product"]);
-      const cartonIdx = colIdx(["carton", "pack"]);
-      const colorIdx = colIdx(["color", "colour"]);
-      const lengthIdx = colIdx(["length", "dimension", "len", "dim"]);
-      const descIdx = colIdx(["desc", "description", "note"]);
-      const rateIdx = colIdx(["price", "rate", "code"]);
-      const stockIdx = colIdx(["stock", "quantity"]);
-      const unitTypeIdx = colIdx(["unit type", "pcs", "dzn", "kg"]);
-      const imageIdx = colIdx(["image", "photo", "url", "picture"]);
-      const warehouseIdx = colIdx(["warehouse", "location", "shelf"]);
+      const nameIdx = colIdx(["name", "product code", "product", "item code", "model"]);
+      const cartonIdx = colIdx(["carton", "pack", "ctn", "qty/ctn", "pcs/ctn"]);
+      const colorIdx = colIdx(["color", "colour", "design", "pattern"]);
+      const lengthIdx = colIdx(["length", "dimension", "len", "dim", "size", "cm", "height", "width"]);
+      const descIdx = colIdx(["desc", "description", "note", "set", "sticks", "specs", "type", "pcs set", "detail", "details"]);
+      const rateIdx = colIdx(["price", "rate", "code", "b2b price", "wholesale price", "cost"]);
+      const stockIdx = colIdx(["stock", "quantity", "qty", "stock qty"]);
+      const unitTypeIdx = colIdx(["unit type", "pcs", "dzn", "kg", "unit"]);
+      const imageIdx = colIdx(["image", "photo", "url", "picture", "img"]);
+      const warehouseIdx = colIdx(["warehouse", "location", "shelf", "bin"]);
 
       let imported = 0; let errors = 0;
       const newProducts: Product[] = [];
@@ -2459,6 +2494,17 @@ ${rows}
                 <Printer className="h-4 w-4" /> Download PDF
               </button>
 
+              <button
+                onClick={() => {
+                  setLabelMarkupPercent("30");
+                  setWholesalePrefix("A9");
+                  setShowLabelModal(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+              >
+                <Tag className="h-4 w-4" /> Download Label
+              </button>
+
               {isCodeCollection(selectedCol) && (
                 <>
                   {/* Excel Import */}
@@ -2647,7 +2693,7 @@ ${rows}
                       </thead>
                       <tbody className="divide-y divide-slate-100 transition-colors">
                         {draftProducts.map((draft, idx) => (
-                          <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400">
+                          <tr key={`draft-${idx}`} className="text-xs bg-blue-50/20 border-l-4 border-l-blue-400 h-20">
                             <td className="py-3 px-4 text-center"></td>
                             <td className="py-3 px-4 text-center">
                               <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
@@ -2771,7 +2817,7 @@ ${rows}
 
                           if (editingProductRowId === prod.id && editingProductState) {
                             return (
-                              <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400">
+                              <tr key={prod.id} className="text-xs bg-amber-50/20 border-l-4 border-l-amber-400 h-20">
                                 <td className="py-3 px-4 text-center"></td>
                                 <td className="py-3 px-4 text-center">
                                   <label className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition group flex items-center justify-center">
@@ -2894,12 +2940,17 @@ ${rows}
                           }
 
                           return (
-                            <tr key={prod.id} className="text-xs text-slate-800 hover:bg-slate-50/40 transition">
+                            <tr 
+                              key={prod.id} 
+                              className="text-xs text-slate-800 hover:bg-slate-50/40 transition cursor-pointer"
+                              onClick={() => setViewingProduct(prod)}
+                            >
                               <td className="py-4 px-4 text-center">
                                 <input 
                                   type="checkbox"
                                   checked={selectedProductIds.has(prod.id)}
                                   onChange={() => toggleProductSelection(prod.id)}
+                                  onClick={(e) => e.stopPropagation()}
                                   className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
                                 />
                               </td>
@@ -2954,14 +3005,14 @@ ${rows}
                               <td className="py-4 px-4 text-center">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
-                                    onClick={() => handleEditProductClick(prod)}
+                                    onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
                                     className="p-2 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
                                     title="Edit Product"
                                   >
                                     <Edit className="h-3.5 w-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteProduct(prod.id)}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteProduct(prod.id); }}
                                     className="p-2 rounded-lg border border-red-100 text-red-600 hover:bg-red-50 transition"
                                     title="Delete Product"
                                   >
@@ -3320,6 +3371,13 @@ ${rows}
                                   >
                                     <Plus className="h-4 w-4" />
                                     Assign to {selectedShelfZone === "upper" ? "Upper" : "Lower"} Shelf
+                                  </button>
+                                  <button
+                                    onClick={() => handlePrintLabels(zoneProducts)}
+                                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
+                                  >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    Print Labels
                                   </button>
 
                                   {/* Product Cards */}
@@ -3906,9 +3964,20 @@ ${rows}
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100 tracking-wider">
-                  Product Details
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100 tracking-wider">
+                    Product Details
+                  </span>
+                  {viewingProduct.stock === 0 ? (
+                    <span className="text-[9px] font-black uppercase text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100 tracking-wider animate-pulse">
+                      Out of Stock
+                    </span>
+                  ) : viewingProduct.stock <= 10 ? (
+                    <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100 tracking-wider">
+                      Low Stock
+                    </span>
+                  ) : null}
+                </div>
                 <h3 className="text-base font-black text-slate-950 mt-1">{viewingProduct.name}</h3>
               </div>
               <button
@@ -4275,6 +4344,116 @@ ${rows}
         </div>
       )}
 
+      {/* --- LABEL DOWNLOAD MODAL --- */}
+      {showLabelModal && (
+        <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowLabelModal(false)}>
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-black text-slate-900">Download Product Labels</h3>
+              <button onClick={() => setShowLabelModal(false)} className="p-1 rounded-full hover:bg-slate-100 transition">
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-xs text-slate-500 font-medium">
+                Generate and print stickers for products in <span className="font-bold text-slate-800">{selectedCol?.name}</span>. 
+                {selectedProductIds.size > 0 ? (
+                  <span className="text-blue-600 font-bold block mt-1">
+                    🎯 Only printing {selectedProductIds.size} selected products.
+                  </span>
+                ) : (
+                  <span className="text-slate-500 font-semibold block mt-1">
+                    📦 Printing all {products.length} products in this collection.
+                  </span>
+                )}
+              </p>
+
+              {/* Wholesale Prefix */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Wholesale Prefix Code
+                </label>
+                <input
+                  type="text"
+                  value={wholesalePrefix}
+                  onChange={(e) => setWholesalePrefix(e.target.value)}
+                  placeholder="e.g. A9"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-550"
+                />
+              </div>
+
+              {/* Label Size Selection */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Label Size (Width x Height)
+                </label>
+                <div className="flex gap-3">
+                  <label className={`flex-1 flex flex-col items-start gap-1 p-3 border rounded-xl cursor-pointer transition ${labelSize === "50x25" ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                    <div className="flex items-center gap-2">
+                      <input type="radio" name="labelSize" value="50x25" checked={labelSize === "50x25"} onChange={() => setLabelSize("50x25")} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-800">50mm × 25mm</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-700 font-semibold pl-5">2-Up Roll (Set printer paper to 106mm × 25mm)</span>
+                  </label>
+                  <label className={`flex-1 flex flex-col items-start gap-1 p-3 border rounded-xl cursor-pointer transition ${labelSize === "50x38" ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                    <div className="flex items-center gap-2">
+                      <input type="radio" name="labelSize" value="50x38" checked={labelSize === "50x38"} onChange={() => setLabelSize("50x38")} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-800">50mm × 38mm</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-700 font-semibold pl-5">1-Up Roll (Set printer paper to 56mm × 38mm)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Event Markup Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Event Price Markup %
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    value={labelMarkupPercent}
+                    onChange={(e) => setLabelMarkupPercent(e.target.value)}
+                    placeholder="e.g. 30"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end bg-slate-50/50">
+              <button
+                onClick={() => setShowLabelModal(false)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const markup = parseFloat(labelMarkupPercent) || 0;
+                  setShowLabelModal(false);
+                  handlePrintLabels(markup);
+                }}
+                className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-sm active:scale-95"
+              >
+                Print Labels
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- PRINT PORTAL FOR COLLECTION CATALOGUE --- */}
       {typeof document !== "undefined" && createPortal(
         <div className="print-portal hidden print:block w-full bg-white text-black p-0">
@@ -4294,9 +4473,10 @@ ${rows}
 
             return chunkedPages.map((page, pageIndex) => {
               const isFirstPage = pageIndex === 0;
+              const isLastPage = pageIndex === chunkedPages.length - 1;
 
               return (
-                <div key={pageIndex} className="collection-pdf-page bg-white flex flex-col page-break-after-always" style={{ width: '210mm', height: '297mm', padding: '8mm 10mm', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <div key={pageIndex} className={`collection-pdf-page bg-white flex flex-col ${isLastPage ? "" : "page-break-after-always"}`} style={{ width: '210mm', height: '277mm', padding: '8mm 10mm', boxSizing: 'border-box', overflow: 'hidden' }}>
                   
                   {/* === HEADER - only on page 1 === */}
                   {isFirstPage && (
@@ -4413,18 +4593,125 @@ ${rows}
         document.body
       )}
 
+      {/* --- PRINT PORTAL FOR LABELS --- */}
+      {typeof document !== "undefined" && activeLabelMarkup !== null && createPortal(
+        <div className="print-labels-portal hidden print:block w-full bg-white text-black p-0">
+          {(() => {
+            if (!selectedCol || products.length === 0) return null;
+            
+            const labelProducts = activeLabelProducts !== null
+              ? activeLabelProducts
+              : (selectedProductIds.size > 0 
+                ? products.filter(p => selectedProductIds.has(p.id))
+                : products);
+
+            const is50x25 = labelSize === "50x25";
+            // 50x25 is 2-Up (106mm roll, 2 labels/page). 50x38 is 1-Up (1 label/page).
+            const LABELS_PER_PAGE = is50x25 ? 2 : 1;
+            const chunkedLabelPages: { items: typeof labelProducts }[] = [];
+            let currentLabelIdx = 0;
+            const totalLabelItems = labelProducts.length;
+
+            while (currentLabelIdx < totalLabelItems) {
+              chunkedLabelPages.push({ items: labelProducts.slice(currentLabelIdx, currentLabelIdx + LABELS_PER_PAGE) });
+              currentLabelIdx += LABELS_PER_PAGE;
+            }
+
+            return chunkedLabelPages.map((page, pageIndex) => {
+              const isLastPage = pageIndex === chunkedLabelPages.length - 1;
+              return (
+                <div 
+                  key={pageIndex} 
+                  className={`collection-labels-page bg-white flex flex-row items-center ${is50x25 ? "justify-start gap-[3mm] px-[2.5mm]" : "justify-center"} ${isLastPage ? "" : "page-break-after-always"}`} 
+                  style={
+                    is50x25
+                      ? { width: '106mm', height: '24.8mm', boxSizing: 'border-box', overflow: 'hidden' }
+                      : { width: '56mm', height: '35.5mm', boxSizing: 'border-box', overflow: 'hidden' }
+                  }
+                >
+                  {page.items.map((prod, idx) => (
+                    <div 
+                      key={prod.id || idx} 
+                      className="label-card-item border-2 border-slate-900 rounded-md flex flex-col justify-between bg-white overflow-hidden shrink-0" 
+                      style={
+                        is50x25
+                          ? { width: '48.5mm', height: '24.5mm', padding: '1.5mm 2mm', boxSizing: 'border-box', flexShrink: 0 }
+                          : { width: '50mm', height: '34mm', padding: '2mm 3mm', boxSizing: 'border-box', flexShrink: 0 }
+                      }
+                    >
+                      {/* Line 1: Product Code - Bold */}
+                      <p className={is50x25 ? "font-black text-[9.5px] text-slate-950 uppercase tracking-tight truncate leading-none" : "font-black text-xs text-slate-955 uppercase tracking-tight truncate leading-tight"}>
+                        {prod.name}
+                      </p>
+                      
+                      {/* Line 2: Carton Qty & Length / Location - Normal */}
+                      <div className={is50x25 ? "flex justify-between text-[8.5px] text-slate-800 font-bold leading-none" : "flex justify-between text-[10px] text-slate-800 font-bold leading-tight"}>
+                        <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
+                        <span>
+                          {(() => {
+                            if (prod.warehouse) {
+                              return prod.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)");
+                            }
+                            if (prod.length) {
+                              return `${prod.length} cm`;
+                            }
+                            return "";
+                          })()}
+                        </span>
+                      </div>
+
+                      {/* Line 3: Description / Color - Clean (No empty '-') */}
+                      <p className={is50x25 ? "text-[8px] text-slate-600 font-medium truncate italic leading-none" : "text-[9.5px] text-slate-600 font-medium truncate italic leading-tight"}>
+                        {(() => {
+                          const parts = [];
+                          if (prod.description?.trim()) parts.push(prod.description.trim());
+                          if (prod.color?.trim()) parts.push(prod.color.trim());
+                          return parts.join(" • ");
+                        })()}
+                      </p>
+
+                      {/* Line 4: Prices - Bold (Line Removed, Uniform Spacing) */}
+                      <div className={is50x25 ? "flex justify-between items-end text-[9.5px] font-black text-slate-950 leading-none" : "flex justify-between items-end text-[11px] font-black text-slate-955 leading-none"}>
+                        <span className="font-extrabold">
+                          {wholesalePrefix}{prod.rate}
+                        </span>
+
+                        <span className="font-extrabold">
+                          {(() => {
+                            const base = parseFloat(prod.rate || "0");
+                            if (!base) return "-";
+                            const markup = parseFloat(labelMarkupPercent) || 0;
+                            return Math.round(base * (1 + markup / 100));
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            });
+          })()}
+        </div>,
+        document.body
+      )}
+
       {/* Global CSS for Print Portal */}
       <style jsx global>{`
         @media print {
           @page {
-            size: A4 portrait;
+            size: ${labelSize === "50x25" ? "106mm 25mm" : "56mm 38mm"};
             margin: 0 !important;
           }
-          html, body {
+          html, body, #__next {
             background-color: white !important;
             color: black !important;
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: hidden !important;
+            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -4440,9 +4727,48 @@ ${rows}
             border: none !important;
             background: white !important;
           }
+          /* Hide everything except the print labels portal */
+          body.is-printing-labels > *:not(.print-labels-portal) {
+            display: none !important;
+          }
+          body.is-printing-labels .print-labels-portal {
+            display: block !important;
+            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: white !important;
+            height: auto !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+          }
+          .collection-labels-page {
+            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
+            height: ${labelSize === "50x25" ? "24.5mm" : "35.5mm"} !important;
+            max-height: ${labelSize === "50x25" ? "24.5mm" : "35.5mm"} !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            margin: 0 !important;
+            font-size: 12px !important;
+            line-height: normal !important;
+          }
+          .collection-labels-page:last-child,
+          .collection-labels-page:last-of-type {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .label-card-item {
+            width: ${labelSize === "50x25" ? "48.5mm" : "50mm"} !important;
+            height: ${labelSize === "50x25" ? "24mm" : "34mm"} !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+          }
           .page-break-after-always {
-            page-break-after: always;
-            break-after: page;
+            page-break-after: always !important;
+            break-after: page !important;
           }
         }
       `}</style>

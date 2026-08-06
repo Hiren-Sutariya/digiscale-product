@@ -22,6 +22,7 @@ import {
   Warehouse,
   FileText,
   HardDrive,
+  ClipboardList,
 } from "lucide-react";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -29,6 +30,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     workspace: "Workspace",
     collections: "Collections",
     warehouse: "Warehouse",
+    "stock book": "Stock Book",
     clients: "Clients",
     quotation: "Quotation",
     myProfile: "My Profile",
@@ -46,6 +48,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     workspace: "વર્કસ્પેસ",
     collections: "કલેક્શન",
     warehouse: "વેરહાઉસ",
+    "stock book": "સ્ટોક બુક",
     clients: "ગ્રાહકો",
     quotation: "કોટેશન",
     myProfile: "મારી પ્રોફાઇલ",
@@ -63,11 +66,12 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     workspace: "कार्यक्षेत्र",
     collections: "कलेक्शन",
     warehouse: "गोदाम",
+    "stock book": "स्टॉक बुक",
     clients: "ग्राहक",
     quotation: "कोटेशन",
     myProfile: "मेरी प्रोफाइल",
     dataBackup: "डेटा और बैकअप",
-    settings: "सेटिंग्स",
+    settings: "सेट्स",
     signOut: "साइन आउट",
     signIn: "साइन इन",
     trialDaysRemaining: "दिनों का परीक्षण शेष",
@@ -80,6 +84,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     workspace: "Espacio",
     collections: "Colecciones",
     warehouse: "Almacén",
+    "stock book": "Libro de Stock",
     clients: "Clientes",
     quotation: "Cotización",
     myProfile: "Mi Perfil",
@@ -96,7 +101,6 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 };
 
 const navLinks = [
-  { href: "/workspace", label: "Workspace", icon: Paintbrush },
   { href: "/projects", label: "Collections", icon: FolderOpen },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse },
   { href: "/clients", label: "Clients", icon: Users },

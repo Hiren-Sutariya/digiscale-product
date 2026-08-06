@@ -148,10 +148,6 @@
 }
 
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 15mm;
-  }
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -341,4 +337,8 @@
 .bg-blue-50\/40,
 .bg-blue-50\/50 {
   background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+}
+
+html {
+  scroll-behavior: smooth;
 }

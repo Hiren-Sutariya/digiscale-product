@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { FolderOpen, FileText, Warehouse, Users, Paintbrush } from "lucide-react";
+import { FolderOpen, FileText, Warehouse, Users, Paintbrush, BookOpen } from "lucide-react";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
@@ -16,7 +16,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     clients: "Clients",
     clientsDesc: "Manage customers for quick access",
     quotation: "Quotation",
-    quotationDesc: "Create and export professional quotes"
+    quotationDesc: "Create and export professional quotes",
+    stockBook: "Stock Book",
+    stockBookDesc: "Track product inflows, sales, quick adjustments and quantities"
   },
   gu: {
     selectDestination: "સ્થાન પસંદ કરો",
@@ -29,7 +31,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     clients: "ગ્રાહકો",
     clientsDesc: "ઝડપી પ્રવેશ માટે ગ્રાહકોનું સંચાલણ કરો",
     quotation: "કોટેશન",
-    quotationDesc: "વ્યવસાયિક અવતરણો બનાવો અને નિકાસ કરો"
+    quotationDesc: "વ્યવસાયિક અવતરણો બનાવો અને નિકાસ કરો",
+    stockBook: "સ્ટોક બુક",
+    stockBookDesc: "પ્રોડક્ટ ઇનફ્લો, વેચાણ, ઝડપી એડજસ્ટમેન્ટ અને સ્ટોક ટ્રૅક કરો"
   },
   hi: {
     selectDestination: "गंतव्य चुनें",
@@ -42,7 +46,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     clients: "ग्राहक",
     clientsDesc: "त्वरित पहुँच के लिए ग्राहकों को प्रबंधित करें",
     quotation: "कोटेशन",
-    quotationDesc: "पेशेवर कोटेशन बनाएं और निर्यात करें"
+    quotationDesc: "पेशेवर कोटेशन बनाएं और निर्यात करें",
+    stockBook: "स्टॉक बुक",
+    stockBookDesc: "उत्पाद इनफ्लो, बिक्री, त्वरित स्टॉक समायोजन को ट्रैक करें"
   },
   es: {
     selectDestination: "Seleccione un destino",
@@ -55,7 +61,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     clients: "Clientes",
     clientsDesc: "Administrar clientes para un acceso rápido",
     quotation: "Cotización",
-    quotationDesc: "Crear y exportar cotizaciones profesionales"
+    quotationDesc: "Crear y exportar cotizaciones profesionales",
+    stockBook: "Libro de Stock",
+    stockBookDesc: "Realice un seguimiento de las entradas, ventas y cantidades de productos"
   }
 };
 
@@ -161,6 +169,25 @@ export default function DashboardPage() {
           </Link>
 
         </div>
+
+        {/* Second Row: Stock Book centered */}
+        <div className="mt-8 flex justify-center w-full">
+          <Link
+            href="/stock-book"
+            className="group flex flex-col items-center justify-center gap-5 rounded-3xl border border-slate-200 bg-white p-6 aspect-square w-full sm:w-[240px] text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+              <BookOpen className="h-7 w-7 text-slate-500 group-hover:text-blue-600 transition" />
+            </div>
+            <div>
+              <p className="text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("stockBook")}</p>
+              <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[190px] mx-auto">
+                {t("stockBookDesc")}
+              </p>
+            </div>
+          </Link>
+        </div>
+
       </div>
     </div>
   );

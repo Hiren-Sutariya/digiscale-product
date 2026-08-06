@@ -15,6 +15,7 @@ from app.api.settings import router as settings_router
 import app.models.user
 import app.models.user_settings
 import app.models.client
+import app.models.stock_entry
 
 # Create database tables at startup
 Base.metadata.create_all(bind=engine)

@@ -112,6 +112,7 @@ interface QuotationItem {
   collectionName?: string;
   description?: string;
   location?: string;
+  stock?: number;
 }
 
 interface CompanyInfo {
@@ -355,6 +356,7 @@ export default function QuotationView() {
   };
   const [quoteDate, setQuoteDate] = useState<string>(() => getLocalDateString());
   const [quoteNumber, setQuoteNumber] = useState("");
+  const [validUntil, setValidUntil] = useState<string>("");
 
   // Selected Quotation Items
   const [selectedItems, setSelectedItems] = useState<QuotationItem[]>([]);
@@ -578,23 +580,33 @@ export default function QuotationView() {
         setProducts(mappedProds);
 
         if (quotesData && quotesData.length > 0) {
-          const parsedQuotes = quotesData.map((q: any) => ({
-            id: q.id,
-            quoteNumber: q.quote_number,
-            clientName: q.client_name,
-            clientCompany: q.client_company,
-            clientAddress: q.client_address,
-            quoteDate: q.quote_date,
-            taxInput: q.tax_input || "",
-            cashAmount: q.cash_amount?.toString() || "",
-            bankAmount: q.bank_amount?.toString() || "",
-            total: q.total_amount,
-            applyEventMarkup: q.apply_event_markup,
-            eventMarkupPercent: q.event_markup_percent,
-            createdAt: q.created_at,
-            isOrderDone: q.is_order_done || false,
-            items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
-          }));
+          const parsedQuotes = quotesData.map((q: any) => {
+            let addr = q.client_address || "";
+            let validDate = "";
+            if (addr.includes(" ||validUntil:")) {
+              const parts = addr.split(" ||validUntil:");
+              addr = parts[0];
+              validDate = parts[1];
+            }
+            return {
+              id: q.id,
+              quoteNumber: q.quote_number,
+              clientName: q.client_name,
+              clientCompany: q.client_company,
+              clientAddress: addr,
+              validUntil: validDate,
+              quoteDate: q.quote_date,
+              taxInput: q.tax_input || "",
+              cashAmount: q.cash_amount?.toString() || "",
+              bankAmount: q.bank_amount?.toString() || "",
+              total: q.total_amount,
+              applyEventMarkup: q.apply_event_markup,
+              eventMarkupPercent: q.event_markup_percent,
+              createdAt: q.created_at,
+              isOrderDone: q.is_order_done || false,
+              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
+            };
+          });
           setSavedQuotes(parsedQuotes);
           const nextNum = getNextQuoteNumber(parsedQuotes);
           setQuoteNumber(nextNum);
@@ -750,6 +762,7 @@ export default function QuotationView() {
       clientName,
       clientCompany,
       clientAddress,
+      validUntil,
       quoteDate,
       items: selectedItems,
       taxInput,
@@ -781,7 +794,7 @@ export default function QuotationView() {
         quote_number: finalQuoteNumber,
         client_name: clientName,
         client_company: clientCompany,
-        client_address: clientAddress,
+        client_address: clientAddress + (validUntil ? ` ||validUntil:${validUntil}` : ""),
         quote_date: quoteDate,
         tax_input: taxInput,
         cash_amount: cashAmount ? parseFloat(cashAmount) : 0,
@@ -888,11 +901,59 @@ export default function QuotationView() {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
           const { error } = await supabase
-        .from('quotations')
-        .update({ is_order_done: !currentStatus })
-        .eq('id', id);
+            .from('quotations')
+            .update({ is_order_done: !currentStatus })
+            .eq('id', id);
 
-      if (error) throw error;
+          if (error) throw error;
+
+          // Adjust stock for each item in the quotation
+          const quote = savedQuotes.find(q => q.id === id);
+          if (quote && quote.items && quote.items.length > 0) {
+            await Promise.all(quote.items.map(async (item: any) => {
+              // 1. Fetch current stock from Supabase
+              const { data: prodData } = await supabase
+                .from('products')
+                .select('stock, name')
+                .eq('id', item.id)
+                .single();
+              
+              const currentStock = prodData ? prodData.stock : 0;
+              const productName = prodData ? prodData.name : item.name;
+              const change = currentStatus ? item.cartons : -item.cartons; // Revert (+) or Deduct (-)
+              const newStock = currentStock + change;
+
+              // 2. Update stock in DB
+              await supabase
+                .from('products')
+                .update({ stock: newStock })
+                .eq('id', item.id);
+
+              // 3. Log stock entry
+              await supabase.from('stock_entries').insert([{
+                user_id: parseInt(currentUserId || "0") || 0,
+                product_id: item.id,
+                product_name: productName,
+                quantity_changed: change,
+                transaction_type: currentStatus ? 'return' : 'sale',
+                reference_id: id,
+                reference_type: 'quotation',
+                description: currentStatus 
+                  ? `Reverted/Returned from Bill #${quote.quoteNumber}` 
+                  : `Sold via Bill #${quote.quoteNumber}`
+              }]);
+            }));
+
+            // 4. Update local products state
+            setProducts(prev => prev.map(p => {
+              const item = quote.items.find((i: any) => i.id === p.id);
+              if (item) {
+                const change = currentStatus ? item.cartons : -item.cartons;
+                return { ...p, stock: p.stock + change };
+              }
+              return p;
+            }));
+          }
 
           setSavedQuotes(savedQuotes.map(q => 
             q.id === id ? { ...q, isOrderDone: !currentStatus } : q
@@ -915,8 +976,54 @@ export default function QuotationView() {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
+          const quote = savedQuotes.find(q => q.id === id);
+          
           const { error } = await supabase.from('quotations').delete().eq('id', id);
-      if (error) throw error;
+          if (error) throw error;
+
+          // If the deleted quotation was active/done, restore its stock
+          if (quote && quote.isOrderDone && quote.items && quote.items.length > 0) {
+            await Promise.all(quote.items.map(async (item: any) => {
+              // 1. Fetch current stock
+              const { data: prodData } = await supabase
+                .from('products')
+                .select('stock, name')
+                .eq('id', item.id)
+                .single();
+              
+              const currentStock = prodData ? prodData.stock : 0;
+              const productName = prodData ? prodData.name : item.name;
+              const change = item.cartons; // Revert (+) stock
+              const newStock = currentStock + change;
+
+              // 2. Update stock in DB
+              await supabase
+                .from('products')
+                .update({ stock: newStock })
+                .eq('id', item.id);
+
+              // 3. Log stock entry
+              await supabase.from('stock_entries').insert([{
+                user_id: parseInt(currentUserId || "0") || 0,
+                product_id: item.id,
+                product_name: productName,
+                quantity_changed: change,
+                transaction_type: 'return',
+                reference_id: id,
+                reference_type: 'quotation',
+                description: `Returned/Reverted due to deletion of Bill #${quote.quoteNumber}`
+              }]);
+            }));
+
+            // 4. Update local products state
+            setProducts(prev => prev.map(p => {
+              const item = quote.items.find((i: any) => i.id === p.id);
+              if (item) {
+                return { ...p, stock: p.stock + item.cartons };
+              }
+              return p;
+            }));
+          }
 
           const updated = savedQuotes.filter(q => q.id !== id);
           setSavedQuotes(updated);
@@ -1005,7 +1112,8 @@ export default function QuotationView() {
           photoUrl: product.photoUrl,
           collectionName: product.collectionName,
           description: product.description,
-          location: product.location
+          location: product.location,
+          stock: product.stock
         }
       ];
     });
@@ -1500,23 +1608,48 @@ export default function QuotationView() {
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       {t("quoteDate")}
                     </label>
-                    <div className="relative">
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="date"
                         value={quoteDate}
                         onChange={(e) => setQuoteDate(e.target.value)}
-                        className="w-full rounded-xl border border-slate-205 bg-white pl-3.5 pr-8 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
+                        className="flex-1 rounded-xl border border-slate-205 bg-white px-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
                       />
                       {quoteDate && (
                         <button
                           type="button"
                           onClick={() => setQuoteDate("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-700 font-extrabold text-xs cursor-pointer"
+                          className="px-2.5 py-2 text-xs font-extrabold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition cursor-pointer shrink-0"
+                          title="Clear date"
                         >
-                          ×
+                          Clear
                         </button>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Valid Until
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={validUntil}
+                      onChange={(e) => setValidUntil(e.target.value)}
+                      className="flex-1 rounded-xl border border-slate-205 bg-white px-3.5 py-2 text-xs font-semibold outline-none transition focus:border-blue-500"
+                    />
+                    {validUntil && (
+                      <button
+                        type="button"
+                        onClick={() => setValidUntil("")}
+                        className="px-2.5 py-2 text-xs font-extrabold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition cursor-pointer shrink-0"
+                        title="Clear date"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1826,9 +1959,27 @@ export default function QuotationView() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[10px] text-slate-455 font-semibold mt-1">
+                          <p className="text-[10px] text-slate-500 font-semibold mt-1">
                             Price Code: {p.rate || "—"} · Carton Qty: {p.cartonQty || 1}
                           </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold text-slate-500">
+                              Stock: <strong className="text-slate-800 font-extrabold">{p.stock ?? 0} Cartons</strong>
+                            </span>
+                            {(p.stock ?? 0) <= 0 ? (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+                                Out of Stock
+                              </span>
+                            ) : (p.stock ?? 0) <= 5 ? (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                                Low Stock
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-705 border border-emerald-200">
+                                In Stock
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1968,16 +2119,17 @@ export default function QuotationView() {
               </div>
 
               {/* Right Side: Quotation Info Metadata */}
-              {(quoteNumber || quoteDate) && (
+              {(quoteNumber || quoteDate || validUntil) && (
                 <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
-                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "gu" ? "કોટેશન માહિતી:" : lang === "hi" ? "कोटेशन जानकारी:" : "Quotation Info:"}</p>
+                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                   <div className="mb-1.5">
                     <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
-                      {lang === "gu" ? "B2B કોટેશન" : lang === "hi" ? "B2B कोटेशन" : "B2B Quotation"}
+                      B2B Quotation
                     </span>
                   </div>
-                  {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">{lang === "gu" ? "કોટેશન સંદર્ભ:" : lang === "hi" ? "कोटेशन संदर्भ:" : "Quote Ref:"} <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
-                  {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">{lang === "gu" ? "તારીખ:" : lang === "hi" ? "दिनांक:" : "Date:"} <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
+                  {quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{quoteNumber}</span></p>}
+                  {quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(quoteDate)}</span></p>}
+                  {validUntil && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Valid Till: <span className="text-slate-900 font-black">{formatDate(validUntil)}</span></p>}
                 </div>
               )}
             </div>
@@ -2024,11 +2176,36 @@ export default function QuotationView() {
                         {/* PRODUCT NAME */}
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
                           <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
-                          {item.location && (
-                            <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block select-none">
-                              {item.location}
-                            </p>
-                          )}
+                          <div className="no-print mt-1.5 flex items-center gap-1.5 flex-wrap">
+                            {item.location && (
+                              <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 select-none shrink-0">
+                                {item.location}
+                              </p>
+                            )}
+                            <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-150 px-1.5 py-0.5 rounded select-none shrink-0">
+                              Stock: <strong className="text-slate-800 font-extrabold">{item.stock ?? 0} Ctns</strong>
+                            </span>
+                            {(item.stock ?? 0) <= 0 ? (
+                              <span className="px-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200 shrink-0">
+                                Out
+                              </span>
+                            ) : (item.stock ?? 0) <= 5 ? (
+                              <span className="px-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-50 text-amber-705 border border-amber-200 animate-pulse shrink-0">
+                                Low
+                              </span>
+                            ) : (
+                              <span className="px-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-705 border border-emerald-200 shrink-0">
+                                OK
+                              </span>
+                            )}
+                          </div>
+                          <div className="hidden print:block">
+                            {item.location && (
+                              <p className="text-[9px] font-bold text-slate-500 mt-0.5">
+                                {item.location}
+                              </p>
+                            )}
+                          </div>
                         </td>
 
                         {/* CTNS */}
@@ -2427,7 +2604,7 @@ export default function QuotationView() {
                     <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed font-bold">{clientContact ? `Contact: ${clientContact}` : "-"}</p>
                   </div>
 
-                {(selectedQuoteForPreview.quoteNumber || selectedQuoteForPreview.quoteDate) && (
+                {(selectedQuoteForPreview.quoteNumber || selectedQuoteForPreview.quoteDate || selectedQuoteForPreview.validUntil) && (
                   <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                     <div className="mb-1.5">
@@ -2437,6 +2614,7 @@ export default function QuotationView() {
                     </div>
                     {selectedQuoteForPreview.quoteNumber && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{selectedQuoteForPreview.quoteNumber}</span></p>}
                     {selectedQuoteForPreview.quoteDate && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(selectedQuoteForPreview.quoteDate)}</span></p>}
+                    {selectedQuoteForPreview.validUntil && <p className="text-[10px] text-slate-550 font-extrabold uppercase">Valid Till: <span className="text-slate-900 font-black">{formatDate(selectedQuoteForPreview.validUntil)}</span></p>}
                   </div>
                 )}
               </div>
@@ -2692,7 +2870,7 @@ export default function QuotationView() {
           </div>
 
           {/* Right Side: Quotation Info Metadata */}
-          {(printQuoteData.quoteNumber || printQuoteData.quoteDate) && (
+          {(printQuoteData.quoteNumber || printQuoteData.quoteDate || printQuoteData.validUntil) && (
             <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
               <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
               <div className="mb-1.5">
@@ -2702,6 +2880,7 @@ export default function QuotationView() {
               </div>
               {printQuoteData.quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{printQuoteData.quoteNumber}</span></p>}
               {printQuoteData.quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(printQuoteData.quoteDate)}</span></p>}
+              {printQuoteData.validUntil && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Valid Till: <span className="text-slate-900 font-black">{formatDate(printQuoteData.validUntil)}</span></p>}
             </div>
           )}
         </div>

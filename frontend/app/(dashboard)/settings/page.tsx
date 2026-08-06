@@ -2070,19 +2070,29 @@ function BackupSection() {
     }
   };
 
-  const triggerDeleteLocal = async (timestamp: string) => {
-    if (window.confirm("Are you sure you want to delete this backup snapshot? This action is permanent and cannot be undone.")) {
-      try {
-        await deleteBackupFromIndexedDB(timestamp);
-        await refreshBackupHistory();
-      } catch (err: any) {
-        setModalConfig({
-          title: "Delete Failed",
-          message: "Failed to delete backup snapshot: " + (err.message || err),
-          type: "error"
-        });
+  const triggerDeleteLocal = (timestamp: any) => {
+    setModalConfig({
+      title: "Delete Backup Snapshot",
+      message: "Are you sure you want to delete this backup snapshot? This action is permanent and cannot be undone.",
+      type: "confirm",
+      onConfirm: async () => {
+        try {
+          await deleteBackupFromIndexedDB(timestamp);
+          await refreshBackupHistory();
+          setModalConfig({
+            title: "Snapshot Deleted",
+            message: "The backup snapshot has been successfully deleted from local history.",
+            type: "success"
+          });
+        } catch (err: any) {
+          setModalConfig({
+            title: "Delete Failed",
+            message: "Failed to delete backup snapshot: " + (err.message || err),
+            type: "error"
+          });
+        }
       }
-    }
+    });
   };
 
   const handleFrequencyChange = (val: string) => {
