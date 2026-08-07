@@ -689,62 +689,64 @@ export default function WarehousePage() {
     : [];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
+    <div className="px-2.5 sm:px-8 pt-2.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
       {/* Static Toolbar Header */}
-      <div className="shrink-0 px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* Search Inputs Row */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
-            {/* Shelf Rows Search */}
-            <div className="relative w-full sm:w-[35%]">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={rowSearchQuery}
-                onChange={(e) => setRowSearchQuery(e.target.value)}
-                placeholder={t("searchShelfRows")}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </div>
-            {/* Global Finder */}
-            <div className="relative w-full sm:w-[65%]">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
-              <input
-                type="text"
-                value={globalSearchQuery}
-                onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                placeholder={t("globalFinderPlaceholder")}
-                className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
-              />
-              {globalSearchQuery && (
-                <button
-                  onClick={() => setGlobalSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+      <div className="shrink-0 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-3 w-full">
+        {/* Search Inputs Row */}
+        <div className="flex gap-2 w-full lg:max-w-3xl">
+          {/* Shelf Rows Search */}
+          <div className="relative flex-[45%] lg:flex-initial lg:w-[35%]">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={rowSearchQuery}
+              onChange={(e) => setRowSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-[11px] font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
+            />
           </div>
+          {/* Global Finder */}
+          <div className="relative flex-[55%] lg:flex-initial lg:w-[65%]">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sky-400" />
+            <input
+              type="text"
+              value={globalSearchQuery}
+              onChange={(e) => setGlobalSearchQuery(e.target.value)}
+              placeholder="Find product..."
+              className="w-full rounded-xl border border-sky-200 bg-white py-2 pl-9 pr-8 text-[11px] font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
+            />
+            {globalSearchQuery && (
+              <button
+                onClick={() => setGlobalSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
 
-          {/* Action Button */}
+        {/* Action Button Row */}
+        <div className="flex items-center w-full lg:w-auto shrink-0">
           <button
             onClick={() => setAddRowModal(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 w-full lg:w-auto px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer uppercase tracking-wider"
           >
             <Plus className="h-4 w-4" />
-            {t("createShelfRow")}
+            <span>Create Shelf Row</span>
           </button>
         </div>
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
+      <div className="flex-1 overflow-y-auto min-h-0 pt-6 pb-24">
         <div className="space-y-6">
 
-        {/* Stats Section */}
+        {/* Stats Section Removed on Mobile */}
+
+        {/* Desktop View stats section (hidden on mobile) */}
         {globalSearchQuery.trim() === "" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
               <div className="h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
                 <Layers className="h-6 w-6" />
@@ -752,7 +754,7 @@ export default function WarehousePage() {
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("totalRowsSlots")}</p>
                 <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                  {totalRows} {lang === "gu" ? "હરોળ" : lang === "hi" ? "पंक्तियाँ" : "Rows"} / {totalSlots} {lang === "gu" ? "સ્લોટ્સ" : lang === "hi" ? "स्लॉट" : "Slots"}
+                  {totalRows} {lang === "gu" ? "હરોળ" : lang === "hi" ? "पंक्तियाँ" : "Rows"} / {totalSlots} {lang === "gu" ? "સ્લોટ્સ" : lang === "hi" ? "સ્લૉટ" : "Slots"}
                 </h3>
               </div>
             </div>
@@ -853,6 +855,12 @@ export default function WarehousePage() {
                                 setSelectedLocation(`${loc.row}-${loc.slot}`);
                                 setSelectedShelfZone(loc.zone as any);
                                 setGlobalSearchQuery("");
+                                setTimeout(() => {
+                                  const el = document.getElementById(`shelf-row-container-${loc.row}`);
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  }
+                                }, 150);
                               }}
                               className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition active:scale-95 cursor-pointer"
                             >
@@ -896,6 +904,7 @@ export default function WarehousePage() {
                 return (
                   <div
                     key={row}
+                    id={`shelf-row-container-${row}`}
                     className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 ${
                       isExpanded
                         ? "border-blue-200 shadow-md shadow-blue-50/50"
@@ -904,10 +913,21 @@ export default function WarehousePage() {
                   >
                     {/* Row Item Header */}
                     <div
-                      onClick={() => setExpandedRow(isExpanded ? null : row)}
-                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/30 transition text-left cursor-pointer select-none"
+                      onClick={() => {
+                        const newExpanded = isExpanded ? null : row;
+                        setExpandedRow(newExpanded);
+                        if (newExpanded) {
+                          setTimeout(() => {
+                            const el = document.getElementById(`shelf-row-container-${row}`);
+                            if (el) {
+                              el.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }
+                          }, 150);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between px-3 sm:px-5 py-4 hover:bg-slate-50/30 transition text-left cursor-pointer select-none gap-2"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                         <div
                           className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition ${
                             isExpanded
@@ -917,30 +937,31 @@ export default function WarehousePage() {
                         >
                           {row}
                         </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm leading-tight">{t("rowShelf").replace("{row}", row)}</h4>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-slate-400 font-semibold">{t("slotsCount").replace("{count}", rowSlots.length.toString())}</span>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-tight truncate">
+                            {t("rowShelf").replace("{row}", row)}
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] sm:text-[10px] text-slate-400 font-semibold shrink-0">
+                              {t("slotsCount").replace("{count}", rowSlots.length.toString())}
+                            </span>
                             {hasItems && (
-                              <>
-                                <span className="text-slate-250 font-bold">·</span>
-                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
-                                  {t("unitsStocked").replace("{count}", assignedCount.toString())}
-                                </span>
-                              </>
+                              <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 whitespace-nowrap shrink-0">
+                                {assignedCount} units
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider transition ${
+                      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                        <span className={`hidden sm:inline text-[10px] font-bold uppercase tracking-wider transition ${
                           isExpanded ? "text-blue-500" : "text-slate-400"
                         }`}>
                           {isExpanded ? t("collapse") : t("openLayout")}
                         </span>
-                        <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${
-                          isExpanded ? "rotate-90 text-blue-500" : "text-slate-350"
+                        <ChevronRight className={`h-4 w-4 transition-transform duration-200 shrink-0 ${
+                          isExpanded ? "rotate-90 text-blue-500" : "text-slate-355"
                         }`} />
                         <button
                           onClick={(e) => {
@@ -956,7 +977,7 @@ export default function WarehousePage() {
 
                     {/* Row Content Expansion */}
                     {isExpanded && (
-                      <div className="border-t border-slate-100 bg-slate-50/20 p-5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                      <div className="border-t border-slate-100 bg-slate-50/20 px-2 sm:px-5 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
                         {/* Shelf Grid Map Visualizer */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
                           {rowSlots.map((slot) => {

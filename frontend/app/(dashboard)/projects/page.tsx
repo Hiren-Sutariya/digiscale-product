@@ -260,6 +260,7 @@ function CollectionsPageContent() {
   const [labelSize, setLabelSize] = useState<"50x25" | "50x38">("50x38");
 
   // Warehouse & Quotation States
+  const [activeColSubView, setActiveColSubView] = useState<"code" | "named">("code");
   const [currentTopTab, setCurrentTopTab] = useState<"collections" | "warehouse" | "quotation">("collections");
   const [isTabReady, setIsTabReady] = useState(true);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
@@ -2180,20 +2181,45 @@ ${rows}
     const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
     const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
 
+    let touchTimer: NodeJS.Timeout | null = null;
+    let isLongPress = false;
+
     return viewMode === "grid" ? (
       /* Grid Card */
       <div
         key={col.id}
-        onClick={() => handleOpenCollectionDetail(col)}
-        className="group relative flex flex-col rounded-[22px] border border-slate-200/70 bg-white p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto animate-fade-in"
+        onTouchStart={(e) => {
+          isLongPress = false;
+          touchTimer = setTimeout(() => {
+            isLongPress = true;
+            setActiveDropdownId(col.id);
+            // Optionally trigger vibration for feedback
+            if (navigator.vibrate) navigator.vibrate(50);
+          }, 600); // 600ms hold triggers long press
+        }}
+        onTouchEnd={(e) => {
+          if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+          }
+        }}
+        onClick={(e) => {
+          if (isLongPress) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          handleOpenCollectionDetail(col);
+        }}
+        className="group relative flex flex-col rounded-2xl sm:rounded-[22px] border border-slate-200/70 bg-white p-2.5 sm:p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto animate-fade-in"
       >
         {/* Folder Icon / Preview Area */}
-        <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[16px]" />
+        <div className="relative flex flex-1 min-h-0 w-full items-center justify-center rounded-xl sm:rounded-[16px] bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-100/80 group-hover:bg-blue-50/40 transition-colors duration-500 overflow-visible z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl sm:rounded-[16px]" />
 
           <div className="relative transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1 z-10">
             <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <Folder className="relative h-14 w-14 text-blue-500 fill-blue-50/50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
+            <Folder className="relative h-10 w-10 sm:h-14 sm:w-14 text-blue-500 fill-blue-50/50 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
           </div>
 
           {/* Options Button */}
@@ -2203,51 +2229,63 @@ ${rows}
                 e.stopPropagation();
                 setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
               }}
-              className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-405 opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
+              className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-405 opacity-0 md:opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
 
             {activeDropdownId === col.id && (
-              <div className="absolute right-0 top-full mt-2 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/50">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRenamingCol(col);
-                    setRenameValue(col.name);
-                    setActiveDropdownId(null);
-                  }}
-                  className="w-full text-left rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-                >
-                  Rename
-                </button>
-                <button
-                  onClick={(e) => handleDeleteCollection(col.id, e)}
-                  className="w-full text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg px-3 py-2 transition mt-0.5"
-                >
-                  Delete
-                </button>
-              </div>
+              <>
+                {/* Full backdrop to dim background on mobile and catch clicks */}
+                <div className="fixed inset-0 bg-slate-900/10 md:bg-transparent z-40 backdrop-blur-[1px] md:backdrop-blur-none transition-opacity" onClick={(e) => { e.stopPropagation(); setActiveDropdownId(null); }} />
+
+                {/* Dropdown Menu - Center popup on Mobile, original placement on Desktop */}
+                <div className="fixed md:absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 md:left-auto md:right-0 md:top-full mt-0 md:mt-2 w-48 md:w-36 rounded-2xl md:rounded-xl border border-slate-200/80 bg-white p-2 md:p-1.5 shadow-2xl md:shadow-xl shadow-slate-300/40 md:shadow-slate-200/50 z-50 animate-in zoom-in-95 md:zoom-in-100 duration-150">
+                  <div className="md:hidden border-b border-slate-100 pb-2 mb-1.5 px-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Options</p>
+                    <p className="text-xs font-black text-slate-800 truncate mt-0.5">{col.name}</p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingCol(col);
+                      setRenameValue(col.name);
+                      setActiveDropdownId(null);
+                    }}
+                    className="w-full text-left rounded-xl md:rounded-lg px-3 py-2.5 md:py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition flex items-center gap-2"
+                  >
+                    <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600" />
+                    <span>Rename</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteCollection(col.id, e)}
+                    className="w-full text-left text-xs font-bold text-red-650 hover:bg-red-50 rounded-xl md:rounded-lg px-3 py-2.5 md:py-2 transition mt-0.5 flex items-center gap-2"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
 
         {/* Info Area */}
-        <div className="mt-4 px-2.5 flex flex-col justify-end shrink-0 pb-1 z-20">
+        <div className="mt-2.5 sm:mt-4 px-1 sm:px-2.5 flex flex-col justify-end shrink-0 pb-0.5 sm:pb-1 z-20">
           <div>
-            <h3 className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors text-[15px] truncate pr-2">
+            <h3 className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors text-xs sm:text-[15px] truncate pr-2">
               {col.name}
             </h3>
             <div className="mt-1 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
-                <span className="flex items-center gap-1.5">
-                  <div className="h-[4.5px] w-[4.5px] rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors" />
-                  {productCount} {productCount === 1 ? 'product' : 'products'}
+              <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-slate-500 font-semibold truncate">
+                <span className="flex items-center gap-1 shrink-0">
+                  <div className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-blue-300 transition-colors shrink-0" />
+                  <span>{productCount} {productCount === 1 ? 'item' : 'items'}</span>
                 </span>
-                <span className="text-slate-300 font-normal">·</span>
-                <span>{dateStr}</span>
+                <span className="hidden sm:inline text-slate-300 font-normal">·</span>
+                <span className="hidden sm:inline truncate">{dateStr}</span>
               </div>
-              <div className="h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
+              <div className="hidden sm:flex h-7 w-7 rounded-full bg-slate-50 items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 border border-transparent group-hover:border-blue-100 shrink-0">
                 <ChevronRight className="h-3.5 w-3.5" />
               </div>
             </div>
@@ -2338,7 +2376,7 @@ ${rows}
                 No collections found
               </div>
             ) : (
-              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
+              <div className={viewMode === "grid" ? "grid gap-2.5 sm:gap-5 grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] mt-2" : "space-y-3"}>
                 {filteredCollections.map(c => renderCollectionCard(c))}
               </div>
             )}
@@ -2351,58 +2389,82 @@ ${rows}
     const namedCols = filteredCollections.filter(c => !isCodeCollection(c));
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-        {/* Code Collections Column */}
-        <div className="flex flex-col min-h-0 h-full">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-blue-600 rounded-full" />
-              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                Code Collections
-              </span>
-            </div>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-              {codeCols.length} {codeCols.length === 1 ? 'item' : 'items'}
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
-            {codeCols.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-xs font-semibold">
-                No code collections found
-              </div>
-            ) : (
-              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
-                {codeCols.map(c => renderCollectionCard(c))}
-              </div>
-            )}
-          </div>
+      <div className="flex flex-col h-full gap-4">
+        {/* Mobile Switcher Tab (Hidden on lg desktop) */}
+        <div className="lg:hidden no-print flex gap-2 p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl border border-slate-200/50">
+          <button
+            onClick={() => setActiveColSubView("code")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-lg transition-all duration-200 ${activeColSubView === "code"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-855"
+              }`}
+          >
+            📝 Code ({codeCols.length})
+          </button>
+          <button
+            onClick={() => setActiveColSubView("named")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-lg transition-all duration-200 ${activeColSubView === "named"
+                ? "bg-white text-emerald-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-855"
+              }`}
+          >
+            📁 Named ({namedCols.length})
+          </button>
         </div>
 
-        {/* Named Collections Column */}
-        <div className="flex flex-col min-h-0 h-full">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-emerald-500 rounded-full" />
-              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                Named Collections
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+          {/* Code Collections Column */}
+          <div className={`flex flex-col min-h-0 h-full ${activeColSubView === "code" ? "flex" : "hidden lg:flex"}`}>
+            <div className="hidden lg:flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-blue-600 rounded-full" />
+                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                  Code Collections
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                {codeCols.length} {codeCols.length === 1 ? 'item' : 'items'}
               </span>
             </div>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-              {namedCols.length} {namedCols.length === 1 ? 'item' : 'items'}
-            </span>
+
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+              {codeCols.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+                  No code collections found
+                </div>
+              ) : (
+                <div className={viewMode === "grid" ? "grid gap-2.5 sm:gap-5 grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] mt-2" : "space-y-3"}>
+                  {codeCols.map(c => renderCollectionCard(c))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
-            {namedCols.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-xs font-semibold">
-                No named collections found
+          {/* Named Collections Column */}
+          <div className={`flex flex-col min-h-0 h-full ${activeColSubView === "named" ? "flex" : "hidden lg:flex"}`}>
+            <div className="hidden lg:flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-emerald-500 rounded-full" />
+                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                  Named Collections
+                </span>
               </div>
-            ) : (
-              <div className={viewMode === "grid" ? "grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mt-2" : "space-y-3"}>
-                {namedCols.map(c => renderCollectionCard(c))}
-              </div>
-            )}
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {namedCols.length} {namedCols.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+              {namedCols.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+                  No named collections found
+                </div>
+              ) : (
+                <div className={viewMode === "grid" ? "grid gap-2.5 sm:gap-5 grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] mt-2" : "space-y-3"}>
+                  {namedCols.map(c => renderCollectionCard(c))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -2424,72 +2486,66 @@ ${rows}
 
 
   return (
-    <div className="px-8 pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
+    <div className="px-2.5 sm:px-8 pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
 
       {/* DETAIL VIEW MODE */}
       {selectedCol ? (
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0 space-y-6">
-          <div className="shrink-0 space-y-6">
-            <button
-              onClick={() => {
-                setSelectedCol(null);
-                setSelectedProductIds(new Set());
-                if (typeof window !== "undefined") {
-                  window.history.pushState(null, "", "?tab=collections");
-                }
-              }}
-              className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-650 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 mb-4"
-            >
-              <ChevronLeft className="h-4 w-4 text-slate-400 group-hover:text-slate-650 transition-transform group-hover:-translate-x-0.5" />
-              Back to Collections
-            </button>
-
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/60 pb-6">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <Folder className="h-6 w-6 text-blue-650 fill-blue-50/20" />
-                  {selectedCol.name}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0 space-y-3 sm:space-y-4">
+          <div className="shrink-0 space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => {
+                    setSelectedCol(null);
+                    setSelectedProductIds(new Set());
+                    if (typeof window !== "undefined") {
+                      window.history.pushState(null, "", "?tab=collections");
+                    }
+                  }}
+                  className="group inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-650 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 shrink-0"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-650 transition-transform group-hover:-translate-x-0.5" />
+                  Back
+                </button>
+                <h2 className="text-sm sm:text-lg font-black text-slate-900 flex items-center gap-1.5">
+                  <Folder className="h-5 w-5 text-blue-650 fill-blue-50/20 shrink-0" />
+                  <span className="truncate">{selectedCol.name}</span>
                 </h2>
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto shrink-0">
                 {selectedProductIds.size > 0 && (
                   <>
                     <button
                       onClick={handleBulkDeleteProducts}
-                      className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95 cursor-pointer"
+                      className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white transition active:scale-95 cursor-pointer shrink-0"
+                      title="Delete Selected"
                     >
-                      <Trash2 className="h-4 w-4" /> Delete Selected ({selectedProductIds.size})
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline ml-1">Delete Selected</span> ({selectedProductIds.size})
                     </button>
 
                     {isCodeCollection(selectedCol) && (
-                      <div className="relative">
-                        {/* Trigger Button */}
+                      <div className="relative shrink-0">
                         <button
                           onClick={() => setIsCopyDropdownOpen(!isCopyDropdownOpen)}
-                          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95 cursor-pointer"
+                          className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition active:scale-95 cursor-pointer shrink-0"
                         >
-                          <Copy className="h-4 w-4 text-blue-600" />
-                          <span>Copy to Collection</span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${isCopyDropdownOpen ? 'rotate-180' : ''}`} />
+                          <Copy className="h-3.5 w-3.5 text-blue-600" />
+                          <span className="hidden sm:inline ml-1">Copy to</span>
+                          <ChevronDown className="h-3 w-3 text-slate-400 ml-1" />
                         </button>
 
-                        {/* Popover Menu - Opens Downwards */}
                         {isCopyDropdownOpen && (
                           <>
-                            {/* Overlay backdrop to close dropdown on click outside */}
-                            <div
-                              className="fixed inset-0 z-40"
-                              onClick={() => setIsCopyDropdownOpen(false)}
-                            />
-                            <div className="absolute left-0 top-full mt-2 z-50 w-60 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-200/40 animate-in fade-in slide-in-from-top-2 duration-150">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3.5 py-2 border-b border-slate-100/60 mb-1">
+                            <div className="fixed inset-0 z-40" onClick={() => setIsCopyDropdownOpen(false)} />
+                            <div className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-xl">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2.5 py-1.5 border-b border-slate-100 mb-1">
                                 Named Collections
                               </p>
-
-                              <div className="max-h-48 overflow-y-auto p-1.5 space-y-0.5">
+                              <div className="max-h-40 overflow-y-auto space-y-0.5">
                                 {collections.filter((c) => c.id !== selectedCol.id && !isCodeCollection(c)).length === 0 ? (
-                                  <p className="text-xs text-slate-400 font-semibold text-center py-4">
+                                  <p className="text-[10px] text-slate-400 font-semibold text-center py-3">
                                     No Named collections found
                                   </p>
                                 ) : (
@@ -2502,9 +2558,9 @@ ${rows}
                                           handleAssignSelectedProductsToCollection(c.id);
                                           setIsCopyDropdownOpen(false);
                                         }}
-                                        className="w-full text-left flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
+                                        className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition"
                                       >
-                                        <Folder className="h-4 w-4 text-blue-500/70 fill-blue-50/50" />
+                                        <Folder className="h-3.5 w-3.5 text-blue-500/70" />
                                         <span className="truncate">{c.name}</span>
                                       </button>
                                     ))
@@ -2523,17 +2579,20 @@ ${rows}
                     onClick={() => {
                       setDraftProducts([{ name: "", stock: 0, cartonQty: 1, rate: "", length: "", color: "", unit_type: "pcs", description: "", photoUrl: "", warehouse: "" }, ...draftProducts]);
                     }}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                    className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3 py-2 text-xs font-bold text-white transition active:scale-95 shrink-0"
                   >
-                    <Plus className="h-4 w-4" /> Add Product
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Product</span>
                   </button>
                 )}
 
                 <button
                   onClick={() => setShowPdfModal(true)}
-                  className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                  className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-xs font-bold text-white transition active:scale-95 shrink-0"
+                  title="Download PDF"
                 >
-                  <Printer className="h-4 w-4" /> Download PDF
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Download PDF</span>
                 </button>
 
                 <button
@@ -2542,20 +2601,22 @@ ${rows}
                     setWholesalePrefix("A9");
                     setShowLabelModal(true);
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-3 text-xs font-bold text-white transition shadow-sm active:scale-95"
+                  className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition active:scale-95 shrink-0"
+                  title="Download Label"
                 >
-                  <Tag className="h-4 w-4" /> Download Label
+                  <Tag className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Download Label</span>
                 </button>
 
                 {isCodeCollection(selectedCol) && (
                   <>
-                    {/* Excel Import */}
                     <button
                       onClick={() => excelImportRef.current?.click()}
-                      className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-5 py-3 text-xs font-bold text-emerald-700 transition shadow-sm active:scale-95"
-                      title="Import products from Excel/CSV file"
+                      className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-700 transition active:scale-95 shrink-0"
+                      title="Import from Excel"
                     >
-                      <Download className="h-4 w-4 rotate-180" /> Import from Excel
+                      <Download className="h-3.5 w-3.5 rotate-180" />
+                      <span className="hidden sm:inline ml-1">Import</span>
                     </button>
                     <input
                       ref={excelImportRef}
@@ -2565,46 +2626,44 @@ ${rows}
                       onChange={handleExcelImport}
                     />
 
-                    {/* Excel Template Download */}
                     <button
                       onClick={downloadExcelTemplate}
-                      className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 text-xs font-bold text-slate-700 transition shadow-sm active:scale-95"
+                      className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition active:scale-95 shrink-0"
+                      title="Get Template"
                     >
-                      <Download className="h-4 w-4" /> Get Template
+                      <Download className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline ml-1">Template</span>
                     </button>
                   </>
                 )}
-
               </div>
             </div>
 
             {/* Excel Import Result Banner */}
             {showImportResult && excelImportStatus && (
-              <div className={`flex items-center justify-between gap-3 px-5 py-3 rounded-2xl text-xs font-semibold border animate-in fade-in slide-in-from-top-1 ${excelImportStatus.errors > 0
+              <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold border ${excelImportStatus.errors > 0
                 ? "bg-amber-50 border-amber-200 text-amber-800"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"
                 }`}>
                 <span>
                   ✅ Successfully imported <strong>{excelImportStatus.count}</strong> product{excelImportStatus.count !== 1 ? "s" : ""}
-                  {excelImportStatus.errors > 0 && ` · ⚠️ ${excelImportStatus.errors} row(s) skipped (missing Product Name)`}
+                  {excelImportStatus.errors > 0 && ` · ⚠️ ${excelImportStatus.errors} skipped`}
                 </span>
                 <button onClick={() => setShowImportResult(false)} className="text-slate-500 hover:text-slate-800">✕</button>
               </div>
             )}
-
-
           </div>
 
           {/* Static Product Search Bar */}
-          <div className="shrink-0 px-0 pt-3 pb-2">
+          <div className="shrink-0 px-0 py-1">
             <div className="relative w-full max-w-sm">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
                 placeholder="Search products by name or color..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-[11px] font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
               />
             </div>
           </div>
@@ -2702,7 +2761,183 @@ ${rows}
                 </div>
               ) : (
                 <div className="flex-1 overflow-hidden min-h-0 flex flex-col border border-slate-200 rounded-2xl bg-white shadow-sm">
-                  <div className="flex-1 overflow-auto">
+                  {/* Mobile Products List View */}
+                  <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-3.5 bg-slate-50/30">
+                    {draftProducts.map((draft, idx) => (
+                      <div key={`draft-${idx}`} className="bg-blue-50/20 border-l-4 border-l-blue-400 p-4 rounded-xl shadow-sm border border-slate-200/60 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <label className="h-14 w-14 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative cursor-pointer hover:opacity-80 transition flex items-center justify-center shrink-0">
+                            <input type="file" accept="image/*,.heic,.heif,image/heic,image/heif" className="hidden" onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  const src = ev.target?.result as string;
+                                  const img = new window.Image();
+                                  img.onload = () => {
+                                    const canvas = document.createElement("canvas");
+                                    const maxDim = 800;
+                                    let { width, height } = img;
+                                    if (width > height) { if (width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; } }
+                                    else { if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; } }
+                                    canvas.width = width; canvas.height = height;
+                                    canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
+                                    const url = canvas.toDataURL("image/jpeg", 0.7);
+                                    handleUpdateDraft(idx, "photoUrl", url);
+                                  };
+                                  img.src = src;
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }} />
+                            {loadingOcrId === `draft-${idx}` ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                            ) : draft.photoUrl ? (
+                              <img src={draft.photoUrl} alt="draft" className="h-full w-full object-contain" />
+                            ) : (
+                              <ImageIcon className="h-5 w-5 text-slate-400" />
+                            )}
+                          </label>
+                          <div className="flex-1 min-w-0">
+                            <input type="text" placeholder="Product Name" className="w-full text-xs font-black p-2 border border-slate-200 rounded-md outline-none" value={draft.name || ""} onChange={(e) => handleUpdateDraft(idx, "name", e.target.value)} />
+                          </div>
+                        </div>
+
+                        {/* Additional fields row: Description & Length */}
+                        <div className="space-y-2">
+                          <input type="text" placeholder="Description (e.g. 3 PCS SET)" className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none" value={draft.description || ""} onChange={(e) => handleUpdateDraft(idx, "description", e.target.value)} />
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <input type="text" placeholder="Length (e.g. 120,100,70)" className="p-2 border border-slate-200 rounded-md outline-none" value={draft.length || ""} onChange={(e) => handleUpdateDraft(idx, "length", e.target.value)} />
+                            <button
+                              type="button"
+                              onClick={() => setOpenLocationPicker({ type: 'draft', idx })}
+                              className="p-2 border border-slate-200 rounded-md outline-none bg-white text-slate-700 text-left truncate"
+                            >
+                              {draft.warehouse
+                                ? draft.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)")
+                                : "Select Location..."}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Standard inputs grid */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold px-1">PRICE CODE</span>
+                            <input type="text" placeholder="Price Code (Rate)" className="p-2 border border-slate-200 rounded-md outline-none font-semibold text-right" value={draft.rate || ""} onChange={(e) => handleUpdateDraft(idx, "rate", e.target.value)} />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold px-1">COLOR</span>
+                            <input type="text" placeholder="Color" className="p-2 border border-slate-200 rounded-md outline-none" value={draft.color || ""} onChange={(e) => handleUpdateDraft(idx, "color", e.target.value)} />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold px-1">STOCK (CARTONS)</span>
+                            <input type="number" placeholder="Cartons count" className="p-2 border border-slate-200 rounded-md outline-none" value={draft.stock || ""} onChange={(e) => handleUpdateDraft(idx, "stock", e.target.value)} />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold px-1">QTY PER CARTON</span>
+                            <div className="flex gap-1 items-center">
+                              <input type="number" placeholder="Qty" className="w-[60px] p-2 border border-slate-200 rounded-md outline-none" value={draft.cartonQty || ""} onChange={(e) => handleUpdateDraft(idx, "cartonQty", e.target.value)} />
+                              <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner shrink-0">
+                                <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "pcs")} className={`px-1.5 py-1 text-[9px] font-black rounded ${draft.unit_type === 'pcs' || !draft.unit_type ? 'bg-white text-slate-800 shadow-sm border' : 'text-slate-500'}`}>pcs</button>
+                                <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "dzn")} className={`px-1.5 py-1 text-[9px] font-black rounded ${draft.unit_type === 'dzn' ? 'bg-white text-slate-800 shadow-sm border' : 'text-slate-500'}`}>dzn</button>
+                                <button type="button" onClick={() => handleUpdateDraft(idx, "unit_type", "kg")} className={`px-1.5 py-1 text-[9px] font-black rounded ${draft.unit_type === 'kg' ? 'bg-white text-slate-800 shadow-sm border' : 'text-slate-500'}`}>kg</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {draft.stock && draft.cartonQty ? (
+                          <div className="text-[10px] text-slate-400 font-bold bg-slate-50 p-2 rounded-lg flex justify-between items-center">
+                            <span>Total Qty: <strong className="text-slate-700">{(parseInt(draft.stock as any) * draft.cartonQty).toLocaleString()} {draft.unit_type || "pcs"}</strong></span>
+                            <span>Total Value: <strong className="text-blue-600">₹{((parseInt(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}</strong></span>
+                          </div>
+                        ) : null}
+
+                        <div className="flex gap-2 justify-end pt-1">
+                          <button onClick={() => handleSaveDraftRow(draft, idx)} className="px-3 py-1.5 bg-green-500 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow-sm active:scale-95">
+                            <Check className="h-3.5 w-3.5" /> Save
+                          </button>
+                          <button onClick={() => setDraftProducts(prev => prev.filter((d) => d !== draft))} className="px-3 py-1.5 bg-slate-100 text-slate-655 text-[11px] font-bold rounded-lg active:scale-95">
+                            Discard
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredProducts.map((prod) => {
+                      const cartonCount = prod.stock || 0;
+                      const isSelected = selectedProductIds.has(prod.id);
+                      return (
+                        <div key={prod.id} onClick={() => setViewingProduct(prod)} className={`p-3.5 bg-white rounded-xl border transition shadow-sm space-y-3 relative group ${isSelected ? "border-blue-300 bg-blue-50/10" : "border-slate-200"}`}>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleProductSelection(prod.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer shrink-0"
+                            />
+                            <div className="h-12 w-12 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center p-1.5 shrink-0">
+                              {prod.photoUrl ? (
+                                <img src={prod.photoUrl} alt={prod.name} className="h-full w-full object-contain" />
+                              ) : (
+                                <ImageIcon className="h-5 w-5 text-slate-300" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-extrabold text-slate-800 text-xs sm:text-sm truncate">{prod.name}</h4>
+                              <p className="text-[10px] text-slate-400 font-semibold truncate mt-0.5">{prod.description || "No description"}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Value</span>
+                              <p className="text-xs font-black text-slate-900 mt-0.5">₹{(prod.stock * prod.cartonQty * (parseFloat(prod.rate) || 0)).toLocaleString()}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 border-t border-b border-slate-100 py-2.5 text-[10px] text-slate-600">
+                            <div>
+                              <span className="text-slate-400 font-medium block">Stock Status</span>
+                              <strong className="text-slate-800 font-extrabold">{prod.stock} Cartons ({prod.stock * prod.cartonQty} pcs)</strong>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Price Code / Color</span>
+                              <strong className="text-slate-850 font-extrabold">{prod.rate || "-"} / {prod.color || "-"}</strong>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Length</span>
+                              <strong className="text-slate-800 font-extrabold">{prod.length ? `${prod.length} cm` : "-"}</strong>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Location</span>
+                              <strong className="text-slate-800 font-extrabold">{prod.warehouse ? prod.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)") : "-"}</strong>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[10px] text-slate-400 font-medium">Carton size: {prod.cartonQty} pcs</span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteProduct(prod.id); }}
+                                className="p-1.5 rounded-lg border border-red-100 text-red-650 hover:bg-red-50 transition"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Products Table View */}
+                  <div className="hidden md:block flex-1 overflow-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-450 shadow-sm">
@@ -3087,34 +3322,35 @@ ${rows}
               {currentTopTab === "collections" ? (
                 <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                   {/* Toolbar */}
-                  <div className="shrink-0 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+                  {/* Desktop Toolbar Container */}
+                  <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-3 w-full">
                     {/* Search Inputs Row */}
-                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
+                    <div className="flex gap-2 w-full lg:max-w-3xl">
                       {/* Collections Search */}
-                      <div className="relative w-full sm:w-[35%]">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <div className="relative flex-[45%] lg:flex-initial lg:w-[35%]">
+                        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                         <input
                           type="text"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Search collections..."
-                          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                          placeholder="Search..."
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-[11px] font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
                         />
                       </div>
                       {/* Global Finder */}
-                      <div className="relative w-full sm:w-[65%]">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
+                      <div className="relative flex-[55%] lg:flex-initial lg:w-[65%]">
+                        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sky-400" />
                         <input
                           type="text"
                           value={globalSearchQuery}
                           onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                          placeholder="Global Finder (Search all products)..."
-                          className="w-full rounded-xl border border-sky-200 bg-white py-2.5 pl-11 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
+                          placeholder="Find product..."
+                          className="w-full rounded-xl border border-sky-200 bg-white py-2 pl-9 pr-8 text-[11px] font-bold text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 shadow-sm"
                         />
                         {globalSearchQuery && (
                           <button
                             onClick={() => setGlobalSearchQuery("")}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-100 transition"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -3123,61 +3359,67 @@ ${rows}
                     </div>
 
                     {/* View Toggle and Action Button */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 justify-between lg:justify-end w-full lg:w-auto">
                       {/* Layout Switcher (Split vs Combined) */}
-                      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                      <div className="flex gap-0.5 rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm shrink-0">
                         <button
                           onClick={() => setCollectionLayout("split")}
-                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${collectionLayout === "split"
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition ${collectionLayout === "split"
                             ? "bg-slate-100 text-slate-900 shadow-sm"
                             : "text-slate-400 hover:text-slate-650"
                             }`}
+                          title="Split View"
                         >
                           <Columns className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Split View</span>
+                          <span className="hidden sm:inline">Split</span>
                         </button>
 
                         <button
                           onClick={() => setCollectionLayout("combined")}
-                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${collectionLayout === "combined"
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition ${collectionLayout === "combined"
                             ? "bg-slate-100 text-slate-900 shadow-sm"
                             : "text-slate-400 hover:text-slate-650"
                             }`}
+                          title="Combined View"
                         >
                           <Layers className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">Combined View</span>
+                          <span className="hidden sm:inline">Combined</span>
                         </button>
                       </div>
 
-                      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
-                        <button
-                          onClick={() => setViewMode("grid")}
-                          className={`rounded-lg p-2.5 transition ${viewMode === "grid"
-                            ? "bg-slate-100 text-slate-900"
-                            : "text-slate-400 hover:text-slate-600"
-                            }`}
-                        >
-                          <Grid3X3 className="h-4 w-4" />
-                        </button>
+                      {/* Grid/List View & Add Button Group */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex gap-0.5 rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm">
+                          <button
+                            onClick={() => setViewMode("grid")}
+                            className={`rounded-lg p-1.5 transition ${viewMode === "grid"
+                              ? "bg-slate-100 text-slate-900"
+                              : "text-slate-400 hover:text-slate-650"
+                              }`}
+                          >
+                            <Grid3X3 className="h-3.5 w-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => setViewMode("list")}
+                            className={`rounded-lg p-1.5 transition ${viewMode === "list"
+                              ? "bg-slate-100 text-slate-900"
+                              : "text-slate-400 hover:text-slate-650"
+                              }`}
+                          >
+                            <List className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
 
                         <button
-                          onClick={() => setViewMode("list")}
-                          className={`rounded-lg p-2.5 transition ${viewMode === "list"
-                            ? "bg-slate-100 text-slate-900"
-                            : "text-slate-400 hover:text-slate-600"
-                            }`}
+                          onClick={() => setIsModalOpen(true)}
+                          className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer"
                         >
-                          <List className="h-4 w-4" />
+                          <Plus className="h-4 w-4" />
+                          <span className="hidden sm:inline">New Collection</span>
+                          <span className="sm:hidden">Collection</span>
                         </button>
                       </div>
-
-                      <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0"
-                      >
-                        <Plus className="h-4 w-4" />
-                        New Collection
-                      </button>
                     </div>
                   </div>
 
@@ -3665,8 +3907,8 @@ ${rows}
                     type="button"
                     onClick={() => setNewCollectionType("code")}
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-left transition ${newCollectionType === "code"
-                        ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/15"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/15"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                   >
                     <div className={`h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${newCollectionType === "code" ? "border-blue-500" : "border-slate-300"
@@ -3683,8 +3925,8 @@ ${rows}
                     type="button"
                     onClick={() => setNewCollectionType("named")}
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-left transition ${newCollectionType === "named"
-                        ? "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/15"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/15"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                   >
                     <div className={`h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${newCollectionType === "named" ? "border-emerald-500" : "border-slate-300"
@@ -3915,10 +4157,10 @@ ${rows}
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex flex-col items-center text-center">
               <div className={`rounded-full p-3.5 ${alertModal.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50'
-                  : alertModal.type === 'warning'
-                    ? 'bg-amber-50 text-amber-600 border border-amber-100/50'
-                    : 'bg-red-50 text-red-650 border border-red-100/50'
+                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50'
+                : alertModal.type === 'warning'
+                  ? 'bg-amber-50 text-amber-600 border border-amber-100/50'
+                  : 'bg-red-50 text-red-650 border border-red-100/50'
                 }`}>
                 {alertModal.type === 'success' ? (
                   <Check className="h-6 w-6" />
@@ -3941,10 +4183,10 @@ ${rows}
                 type="button"
                 onClick={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
                 className={`w-full rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm ${alertModal.type === 'success'
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : alertModal.type === 'warning'
-                      ? "bg-amber-500 hover:bg-amber-600"
-                      : "bg-red-600 hover:bg-red-700"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : alertModal.type === 'warning'
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "bg-red-600 hover:bg-red-700"
                   }`}
               >
                 OK
@@ -3996,25 +4238,25 @@ ${rows}
       {/* PRODUCT OVERVIEW MODAL — COMPACT & NO SCROLL REDESIGN */}
       {viewingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl max-h-[90vh] sm:max-h-[85vh] rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100 tracking-wider">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 sm:px-2.5 rounded-full border border-blue-100 tracking-wider">
                     Product Details
                   </span>
                   {viewingProduct.stock === 0 ? (
-                    <span className="text-[9px] font-black uppercase text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100 tracking-wider animate-pulse">
+                    <span className="text-[9px] font-black uppercase text-red-600 bg-red-50 px-2 py-0.5 sm:px-2.5 rounded-full border border-red-100 tracking-wider animate-pulse">
                       Out of Stock
                     </span>
                   ) : viewingProduct.stock <= 10 ? (
-                    <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100 tracking-wider">
+                    <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 sm:px-2.5 rounded-full border border-amber-100 tracking-wider">
                       Low Stock
                     </span>
                   ) : null}
                 </div>
-                <h3 className="text-base font-black text-slate-950 mt-1">{viewingProduct.name}</h3>
+                <h3 className="text-sm sm:text-base font-black text-slate-950 mt-1">{viewingProduct.name}</h3>
               </div>
               <button
                 onClick={() => setViewingProduct(null)}
@@ -4024,87 +4266,89 @@ ${rows}
               </button>
             </div>
 
-            {/* Split Grid Body (Left: Image, Right: Details) — Compact height layout */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6">
-              {/* Left Column: Image (2/5 size) */}
-              <div className="md:col-span-2 flex items-center justify-center bg-slate-50 border border-slate-100 rounded-2xl p-4 min-h-[220px] max-h-[300px]">
-                {viewingProduct.photoUrl ? (
-                  <img
-                    src={viewingProduct.photoUrl}
-                    alt={viewingProduct.name}
-                    className="max-h-[260px] max-w-full object-contain rounded-xl shadow-sm"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center text-slate-350">
-                    <ImageIcon className="h-12 w-12 mb-2" />
-                    <p className="text-xs font-bold">No Image Provided</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Details (3/5 size) */}
-              <div className="md:col-span-3 flex flex-col justify-between space-y-4">
-                <div className="grid grid-cols-2 gap-3.5">
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Product Code</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5 truncate">{viewingProduct.id}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price Code</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">{viewingProduct.rate ? `${viewingProduct.rate} ${viewingProduct.unit_type || "pcs"}` : "—"}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Color</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">{viewingProduct.color || "—"}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Stock Available</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">
-                      {viewingProduct.stock} <span className="text-slate-400 text-[10px] font-bold">units</span>
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Color Length</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">{viewingProduct.length || "—"}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price per Unit</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">{viewingProduct.rate || "—"}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Carton Packing</p>
-                    <p className="text-xs font-black text-slate-800 mt-0.5">
-                      {viewingProduct.cartonQty} <span className="text-slate-400 text-[10px] font-bold">/ box</span>
-                    </p>
-                  </div>
+            {/* Split Grid Body (Left: Image, Right: Details) — Scrollable container */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 md:space-y-0">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 sm:gap-6">
+                {/* Left Column: Image (2/5 size) */}
+                <div className="md:col-span-2 flex items-center justify-center bg-slate-50 border border-slate-100 rounded-2xl p-4 min-h-[200px] max-h-[260px] sm:max-h-[300px]">
+                  {viewingProduct.photoUrl ? (
+                    <img
+                      src={viewingProduct.photoUrl}
+                      alt={viewingProduct.name}
+                      className="max-h-[180px] sm:max-h-[260px] max-w-full object-contain rounded-xl shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-350">
+                      <ImageIcon className="h-12 w-12 mb-2" />
+                      <p className="text-xs font-bold">No Image Provided</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Compact Description Panel */}
-                {viewingProduct.description && (
-                  <div className="bg-slate-50/40 rounded-xl border border-slate-100 px-4 py-2.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks / Details</p>
-                    <p className="text-[11px] text-slate-600 font-medium leading-relaxed line-clamp-2">
-                      {viewingProduct.description}
-                    </p>
+                {/* Right Column: Details (3/5 size) */}
+                <div className="md:col-span-3 flex flex-col justify-between space-y-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3.5">
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Product Code</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5 truncate">{viewingProduct.id}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price Code</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">{viewingProduct.rate ? `${viewingProduct.rate} ${viewingProduct.unit_type || "pcs"}` : "—"}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Color</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">{viewingProduct.color || "—"}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Stock Available</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">
+                        {viewingProduct.stock} <span className="text-slate-400 text-[10px] font-bold">units</span>
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Color Length</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">{viewingProduct.length || "—"}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price per Unit</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">{viewingProduct.rate || "—"}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Carton Packing</p>
+                      <p className="text-[11px] sm:text-xs font-black text-slate-800 mt-0.5">
+                        {viewingProduct.cartonQty} <span className="text-slate-400 text-[10px] font-bold">/ box</span>
+                      </p>
+                    </div>
                   </div>
-                )}
+
+                  {/* Compact Description Panel */}
+                  {viewingProduct.description && (
+                    <div className="bg-slate-50/40 rounded-xl border border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks / Details</p>
+                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed line-clamp-2">
+                        {viewingProduct.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center gap-3 border-t border-slate-100 px-6 py-4 bg-slate-50/30">
+            <div className="flex items-center gap-2.5 sm:gap-3 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4 bg-slate-50/30 shrink-0">
               <button
                 onClick={() => {
                   handleEditProductClick(viewingProduct);
                   setViewingProduct(null);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-sm cursor-pointer"
               >
                 <Edit className="h-3.5 w-3.5" /> Edit Product Info
               </button>
               <button
                 onClick={() => setViewingProduct(null)}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95 cursor-pointer text-center"
               >
                 Close View
               </button>
@@ -4295,8 +4539,8 @@ ${rows}
                 <button
                   onClick={() => { setPdfDownloadType("b2b"); setEventMarkupPercent(""); }}
                   className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all border-2 ${pdfDownloadType === "b2b"
-                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10"
+                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                     }`}
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -4308,8 +4552,8 @@ ${rows}
                 <button
                   onClick={() => setPdfDownloadType("event")}
                   className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all border-2 ${pdfDownloadType === "event"
-                      ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm shadow-purple-500/10"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                    ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm shadow-purple-500/10"
+                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                     }`}
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -4364,10 +4608,10 @@ ${rows}
                 }}
                 disabled={pdfDownloadType === "event" && (!eventMarkupPercent || parseFloat(eventMarkupPercent) <= 0)}
                 className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white transition shadow-sm ${pdfDownloadType === "event" && (!eventMarkupPercent || parseFloat(eventMarkupPercent) <= 0)
-                    ? "bg-slate-300 cursor-not-allowed"
-                    : pdfDownloadType === "event"
-                      ? "bg-purple-600 hover:bg-purple-700"
-                      : "bg-blue-600 hover:bg-blue-700"
+                  ? "bg-slate-300 cursor-not-allowed"
+                  : pdfDownloadType === "event"
+                    ? "bg-purple-600 hover:bg-purple-700"
+                    : "bg-blue-600 hover:bg-blue-700"
                   }`}
               >
                 Download PDF

@@ -420,15 +420,15 @@ function SettingsPageContent() {
   }, [searchParams]);
 
   const tabs = [
-    { id: "profile",      label: t("profile"),            icon: User },
-    { id: "company",      label: t("company"),            icon: Building },
-    { id: "security",     label: t("security"),           icon: Shield },
-    { id: "language",     label: t("language"),           icon: Languages },
-    { id: "theme",        label: t("theme"),              icon: Paintbrush },
-    { id: "shortcuts",    label: t("shortcuts"),          icon: Keyboard },
-    { id: "billing",      label: t("billing"),            icon: CreditCard },
-    { id: "storage",      label: t("storage"),            icon: HardDrive },
-    { id: "backup",       label: t("backup"),             icon: HardDrive },
+    { id: "profile", label: t("profile"), icon: User },
+    { id: "company", label: t("company"), icon: Building },
+    { id: "security", label: t("security"), icon: Shield },
+    { id: "language", label: t("language"), icon: Languages },
+    { id: "theme", label: t("theme"), icon: Paintbrush },
+    { id: "shortcuts", label: t("shortcuts"), icon: Keyboard },
+    { id: "billing", label: t("billing"), icon: CreditCard },
+    { id: "storage", label: t("storage"), icon: HardDrive },
+    { id: "backup", label: t("backup"), icon: HardDrive },
   ];
 
   return (
@@ -448,11 +448,10 @@ function SettingsPageContent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
-                  activeTab === tab.id
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${activeTab === tab.id
                     ? "bg-blue-50 text-blue-700 font-extrabold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
@@ -463,7 +462,7 @@ function SettingsPageContent() {
 
           <hr className="my-3 border-slate-100" />
 
-          <button 
+          <button
             onClick={() => {
               logout();
               window.location.href = "/login";
@@ -479,15 +478,15 @@ function SettingsPageContent() {
 
         {/* Content */}
         <div className="rounded-2xl border border-slate-200 bg-white p-8 overflow-y-auto h-full shadow-sm">
-          {activeTab === "profile"       && <ProfileSection />}
-          {activeTab === "company"       && <CompanySection />}
-          {activeTab === "theme"         && <ThemeSection />}
-          {activeTab === "language"      && <LanguageSection />}
-          {activeTab === "shortcuts"     && <KeyboardShortcutsSection />}
-          {activeTab === "storage"       && <StorageSection />}
-          {activeTab === "billing"       && <BillingSection />}
-          {activeTab === "security"      && <SecuritySection />}
-          {activeTab === "backup"        && <BackupSection />}
+          {activeTab === "profile" && <ProfileSection />}
+          {activeTab === "company" && <CompanySection />}
+          {activeTab === "theme" && <ThemeSection />}
+          {activeTab === "language" && <LanguageSection />}
+          {activeTab === "shortcuts" && <KeyboardShortcutsSection />}
+          {activeTab === "storage" && <StorageSection />}
+          {activeTab === "billing" && <BillingSection />}
+          {activeTab === "security" && <SecuritySection />}
+          {activeTab === "backup" && <BackupSection />}
         </div>
 
       </div>
@@ -534,7 +533,7 @@ function ProfileSection() {
           setAutoRemoveBg(settingsData.auto_remove_background || false);
           setAvatarUrl(settingsData.avatar_url || null);
           setLoading(false);
-        } catch(e) {}
+        } catch (e) { }
       }
     }
 
@@ -545,7 +544,7 @@ function ProfileSection() {
           setEmail(profileData.email || "");
           setOriginalEmail(profileData.email || "");
         }
-        
+
         if (settingsData) {
           setPhone(settingsData.phone || "");
           setOriginalPhone(settingsData.phone || "");
@@ -556,9 +555,9 @@ function ProfileSection() {
         setLoading(false);
       })
       .catch((err) => {
-        setStatusMsg({ 
-          type: "error", 
-          text: "Failed to connect to server." 
+        setStatusMsg({
+          type: "error",
+          text: "Failed to connect to server."
         });
         setLoading(false);
       });
@@ -600,20 +599,20 @@ function ProfileSection() {
         avatar_url: avatarUrl,
         auto_remove_background: autoRemoveBg
       });
-      
+
       await updateUserProfile(name, email);
-      
+
       // Update global context for navbar sync
       localStorage.setItem("user_name", name);
       localStorage.setItem("user_email", email);
       if (avatarUrl) localStorage.setItem(`digiscale_avatar_${email}`, avatarUrl);
-      
+
       setOriginalEmail(email);
       setOriginalPhone(phone);
-      
+
       setStatusMsg({ type: "success", text: "Changes saved successfully!" });
       setSaving(false);
-      
+
       // Dispatch event for components to sync if they want
       window.dispatchEvent(new Event("profileUpdated"));
     } catch (err: any) {
@@ -692,11 +691,10 @@ function ProfileSection() {
 
       {statusMsg && (
         <div
-          className={`rounded-xl p-4 text-sm font-semibold border ${
-            statusMsg.type === "success"
+          className={`rounded-xl p-4 text-sm font-semibold border ${statusMsg.type === "success"
               ? "bg-green-50 border-green-200 text-green-700"
               : "bg-red-50 border-red-200 text-red-700"
-          }`}
+            }`}
         >
           {statusMsg.text}
         </div>
@@ -783,11 +781,10 @@ function ProfileSection() {
               value={email}
               disabled={!isEmailEditable}
               onChange={(e) => setEmail(e.target.value)}
-              className={`w-full rounded-xl border py-3 pl-12 pr-4 text-sm font-medium outline-none transition ${
-                !isEmailEditable
+              className={`w-full rounded-xl border py-3 pl-12 pr-4 text-sm font-medium outline-none transition ${!isEmailEditable
                   ? "bg-slate-50 border-slate-200 text-slate-450 cursor-not-allowed"
                   : "bg-white border-slate-300 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              }`}
+                }`}
             />
           </div>
         </div>
@@ -1096,14 +1093,12 @@ function NotificationsSection() {
 
             <button
               onClick={() => item.setter(!item.value)}
-              className={`relative h-7 w-12 rounded-full transition ${
-                item.value ? "bg-blue-600" : "bg-slate-300"
-              }`}
+              className={`relative h-7 w-12 rounded-full transition ${item.value ? "bg-blue-600" : "bg-slate-300"
+                }`}
             >
               <div
-                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition ${
-                  item.value ? "left-[22px]" : "left-0.5"
-                }`}
+                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition ${item.value ? "left-[22px]" : "left-0.5"
+                  }`}
               />
             </button>
           </div>
@@ -1183,12 +1178,12 @@ function SecuritySection() {
     setErrorMsg("");
     try {
       await deleteAccount();
-      
+
       // Clear user login credentials
       logout();
-      
+
       setShowConfirmModal(false);
-      
+
       // Redirect to login page with a query parameter
       window.location.href = "/login?msg=scheduled_deletion";
     } catch (err: any) {
@@ -1272,7 +1267,7 @@ function SecuritySection() {
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            
+
             {deleteStep === 1 && (
               <div>
                 <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
@@ -1335,7 +1330,7 @@ function SecuritySection() {
                   <p className="text-sm text-slate-600 leading-relaxed font-medium">
                     To confirm scheduling account deletion, please type the exact phrase <strong className="text-red-700">DELETE MY ACCOUNT</strong> below:
                   </p>
-                  
+
                   <input
                     type="text"
                     placeholder="DELETE MY ACCOUNT"
@@ -1427,9 +1422,9 @@ function CompanySection() {
         setLoading(false);
       })
       .catch(() => {
-        setStatusMsg({ 
-          type: "error", 
-          text: "Failed to connect to server. Cannot load company profile." 
+        setStatusMsg({
+          type: "error",
+          text: "Failed to connect to server. Cannot load company profile."
         });
         setLoading(false);
       });
@@ -1524,11 +1519,10 @@ function CompanySection() {
 
       {statusMsg && (
         <div
-          className={`rounded-xl p-4 text-sm font-semibold border ${
-            statusMsg.type === "success"
+          className={`rounded-xl p-4 text-sm font-semibold border ${statusMsg.type === "success"
               ? "bg-green-50 border-green-200 text-green-700"
               : "bg-red-50 border-red-200 text-red-700"
-          }`}
+            }`}
         >
           {statusMsg.text}
         </div>
@@ -1823,27 +1817,27 @@ function CompanySection() {
 /* ============ Backup Section ============ */
 
 /* ============ Backup Section ============ */
-import { 
-  createBackupPayload, 
-  downloadExcelFromBackupPayload, 
-  restoreBackupFromExcel, 
-  restoreBackupPayload, 
+import {
+  createBackupPayload,
+  downloadExcelFromBackupPayload,
+  restoreBackupFromExcel,
+  restoreBackupPayload,
   formatBackupDate,
   deleteAllWorkspaceData
 } from "@/lib/backup";
-import { 
-  getBackupsFromIndexedDB, 
+import {
+  getBackupsFromIndexedDB,
   deleteBackupFromIndexedDB,
   saveBackupToIndexedDB
 } from "@/lib/db";
-import { 
-  Download, 
-  RefreshCw, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  AlertCircle, 
-  X, 
+import {
+  Download,
+  RefreshCw,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  X,
   Database
 } from "lucide-react";
 
@@ -1958,7 +1952,7 @@ function BackupSection() {
     setLoading(true);
     try {
       const payload = await createBackupPayload(currentUserId);
-      
+
       // Download Excel
       downloadExcelFromBackupPayload(payload);
 
@@ -1972,7 +1966,7 @@ function BackupSection() {
       // Update state
       localStorage.setItem("digiscale_last_backup_time", timestamp);
       setLastBackupTime(timestamp);
-      
+
       setModalConfig({
         title: "Success",
         message: "Your live database has been successfully downloaded as an Excel workbook and saved to history.",
@@ -2112,7 +2106,7 @@ function BackupSection() {
 
   const handleEraseAllData = async () => {
     if (!currentUserId) return;
-    
+
     setModalConfig({
       title: "Confirm Erase All Data",
       message: "WARNING: This will permanently erase ALL your workspace data (Products, Collections, Clients, etc.). Your user profile and settings will be preserved. Are you absolutely sure you want to proceed?",
@@ -2146,7 +2140,7 @@ function BackupSection() {
       {/* Custom Alert/Confirm Modal Popup */}
       {modalConfig && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => {
               if (modalConfig.type !== "confirm") setModalConfig(null);
@@ -2154,22 +2148,20 @@ function BackupSection() {
           />
           <div className="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-2xl transition-all duration-300 scale-100 border border-slate-100 z-10">
             <div className="flex items-start gap-4">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                modalConfig.type === "success" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                modalConfig.type === "error" ? "bg-red-50 text-red-600 border border-red-100" :
-                "bg-amber-50 text-amber-600 border border-amber-100"
-              }`}>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${modalConfig.type === "success" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                  modalConfig.type === "error" ? "bg-red-50 text-red-600 border border-red-100" :
+                    "bg-amber-50 text-amber-600 border border-amber-100"
+                }`}>
                 {modalConfig.type === "success" && <CheckCircle className="h-5 w-5" />}
                 {modalConfig.type === "error" && <AlertCircle className="h-5 w-5" />}
                 {modalConfig.type === "confirm" && <AlertTriangle className="h-5 w-5" />}
               </div>
-              
+
               <div className="flex-1 mt-0.5">
-                <h3 className={`text-base font-bold leading-6 ${
-                  modalConfig.type === 'error' ? 'text-red-600' :
-                  modalConfig.type === 'success' ? 'text-emerald-700' :
-                  modalConfig.type === 'confirm' ? 'text-amber-700' : 'text-slate-900'
-                }`}>
+                <h3 className={`text-base font-bold leading-6 ${modalConfig.type === 'error' ? 'text-red-600' :
+                    modalConfig.type === 'success' ? 'text-emerald-700' :
+                      modalConfig.type === 'confirm' ? 'text-amber-700' : 'text-slate-900'
+                  }`}>
                   {modalConfig.title}
                 </h3>
                 <div className="mt-2">
@@ -2192,12 +2184,11 @@ function BackupSection() {
               )}
               <button
                 type="button"
-                className={`inline-flex justify-center rounded-lg border border-transparent px-5 py-2 text-xs font-bold text-white transition-colors focus:outline-none shadow-sm ${
-                  modalConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
-                  modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                  modalConfig.type === 'confirm' ? 'bg-amber-600 hover:bg-amber-700' :
-                  'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className={`inline-flex justify-center rounded-lg border border-transparent px-5 py-2 text-xs font-bold text-white transition-colors focus:outline-none shadow-sm ${modalConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                    modalConfig.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                      modalConfig.type === 'confirm' ? 'bg-amber-600 hover:bg-amber-700' :
+                        'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 onClick={() => {
                   if (modalConfig.onConfirm) {
                     modalConfig.onConfirm();
@@ -2417,7 +2408,7 @@ function ThemeSection() {
     if (typeof window !== "undefined") {
       localStorage.setItem("digiscale_theme_mode", themeMode);
       localStorage.setItem("digiscale_theme_accent", accentColor);
-      
+
       // Update DOM immediately
       const isDark = themeMode === 'dark' || (themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       if (isDark) {
@@ -2426,7 +2417,7 @@ function ThemeSection() {
         document.documentElement.classList.remove('dark');
       }
       document.documentElement.setAttribute('data-theme-accent', accentColor);
-      
+
       setStatusMsg({ type: "success", text: t("themeSuccess") });
       setTimeout(() => setStatusMsg(null), 3000);
     }
@@ -2468,11 +2459,10 @@ function ThemeSection() {
               <button
                 key={tObj.id}
                 onClick={() => setThemeMode(tObj.id as any)}
-                className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                  themeMode === tObj.id
+                className={`p-4 rounded-xl border text-left transition cursor-pointer ${themeMode === tObj.id
                     ? "border-blue-600 bg-blue-50/40 text-blue-900 shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 <div className="text-xs font-black">{tObj.label}</div>
                 <div className="text-[10px] text-slate-400 font-semibold mt-1">{tObj.desc}</div>
@@ -2488,9 +2478,8 @@ function ThemeSection() {
               <button
                 key={acc.id}
                 onClick={() => setAccentColor(acc.id)}
-                className={`w-10 h-10 rounded-full border-2 transition relative flex items-center justify-center cursor-pointer ${
-                  accentColor === acc.id ? "border-slate-800 scale-105" : "border-transparent hover:scale-105"
-                }`}
+                className={`w-10 h-10 rounded-full border-2 transition relative flex items-center justify-center cursor-pointer ${accentColor === acc.id ? "border-slate-800 scale-105" : "border-transparent hover:scale-105"
+                  }`}
               >
                 <div className={`w-7.5 h-7.5 rounded-full ${acc.bg} shadow-sm`} />
                 {accentColor === acc.id && (
@@ -2565,11 +2554,10 @@ function LanguageSection() {
           <button
             key={langObj.id}
             onClick={() => setSelectedLang(langObj.id)}
-            className={`p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
-              selectedLang === langObj.id
+            className={`p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${selectedLang === langObj.id
                 ? "border-blue-600 bg-blue-50/40"
                 : "border-slate-200 bg-white hover:bg-slate-50"
-            }`}
+              }`}
           >
             <div>
               <span className={`text-xs font-bold block ${selectedLang === langObj.id ? "text-blue-900" : "text-slate-800"}`}>
@@ -2703,7 +2691,7 @@ function StorageSection() {
       if (hist) {
         try {
           setCachedHistoryCount(JSON.parse(hist).length);
-        } catch (e) {}
+        } catch (e) { }
       } else {
         setCachedHistoryCount(0);
       }
@@ -2738,8 +2726,8 @@ function StorageSection() {
     const confirmText = lang === "gu"
       ? "શું તમે ખરેખર નિકાસ ઇતિહાસ સાફ કરવા માંગો છો? આનાથી તમારું લિસ્ટ શૂન્ય થઈ જશે."
       : lang === "hi"
-      ? "क्या आप वाकई निर्यात इतिहास साफ करना चाहते हैं? इससे आपकी सूची शून्य हो जाएगी।"
-      : "Are you sure you want to clear export history logs? This will reset your Export History list.";
+        ? "क्या आप वाकई निर्यात इतिहास साफ करना चाहते हैं? इससे आपकी सूची शून्य हो जाएगी।"
+        : "Are you sure you want to clear export history logs? This will reset your Export History list.";
 
     if (window.confirm(confirmText)) {
       localStorage.removeItem("digiscale_export_history");

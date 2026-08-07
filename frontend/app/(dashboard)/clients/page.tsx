@@ -360,23 +360,23 @@ export default function ClientsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
       {/* Static Toolbar Header */}
-      <div className="shrink-0 px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80">
+      <div className="shrink-0 px-2.5 sm:px-8 pt-2.5 sm:pt-4 pb-3 border-b border-slate-200 bg-slate-50/80">
         {/* Toolbar */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
-            <div className="relative w-full sm:w-[50%]">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex gap-2 w-full lg:max-w-3xl">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder={t("searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
               />
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between lg:justify-end gap-2 w-full lg:w-auto">
             <div className="hidden sm:flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition group">
               <Star className="w-4 h-4 text-amber-400 fill-amber-400/20" />
               <span className="text-xs font-bold text-slate-700">{t("regularClientLabel")}</span>
@@ -406,17 +406,17 @@ export default function ClientsPage() {
             </div>
             <button
               onClick={() => openModal()}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 w-full lg:w-auto cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              {t("addNewClient")}
+              <span>{t("addNewClient")}</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
+      <div className="flex-1 overflow-y-auto min-h-0 px-2.5 sm:px-8 pt-6 pb-24">
 
         {/* Clients Grid */}
         {loading ? (
@@ -442,7 +442,7 @@ export default function ClientsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredClients.map((client) => {
               const quotes = clientQuotes[client.name?.toLowerCase()] || [];
               const doneQuotes = quotes.filter(q => q.is_order_done).length;
@@ -452,31 +452,31 @@ export default function ClientsPage() {
               return (
               <div 
                 key={client.id}
-                className={`bg-white rounded-2xl border ${isRegularClient ? 'border-amber-300 shadow-amber-100' : 'border-slate-200'} p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden`}
+                className={`bg-white rounded-2xl border ${isRegularClient ? 'border-amber-300 shadow-amber-100' : 'border-slate-200'} p-4 sm:p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden`}
               >
                 {isRegularClient ? (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1 z-10">
                     <Award className="w-3 h-3" />
                     {t("regularClientStarBadge")}
                   </div>
                 ) : null}
                 
                 <div className="flex justify-between items-start mb-4">
-                  <div className={isRegularClient ? "pr-24" : ""}>
-                    <h3 className="font-bold text-slate-900 text-lg pr-4 line-clamp-2">
+                  <div className={isRegularClient ? "pr-24" : "pr-14"}>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base pr-4 line-clamp-2">
                       {client.company ? `${client.company} | ${client.name}` : client.name}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-10 bg-white/80 backdrop-blur-sm rounded-lg p-1">
+                  <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity absolute right-4 top-4 md:top-10 bg-slate-100/80 md:bg-white/80 backdrop-blur-sm rounded-lg p-0.5 border border-slate-200/50 md:border-transparent z-10">
                     <button 
                       onClick={() => openModal(client)}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={() => confirmDelete(client.id, client.name)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-500 hover:text-red-650 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

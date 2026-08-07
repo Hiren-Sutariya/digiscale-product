@@ -251,20 +251,19 @@ export default function DashboardNavbar() {
             <>
 
 
-              {/* Mobile-only Camera Scanner button next to Bell on /quotation page */}
-              {pathname === "/quotation" && (
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-camera-scanner"))}
-                  className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm animate-pulse shrink-0"
-                  title="Open Camera Scanner"
-                >
-                  <Camera className="h-[18px] w-[18px]" />
-                </button>
-              )}
-
-              {/* Bell — full navbar height pill */}
-              <button className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 hover:border-slate-300 cursor-pointer shadow-sm">
-                <Bell className="h-[18px] w-[18px] text-slate-500" />
+              {/* Mobile-only Camera Scanner button next to Profile on all pages */}
+              <button 
+                onClick={() => {
+                  if (pathname !== "/quotation") {
+                    window.location.href = "/quotation?openScanner=true";
+                  } else {
+                    window.dispatchEvent(new CustomEvent("open-mobile-camera-scanner"));
+                  }
+                }}
+                className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50/70 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm shrink-0"
+                title="Open Camera Scanner"
+              >
+                <Camera className="h-[18px] w-[18px]" />
               </button>
 
               {/* Profile button — tall pill */}
@@ -311,29 +310,29 @@ export default function DashboardNavbar() {
 
                 {/* ── Dropdown Menu ── */}
                 {profileOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-64 rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] z-50 overflow-hidden">
+                  <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden origin-top-right animate-in fade-in slide-in-from-top-2 duration-150">
 
                     {/* User header block */}
-                    <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+                    <div className="px-4 pt-4 pb-3 bg-slate-50/50 border-b border-slate-100">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white overflow-hidden shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white overflow-hidden shrink-0 shadow-inner">
                           {avatarUrl ? (
                             <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                           ) : (
                             getInitials(user?.name || "User")
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900 leading-tight">{user?.name || "User"}</p>
-                          <p className="text-xs text-slate-400 leading-tight mt-0.5">{user?.email || ""}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-slate-900 leading-tight truncate">{user?.name || "User"}</p>
+                          <p className="text-[10px] text-slate-400 font-semibold leading-tight mt-0.5 truncate">{user?.email || ""}</p>
                         </div>
                       </div>
 
                       {/* Plan badge */}
                       <div className="mt-3">
-                        <div className="flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-                          <Zap className="h-3.5 w-3.5 text-blue-500 fill-blue-500" />
-                          <span className="text-xs font-bold text-blue-700">
+                        <div className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100/70 px-3 py-2">
+                          <Zap className="h-3.5 w-3.5 text-blue-600 fill-blue-500/10 animate-pulse" />
+                          <span className="text-[10px] font-black text-blue-700 uppercase tracking-wider">
                             {user?.plan === "Starter" ? t("starterPlan") : user?.plan === "Pro" ? t("proPlan") : t("freePlan")}
                           </span>
                         </div>
@@ -341,43 +340,43 @@ export default function DashboardNavbar() {
                     </div>
 
                     {/* Menu Items */}
-                    <div className="p-2">
+                    <div className="p-2 space-y-0.5">
                       <Link
                         href="/settings?tab=profile"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
-                          <User className="h-3.5 w-3.5 text-slate-500" />
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 text-slate-500 transition duration-150 shrink-0">
+                          <User className="h-3.5 w-3.5" />
                         </div>
-                        {t("myProfile")}
+                        <span>{t("myProfile")}</span>
                       </Link>
 
                       <Link
                         href="/settings?tab=backup"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
-                          <HardDrive className="h-3.5 w-3.5 text-slate-500" />
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 text-slate-500 transition duration-150 shrink-0">
+                          <HardDrive className="h-3.5 w-3.5" />
                         </div>
-                        {t("dataBackup")}
+                        <span>{t("dataBackup")}</span>
                       </Link>
 
                       <Link
                         href="/settings?tab=company"
                         onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition group"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-slate-200 transition">
-                          <Settings className="h-3.5 w-3.5 text-slate-500" />
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 text-slate-500 transition duration-150 shrink-0">
+                          <Settings className="h-3.5 w-3.5" />
                         </div>
-                        {t("settings")}
+                        <span>{t("settings")}</span>
                       </Link>
                     </div>
 
                     {/* Sign Out */}
-                    <div className="px-2 pb-2 border-t border-slate-100 mt-0 pt-2">
+                    <div className="px-2 pb-2 border-t border-slate-100 mt-1 pt-2">
                       <button
                         onClick={() => {
                           logout();
@@ -385,12 +384,12 @@ export default function DashboardNavbar() {
                           setProfileOpen(false);
                           window.location.href = "/login";
                         }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition cursor-pointer group"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer group"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition shrink-0">
                           <LogOut className="h-3.5 w-3.5 text-red-500" />
                         </div>
-                        {t("signOut")}
+                        <span>{t("signOut")}</span>
                       </button>
                     </div>
                   </div>
@@ -413,7 +412,7 @@ export default function DashboardNavbar() {
 
       {/* Mobile Bottom Navigation Bar */}
       {isLoggedIn && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-2px_15px_rgba(0,0,0,0.06)] px-4 py-2.5 flex justify-around items-center select-none pb-safe">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-2px_15px_rgba(0,0,0,0.06)] px-4 py-2 flex justify-around items-center select-none pb-[env(safe-area-inset-bottom,12px)]">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
@@ -421,12 +420,15 @@ export default function DashboardNavbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition duration-150 cursor-pointer ${
-                  isActive ? "text-blue-600 font-black" : "text-slate-500 font-semibold hover:text-slate-900"
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 active:scale-90 cursor-pointer ${
+                  isActive ? "text-blue-600 scale-105" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />
                 <span className="text-[9px] font-bold tracking-tight uppercase">{t(link.label.toLowerCase())}</span>
+                {isActive && (
+                  <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-blue-600 animate-pulse" />
+                )}
               </Link>
             );
           })}

@@ -323,9 +323,16 @@ export default function QuotationView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   
-  // Accordion Toggles
-  const [settingsOpen, setSettingsOpen] = useState(true); // Open by default
+  // Accordion Toggles (settings collapsed by default on mobile screens to save scroll space)
+  const [settingsOpen, setSettingsOpen] = useState(true);
   const [clientOpen, setClientOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSettingsOpen(false);
+      setClientOpen(false);
+    }
+  }, []);
 
   // Loaded Company Info from Profile
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
@@ -444,6 +451,18 @@ export default function QuotationView() {
       setShowCameraScanner(true);
     };
     window.addEventListener("open-mobile-camera-scanner", handleOpenScanner);
+
+    // If loaded via redirect with ?openScanner=true parameter
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("openScanner") === "true") {
+        handleOpenScanner();
+        // Clean URL parameter
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    }
+
     return () => window.removeEventListener("open-mobile-camera-scanner", handleOpenScanner);
   }, []);
 
@@ -1589,7 +1608,7 @@ export default function QuotationView() {
       `}</style>
 
       {/* Header / Toolbar */}
-      <div className="no-print flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+      <div className="no-print flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-3">
         {/* Search Inputs Row */}
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
           {/* History Search */}
@@ -1648,7 +1667,7 @@ export default function QuotationView() {
       </div>
 
       {/* Subview switcher tabs */}
-      <div className="no-print flex gap-2 mb-4 lg:mb-6">
+      <div className="no-print flex gap-2 mb-3 lg:mb-3">
         <button
           onClick={handleCreateNew}
           className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
@@ -1683,9 +1702,9 @@ export default function QuotationView() {
           </button>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1 no-print">
+      <div className="flex-1 overflow-y-auto min-h-0 pb-24 pr-1 no-print">
       {activeSubView === "history" ? (
-        <div className="no-print bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
+        <div className="no-print bg-white rounded-3xl border border-slate-200 p-3 sm:p-6 md:p-8 shadow-sm">
           
           <div className="flex gap-1 mb-6 bg-slate-100/80 p-1.5 rounded-xl w-fit">
             <button
@@ -1724,99 +1743,180 @@ export default function QuotationView() {
               <p className="text-xs text-slate-400 mt-1 font-medium">Start by creating and saving your first quotation bill.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider bg-slate-50/50">
-                    <th className="py-3.5 px-4">Ref No.</th>
-                    <th className="py-3.5 px-4">Client / Company</th>
-                    <th className="py-3.5 px-4">Quote Date</th>
-                    <th className="py-3.5 px-4 text-center">Items</th>
-                    <th className="py-3.5 px-4 text-right">Grand Total</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center w-40">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                  {savedQuotes
-                    .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
-                    .filter((q) => {
-                      const qNum = (q.quoteNumber || "").toLowerCase();
-                      const client = (q.clientName || "").toLowerCase();
-                      const company = (q.clientCompany || "").toLowerCase();
-                      const term = historySearchQuery.trim().toLowerCase();
-                      return qNum.includes(term) || client.includes(term) || company.includes(term);
-                    })
-                    .map((quote) => (
-                    <tr key={quote.id} className="hover:bg-slate-50/40">
-                      <td className="py-4 px-4">
-                        <div className="font-black text-slate-900">{quote.quoteNumber}</div>
-                        <div className="mt-1">
-                          {quote.applyEventMarkup ? (
-                            <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
-                          )}
+            <div>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                      <th className="py-3.5 px-4">Ref No.</th>
+                      <th className="py-3.5 px-4">Client / Company</th>
+                      <th className="py-3.5 px-4">Quote Date</th>
+                      <th className="py-3.5 px-4 text-center">Items</th>
+                      <th className="py-3.5 px-4 text-right">Grand Total</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4 text-center w-40">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                    {savedQuotes
+                      .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
+                      .filter((q) => {
+                        const qNum = (q.quoteNumber || "").toLowerCase();
+                        const client = (q.clientName || "").toLowerCase();
+                        const company = (q.clientCompany || "").toLowerCase();
+                        const term = historySearchQuery.trim().toLowerCase();
+                        return qNum.includes(term) || client.includes(term) || company.includes(term);
+                      })
+                      .map((quote) => (
+                      <tr key={quote.id} className="hover:bg-slate-50/40">
+                        <td className="py-4 px-4">
+                          <div className="font-black text-slate-900">{quote.quoteNumber}</div>
+                          <div className="mt-1">
+                            {quote.applyEventMarkup ? (
+                              <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <p className="font-bold text-slate-800">{quote.clientName || "—"}</p>
+                          {quote.clientCompany && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{quote.clientCompany}</p>}
+                        </td>
+                        <td className="py-4 px-4">{quote.quoteDate ? formatDate(quote.quoteDate) : "—"}</td>
+                        <td className="py-4 px-4 text-center">{quote.items?.length || 0}</td>
+                        <td className="py-4 px-4 text-right font-black text-slate-900">
+                          ₹{(quote.total || 0).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            onClick={() => handleToggleOrderStatus(quote.id, quote.isOrderDone)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 mx-auto rounded-lg text-[10px] font-black tracking-wide uppercase transition active:scale-95 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                          >
+                            {quote.isOrderDone ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <Clock className="h-3 w-3 text-amber-500" />}
+                            {quote.isOrderDone ? "Done" : "Follow Up"}
+                          </button>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleLoadQuote(quote)}
+                              className="p-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg border border-blue-100 transition active:scale-95 cursor-pointer"
+                              title="Edit Quotation"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handlePrintQuoteDirect(quote)}
+                              className="p-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-600 rounded-lg border border-emerald-100 transition active:scale-95 cursor-pointer"
+                              title="Direct Print PDF"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuote(quote.id)}
+                              className="p-1.5 bg-red-50 hover:bg-red-650 hover:text-white text-red-655 rounded-lg border border-red-100 transition active:scale-95 cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile List Card View */}
+              <div className="md:hidden space-y-4">
+                {savedQuotes
+                  .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
+                  .filter((q) => {
+                    const qNum = (q.quoteNumber || "").toLowerCase();
+                    const client = (q.clientName || "").toLowerCase();
+                    const company = (q.clientCompany || "").toLowerCase();
+                    const term = historySearchQuery.trim().toLowerCase();
+                    return qNum.includes(term) || client.includes(term) || company.includes(term);
+                  })
+                  .map((quote) => (
+                    <div key={quote.id} className="bg-slate-50/50 rounded-2xl p-4 border border-slate-150 space-y-3.5">
+                      {/* Card Header Info */}
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-slate-900 text-sm">{quote.quoteNumber}</span>
+                            {quote.applyEventMarkup ? (
+                              <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                            {quote.quoteDate ? formatDate(quote.quoteDate) : "—"} · {quote.items?.length || 0} items
+                          </p>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <p className="font-bold text-slate-800">{quote.clientName || "—"}</p>
-                        {quote.clientCompany && <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{quote.clientCompany}</p>}
-                      </td>
-                      <td className="py-4 px-4">{quote.quoteDate ? formatDate(quote.quoteDate) : "—"}</td>
-                      <td className="py-4 px-4 text-center">{quote.items?.length || 0}</td>
-                      <td className="py-4 px-4 text-right font-black text-slate-900">
-                        ₹{(quote.total || 0).toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-4 px-4 text-center">
+
+                        <div className="text-right">
+                          <span className="block text-sm font-black text-slate-900">
+                            ₹{(quote.total || 0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Client Details Row */}
+                      <div className="border-t border-slate-200/60 pt-2.5">
+                        <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Client / Company</span>
+                        <p className="font-bold text-slate-800 text-xs mt-0.5">{quote.clientName || "—"}</p>
+                        {quote.clientCompany && <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{quote.clientCompany}</p>}
+                      </div>
+
+                      {/* Bottom Actions Row */}
+                      <div className="border-t border-slate-200/60 pt-3 flex items-center justify-between gap-3">
                         <button
                           onClick={() => handleToggleOrderStatus(quote.id, quote.isOrderDone)}
-                          className={`flex items-center gap-1.5 px-2 py-1 mx-auto rounded-lg text-[10px] font-black tracking-wide uppercase transition active:scale-95 ${
-                            quote.isOrderDone 
-                              ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100" 
-                              : "bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100"
-                          }`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition active:scale-95 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-sm"
                         >
-                          {quote.isOrderDone ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {quote.isOrderDone ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5 text-amber-500" />}
                           {quote.isOrderDone ? "Done" : "Follow Up"}
                         </button>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
+
+                        <div className="flex gap-2">
                           <button
                             onClick={() => handleLoadQuote(quote)}
-                            className="p-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg border border-blue-100 transition active:scale-95 cursor-pointer"
-                            title="Edit Quotation"
+                            className="p-2 bg-white hover:bg-blue-50 text-blue-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
+                            title="Edit"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handlePrintQuoteDirect(quote)}
-                            className="p-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-600 rounded-lg border border-emerald-100 transition active:scale-95 cursor-pointer"
-                            title="Direct Print PDF"
+                            className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
+                            title="Print"
                           >
                             <Printer className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteQuote(quote.id)}
-                            className="p-1.5 bg-red-50 hover:bg-red-650 hover:text-white text-red-655 rounded-lg border border-red-100 transition active:scale-95 cursor-pointer"
+                            className="p-2 bg-white hover:bg-red-50 text-red-655 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
                             title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
             </div>
           )}
         </div>
       ) : (
         <div>
           {/* Mobile Tabs Toggle (Form vs Preview) */}
-          <div className="no-print lg:hidden flex gap-2 mb-4 p-1 bg-slate-100 border border-slate-200/60 rounded-xl w-full select-none">
+          <div className="no-print lg:hidden flex gap-2 mb-3 p-1 bg-slate-100 border border-slate-200/60 rounded-xl w-full select-none">
             <button
               type="button"
               onClick={() => setMobileTab("form")}
@@ -2179,11 +2279,11 @@ export default function QuotationView() {
                   {t("searchAddProducts")}
                 </h3>
                 
-                {/* Camera Scanner Toggle Button */}
+                {/* Camera Scanner Toggle Button - Hidden on mobile view */}
                 <button
                   type="button"
                   onClick={() => setShowCameraScanner(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-[10px] font-black tracking-wider uppercase transition shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-[10px] font-black tracking-wider uppercase transition shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
                 >
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -2195,7 +2295,7 @@ export default function QuotationView() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3">
                 {/* Search Input */}
-                <div className="relative">
+                <div className="relative col-span-1 md:col-span-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
@@ -2215,8 +2315,8 @@ export default function QuotationView() {
                   )}
                 </div>
 
-                {/* USB Barcode Scanner Input */}
-                <div className="relative">
+                {/* USB Barcode Scanner Input - Hidden on mobile view */}
+                <div className="relative hidden md:block">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-[12px] select-none">
                     █║
                   </div>
