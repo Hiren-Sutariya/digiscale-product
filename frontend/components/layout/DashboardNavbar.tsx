@@ -23,6 +23,7 @@ import {
   FileText,
   HardDrive,
   ClipboardList,
+  Camera,
 } from "lucide-react";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -249,6 +250,17 @@ export default function DashboardNavbar() {
           {isLoggedIn ? (
             <>
 
+
+              {/* Mobile-only Camera Scanner button next to Bell on /quotation page */}
+              {pathname === "/quotation" && (
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-camera-scanner"))}
+                  className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm animate-pulse shrink-0"
+                  title="Open Camera Scanner"
+                >
+                  <Camera className="h-[18px] w-[18px]" />
+                </button>
+              )}
 
               {/* Bell — full navbar height pill */}
               <button className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 hover:border-slate-300 cursor-pointer shadow-sm">

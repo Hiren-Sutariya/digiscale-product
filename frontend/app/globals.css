@@ -135,6 +135,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter);
+    overflow-x: hidden;
   }
 
   h1,

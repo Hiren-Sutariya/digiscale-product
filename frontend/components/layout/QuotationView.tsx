@@ -437,6 +437,16 @@ export default function QuotationView() {
     return () => document.body.classList.remove('is-printing-portal');
   }, [printQuoteData]);
 
+  // Listen to mobile camera scanner trigger event from DashboardNavbar
+  useEffect(() => {
+    const handleOpenScanner = () => {
+      setMobileTab("form");
+      setShowCameraScanner(true);
+    };
+    window.addEventListener("open-mobile-camera-scanner", handleOpenScanner);
+    return () => window.removeEventListener("open-mobile-camera-scanner", handleOpenScanner);
+  }, []);
+
   useEffect(() => {
     if (selectedQuoteForPreview && zoomMode === "fit") {
       const updateScale = () => {
@@ -2339,7 +2349,7 @@ export default function QuotationView() {
         {/* Right Side: Print Preview Container */}
         <div id="mobile-preview-parent" className={`lg:col-span-8 ${mobileTab === "preview" ? "block" : "hidden lg:block"} w-full`}>
           
-          <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2">
+          <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2 lg:hidden">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               {t("documentPreview")}
             </p>

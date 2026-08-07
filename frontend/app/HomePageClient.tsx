@@ -487,14 +487,14 @@ export default function HomePageClient() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2.5 w-64 flex-shrink-0 justify-end">
-            <Link href="/login" className={`flex items-center justify-center rounded-xl border border-slate-200 bg-white font-semibold text-slate-600 transition-all duration-300 hover:bg-slate-50 cursor-pointer shadow-sm ${
-              isScrolled ? "h-9 px-3.5 text-xs" : "h-10 px-4 text-sm"
+          <div className="flex items-center gap-1.5 md:gap-2.5 w-auto md:w-64 flex-shrink-0 justify-end">
+            <Link href="/login" className={`flex items-center justify-center rounded-xl border border-slate-200 bg-white font-semibold text-slate-655 transition-all duration-300 hover:bg-slate-50 cursor-pointer shadow-sm ${
+              isScrolled ? "h-8 px-2.5 text-[10px] md:h-9 md:px-3.5 md:text-xs" : "h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
             }`}>
               Login
             </Link>
             <Link href="/signup" className={`flex items-center justify-center rounded-xl bg-blue-600 font-semibold text-white transition-all duration-300 hover:bg-blue-700 active:scale-[0.98] cursor-pointer shadow-sm shadow-blue-500/10 ${
-              isScrolled ? "h-9 px-3.5 text-xs" : "h-10 px-4 text-sm"
+              isScrolled ? "h-8 px-2.5 text-[10px] md:h-9 md:px-3.5 md:text-xs" : "h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
             }`}>
               Sign Up
             </Link>
@@ -750,7 +750,7 @@ export default function HomePageClient() {
                   <div className="flex-1 p-6 flex items-center justify-center overflow-hidden relative">
                     
                     {/* Simulated 1080x1080 design Canvas */}
-                    <div className={`w-80 h-80 ${demoImages[demoActiveIndex].bgColor} rounded-xl shadow-md border border-slate-200 relative overflow-hidden flex flex-col items-center justify-center transition-colors duration-500`}>
+                    <div className={`w-full max-w-[320px] aspect-square ${demoImages[demoActiveIndex].bgColor} rounded-xl shadow-md border border-slate-200 relative overflow-hidden flex flex-col items-center justify-center transition-colors duration-500`}>
                       
                       {/* Grid Calibration Laser Scan Line */}
                       <div className="absolute left-0 right-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-blue-500/70 to-transparent shadow-[0_0_6px_rgba(59,130,246,0.4)] animate-canvas-scan pointer-events-none z-30" />
