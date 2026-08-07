@@ -508,7 +508,7 @@ export default function QuotationView() {
     if (showCameraScanner && typeof window !== "undefined") {
       const startScanner = async () => {
         try {
-          const { Html5Qrcode } = await import("html5-qrcode");
+          const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
           await new Promise(resolve => setTimeout(resolve, 300));
           
           const scannerContainer = document.getElementById("camera-scanner-reader");
@@ -518,8 +518,15 @@ export default function QuotationView() {
           await scannerInstance.start(
             { facingMode: "environment" },
             {
-              fps: 10,
-              qrbox: { width: 260, height: 160 }
+              fps: 24, // Scan faster
+              qrbox: { width: 280, height: 140 }, // Optimized horizontal aspect for barcodes
+              aspectRatio: 1.777778, // HD aspect ratio for sharp focus
+              formatsToSupport: [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.QR_CODE
+              ]
             },
             (decodedText: string) => {
               handleBarcodeSubmit(decodedText);
@@ -1163,8 +1170,12 @@ export default function QuotationView() {
     const cleanCode = codeVal.trim();
     if (!cleanCode) return;
 
-    // Search product whose name matches the code
-    const matchedProduct = products.find(p => p.name.trim().toLowerCase() === cleanCode.toLowerCase());
+    // Search product using sanitized alphanumeric comparison
+    const searchTarget = cleanCode.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+    const matchedProduct = products.find(p => {
+      const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+      return sanitizedName === searchTarget;
+    });
 
     if (matchedProduct) {
       playBeepSound(false);

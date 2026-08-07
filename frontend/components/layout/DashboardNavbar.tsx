@@ -161,20 +161,21 @@ export default function DashboardNavbar() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
-        .eq("name", cleanCode)
-        .limit(1);
+        .select("*");
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
+      const searchTarget = cleanCode.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+      const matched = data?.find(p => p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase() === searchTarget);
+
+      if (matched) {
         playBeepSound(false);
         
         // Fetch warehouse location details
         const { data: assigns } = await supabase
           .from("warehouse_assignments")
           .select("location_key")
-          .eq("product_id", data[0].id);
+          .eq("product_id", matched.id);
 
         let locationStr = "";
         if (assigns && assigns.length > 0) {
@@ -194,7 +195,7 @@ export default function DashboardNavbar() {
         }
 
         setScannedProduct({
-          ...data[0],
+          ...matched,
           location: locationStr
         });
         setShowCameraScanner(false);
@@ -218,7 +219,7 @@ export default function DashboardNavbar() {
     if (showCameraScanner && typeof window !== "undefined") {
       const startScanner = async () => {
         try {
-          const { Html5Qrcode } = await import("html5-qrcode");
+          const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
           await new Promise(resolve => setTimeout(resolve, 300));
           const scannerContainer = document.getElementById("navbar-scanner-reader");
           if (!scannerContainer) return;
@@ -227,8 +228,15 @@ export default function DashboardNavbar() {
           await scannerInstance.start(
             { facingMode: "environment" },
             {
-              fps: 10,
-              qrbox: { width: 260, height: 160 }
+              fps: 24, // Scan faster
+              qrbox: { width: 280, height: 140 }, // Optimized horizontal aspect for barcodes
+              aspectRatio: 1.777778, // HD aspect ratio for sharp focus
+              formatsToSupport: [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.QR_CODE
+              ]
             },
             (decodedText: string) => {
               handleBarcodeScan(decodedText);
