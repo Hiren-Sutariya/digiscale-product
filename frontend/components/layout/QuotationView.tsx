@@ -518,7 +518,15 @@ export default function QuotationView() {
 
           scannerInstance = new Html5Qrcode("camera-scanner-reader");
           
-          // 1. Resolve camera list
+          // 1. Trigger camera permission to populate labels
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            stream.getTracks().forEach(track => track.stop());
+          } catch (e) {
+            console.warn("Camera permission prompt failed:", e);
+          }
+
+          // 2. Resolve camera list
           let deviceList: any[] = [];
           try {
             const available = await Html5Qrcode.getCameras();
@@ -530,12 +538,18 @@ export default function QuotationView() {
                 c.label.toLowerCase().includes("camera 0") ||
                 c.label.toLowerCase().includes("main")
               );
+              
               const mainBack = (backCameras.length > 0 ? backCameras : available).filter(c => {
                 const label = c.label.toLowerCase();
                 return !label.includes("tele") && 
                        !label.includes("zoom") && 
                        !label.includes("ultra") && 
-                       !label.includes("macro");
+                       !label.includes("macro") &&
+                       !label.includes("0.5") &&
+                       !label.includes("0.6") &&
+                       !label.includes("2x") &&
+                       !label.includes("3x") &&
+                       !label.includes("5x");
               });
               
               const orderedList = [...mainBack];
@@ -552,7 +566,7 @@ export default function QuotationView() {
             console.warn("Failed to get cameras:", e);
           }
 
-          // 2. Select camera based on current index
+          // 3. Select camera based on current index
           let activeCamera: any = { facingMode: "environment" };
           if (deviceList.length > 0) {
             const index = Math.min(currentCameraIndex, deviceList.length - 1);
@@ -1210,16 +1224,32 @@ export default function QuotationView() {
     }
   };
 
-  const handleBarcodeSubmit = (codeVal: string) => {
+  const handleBarcodeSubmit = async (codeVal: string) => {
     const cleanCode = codeVal.trim();
     if (!cleanCode) return;
 
-    // Search product using sanitized alphanumeric comparison
     const searchTarget = cleanCode.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
-    const matchedProduct = products.find(p => {
+    
+    // 1. Local array search
+    let matchedProduct = products.find(p => {
       const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
       return sanitizedName === searchTarget;
     });
+
+    // 2. Direct Supabase fallback if local search yields no results (useful on mobile first mounts)
+    if (!matchedProduct) {
+      try {
+        const { data } = await supabase.from("products").select("*");
+        if (data) {
+          matchedProduct = data.find(p => {
+            const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+            return sanitizedName === searchTarget;
+          });
+        }
+      } catch (e) {
+        console.error("Supabase direct lookup failed:", e);
+      }
+    }
 
     if (matchedProduct) {
       playBeepSound(false);
@@ -3426,17 +3456,7 @@ export default function QuotationView() {
               style={{ minHeight: "260px" }}
             />
             
-            {cameras.length > 1 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentCameraIndex(prev => (prev + 1) % cameras.length);
-                }}
-                className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-755 text-xs font-black rounded-xl transition w-full active:scale-95 cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5"
-              >
-                🔄 {lang === "gu" ? "કેમેરો બદલો (બીજો કેમેરો ટ્રાય કરો)" : "Switch Camera (Try other lens)"}
-              </button>
-            )}
+
 
             <button
               onClick={() => {
