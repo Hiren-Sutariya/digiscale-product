@@ -4640,12 +4640,12 @@ ${rows}
                       }
                     >
                       {/* Line 1: Product Code - Bold */}
-                      <p className={is50x25 ? "font-black text-[9.5px] text-slate-950 uppercase tracking-tight truncate leading-none" : "font-black text-xs text-slate-955 uppercase tracking-tight truncate leading-tight"}>
+                      <p className={is50x25 ? "font-black text-[9.5px] text-black uppercase tracking-tight truncate leading-none" : "font-black text-xs text-black uppercase tracking-tight truncate leading-tight"}>
                         {prod.name}
                       </p>
                       
-                      {/* Line 2: Carton Qty & Length / Location - Normal */}
-                      <div className={is50x25 ? "flex justify-between text-[8.5px] text-slate-800 font-bold leading-none" : "flex justify-between text-[10px] text-slate-800 font-bold leading-tight"}>
+                      {/* Line 2: Carton Qty & Length / Location - Bold */}
+                      <div className={is50x25 ? "flex justify-between text-[8.5px] text-black font-black leading-none" : "flex justify-between text-[10px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -4660,8 +4660,8 @@ ${rows}
                         </span>
                       </div>
 
-                      {/* Line 3: Description / Color - Clean (No empty '-') */}
-                      <p className={is50x25 ? "text-[8px] text-slate-600 font-medium truncate italic leading-none" : "text-[9.5px] text-slate-600 font-medium truncate italic leading-tight"}>
+                      {/* Line 3: Description / Color - Bold */}
+                      <p className={is50x25 ? "text-[8px] text-black font-black truncate leading-none" : "text-[9.5px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -4670,13 +4670,13 @@ ${rows}
                         })()}
                       </p>
 
-                      {/* Line 4: Prices - Bold (Line Removed, Uniform Spacing) */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[9.5px] font-black text-slate-950 leading-none" : "flex justify-between items-end text-[11px] font-black text-slate-955 leading-none"}>
-                        <span className="font-extrabold">
+                      {/* Line 4: Prices - Bold */}
+                      <div className={is50x25 ? "flex justify-between items-end text-[9.5px] font-black text-black leading-none" : "flex justify-between items-end text-[11px] font-black text-black leading-none"}>
+                        <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
 
-                        <span className="font-extrabold">
+                        <span className="font-black">
                           {(() => {
                             const base = parseFloat(prod.rate || "0");
                             if (!base) return "-";
@@ -4765,6 +4765,10 @@ ${rows}
             height: ${labelSize === "50x25" ? "24mm" : "34mm"} !important;
             flex-shrink: 0 !important;
             box-sizing: border-box !important;
+          }
+          .label-card-item * {
+            font-weight: 900 !important;
+            color: #000000 !important;
           }
           .page-break-after-always {
             page-break-after: always !important;
