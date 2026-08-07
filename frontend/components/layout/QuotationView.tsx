@@ -515,8 +515,39 @@ export default function QuotationView() {
           if (!scannerContainer) return;
 
           scannerInstance = new Html5Qrcode("camera-scanner-reader");
+          
+          let cameraDevice: any = { facingMode: "environment" };
+          try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (cameras && cameras.length > 0) {
+              const backCameras = cameras.filter(c => 
+                c.label.toLowerCase().includes("back") || 
+                c.label.toLowerCase().includes("rear") || 
+                c.label.toLowerCase().includes("environment") ||
+                c.label.toLowerCase().includes("camera 0") ||
+                c.label.toLowerCase().includes("main")
+              );
+              const mainBackCameras = (backCameras.length > 0 ? backCameras : cameras).filter(c => {
+                const label = c.label.toLowerCase();
+                return !label.includes("tele") && 
+                       !label.includes("zoom") && 
+                       !label.includes("ultra") && 
+                       !label.includes("macro");
+              });
+              if (mainBackCameras.length > 0) {
+                cameraDevice = mainBackCameras[0].id;
+              } else if (backCameras.length > 0) {
+                cameraDevice = backCameras[0].id;
+              } else {
+                cameraDevice = cameras[0].id;
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to query cameras, falling back to environment facingMode:", e);
+          }
+
           await scannerInstance.start(
-            { facingMode: "environment" },
+            cameraDevice,
             {
               fps: 24, // Scan faster
               qrbox: { width: 280, height: 140 }, // Optimized horizontal aspect for barcodes
