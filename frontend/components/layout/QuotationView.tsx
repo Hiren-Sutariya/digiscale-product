@@ -1864,7 +1864,7 @@ export default function QuotationView() {
             
             {settingsOpen && (
               <div className="p-5 space-y-4 animate-in slide-in-from-top-2 duration-150">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       {t("quoteRefNo")}
@@ -2416,13 +2416,13 @@ export default function QuotationView() {
                   }}
                 >
                   {chunkedPages.map((page, pageIndex) => (
-                    <div key={pageIndex} className="print-container w-[800px] min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm flex flex-col relative shrink-0 overflow-hidden">
+                    <div key={pageIndex} className="print-container w-[800px] min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-10 shadow-sm flex flex-col relative shrink-0 overflow-hidden">
                     
                     {page.isFirst && (
                       <>
-                      <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden shrink-0">
+                      <div className="flex flex-row gap-4 border-2 border-slate-900 overflow-hidden shrink-0">
                         {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
-              <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+              <div className="w-28 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
                 {companyInfo?.logo ? (
                   <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
                 ) : (
@@ -2438,7 +2438,7 @@ export default function QuotationView() {
                 <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
                   <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
                   <p>
                     <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
                   </p>
@@ -2466,9 +2466,9 @@ export default function QuotationView() {
             )}
 
             {/* Billing Details & Quotation Info Metadata Block */}
-            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
+            <div className="flex flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
               {/* Left Side: Customer Billing Details */}
-              <div className="sm:w-1/2">
+              <div className="w-1/2">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{t("billingDetails")}</p>
                 <p className="text-slate-900 font-extrabold">{clientCompany || "-"}</p>
                 <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{clientAddress || "-"}</p>
@@ -2477,7 +2477,7 @@ export default function QuotationView() {
 
               {/* Right Side: Quotation Info Metadata */}
               {(quoteNumber || quoteDate || validUntil) && (
-                <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
+                <div className="text-right space-y-1 min-w-[220px] ml-auto">
                   <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                   <div className="mb-1.5">
                     <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
@@ -2911,8 +2911,8 @@ export default function QuotationView() {
           <div className="p-10 flex flex-col justify-between h-full bg-white">
             <div>
               {/* Invoice Header */}
-              <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
-                <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+              <div className="flex flex-row gap-4 border-2 border-slate-900 overflow-hidden">
+                <div className="w-28 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
                   {companyInfo?.logo ? (
                     <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
@@ -2927,7 +2927,7 @@ export default function QuotationView() {
                   <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
                     <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
                     <p>
                       <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
                     </p>
@@ -2955,8 +2955,8 @@ export default function QuotationView() {
               )}
 
               {/* Billing Details & Quotation Info Metadata Block */}
-              <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
-                  <div className="sm:w-1/2">
+              <div className="flex flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
+                  <div className="w-1/2">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
                     <p className="text-slate-900 font-extrabold">{selectedQuoteForPreview.clientCompany || "-"}</p>
                     <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{selectedQuoteForPreview.clientAddress || "-"}</p>
@@ -2964,7 +2964,7 @@ export default function QuotationView() {
                   </div>
 
                 {(selectedQuoteForPreview.quoteNumber || selectedQuoteForPreview.quoteDate || selectedQuoteForPreview.validUntil) && (
-                  <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
+                  <div className="text-right space-y-1 min-w-[220px] ml-auto">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
                     <div className="mb-1.5">
                       <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
