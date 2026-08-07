@@ -4632,20 +4632,20 @@ ${rows}
                   {page.items.map((prod, idx) => (
                     <div 
                       key={prod.id || idx} 
-                      className="label-card-item border-2 border-slate-900 rounded-md flex flex-col justify-between bg-white overflow-hidden shrink-0" 
+                      className="label-card-item flex flex-col justify-between bg-white overflow-hidden shrink-0" 
                       style={
                         is50x25
-                          ? { width: '48.5mm', height: '24mm', padding: '1.5mm 2.5mm', boxSizing: 'border-box', flexShrink: 0 }
-                          : { width: '50mm', height: '35.5mm', padding: '3mm 3.5mm', boxSizing: 'border-box', flexShrink: 0 }
+                          ? { width: '49.5mm', height: '24.5mm', padding: '0.8mm 1.2mm', boxSizing: 'border-box', flexShrink: 0 }
+                          : { width: '52mm', height: '36.5mm', padding: '1mm 1.5mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
-                      {/* Line 1: Product Code - Product Name size unchanged */}
-                      <p className={is50x25 ? "font-black text-[9.5px] text-black uppercase tracking-tight truncate leading-none" : "font-black text-xs text-black uppercase tracking-tight truncate leading-tight"}>
+                      {/* Line 1: Product Code - Borderless Larger Font */}
+                      <p className={is50x25 ? "font-black text-[10.5px] text-black uppercase tracking-tight truncate leading-none" : "font-black text-[13.5px] text-black uppercase tracking-tight truncate leading-tight"}>
                         {prod.name}
                       </p>
                       
-                      {/* Line 2: Carton Qty & Length / Location - Slightly larger font */}
-                      <div className={is50x25 ? "flex justify-between text-[9px] text-black font-black leading-none" : "flex justify-between text-[11px] text-black font-black leading-tight"}>
+                      {/* Line 2: Carton Qty & Length / Location - Borderless Larger Font */}
+                      <div className={is50x25 ? "flex justify-between text-[9.5px] text-black font-black leading-none" : "flex justify-between text-[12px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -4660,8 +4660,8 @@ ${rows}
                         </span>
                       </div>
 
-                      {/* Line 3: Description / Color - Slightly larger font */}
-                      <p className={is50x25 ? "text-[8.5px] text-black font-black truncate leading-none" : "text-[10.5px] text-black font-black truncate leading-tight"}>
+                      {/* Line 3: Description / Color - Borderless Larger Font */}
+                      <p className={is50x25 ? "text-[9px] text-black font-black truncate leading-none" : "text-[11px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -4670,8 +4670,8 @@ ${rows}
                         })()}
                       </p>
 
-                      {/* Line 4: Prices - Slightly larger font */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[10px] font-black text-black leading-none" : "flex justify-between items-end text-[12px] font-black text-black leading-none"}>
+                      {/* Line 4: Prices - Borderless Larger Font */}
+                      <div className={is50x25 ? "flex justify-between items-end text-[11px] font-black text-black leading-none" : "flex justify-between items-end text-[13.5px] font-black text-black leading-none"}>
                         <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
@@ -4761,9 +4761,11 @@ ${rows}
             break-after: avoid !important;
           }
           .label-card-item {
-            width: ${labelSize === "50x25" ? "48.5mm" : "50mm"} !important;
-            height: ${labelSize === "50x25" ? "24mm" : "35.5mm"} !important;
-            padding: ${labelSize === "50x25" ? "1.5mm 2.5mm" : "3mm 3.5mm"} !important;
+            width: ${labelSize === "50x25" ? "49.5mm" : "52mm"} !important;
+            height: ${labelSize === "50x25" ? "24.5mm" : "36.5mm"} !important;
+            padding: ${labelSize === "50x25" ? "0.8mm 1.2mm" : "1mm 1.5mm"} !important;
+            border: none !important;
+            border-radius: 0 !important;
             flex-shrink: 0 !important;
             box-sizing: border-box !important;
           }
