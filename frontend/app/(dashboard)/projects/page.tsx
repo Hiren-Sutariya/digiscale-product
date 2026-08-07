@@ -4639,13 +4639,13 @@ ${rows}
                           : { width: '50mm', height: '34mm', padding: '2mm 3mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
-                      {/* Line 1: Product Code - Bold */}
+                      {/* Line 1: Product Code - Product Name size unchanged */}
                       <p className={is50x25 ? "font-black text-[9.5px] text-black uppercase tracking-tight truncate leading-none" : "font-black text-xs text-black uppercase tracking-tight truncate leading-tight"}>
                         {prod.name}
                       </p>
                       
-                      {/* Line 2: Carton Qty & Length / Location - Bold */}
-                      <div className={is50x25 ? "flex justify-between text-[8.5px] text-black font-black leading-none" : "flex justify-between text-[10px] text-black font-black leading-tight"}>
+                      {/* Line 2: Carton Qty & Length / Location - Slightly larger font */}
+                      <div className={is50x25 ? "flex justify-between text-[9px] text-black font-black leading-none" : "flex justify-between text-[11px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -4660,8 +4660,8 @@ ${rows}
                         </span>
                       </div>
 
-                      {/* Line 3: Description / Color - Bold */}
-                      <p className={is50x25 ? "text-[8px] text-black font-black truncate leading-none" : "text-[9.5px] text-black font-black truncate leading-tight"}>
+                      {/* Line 3: Description / Color - Slightly larger font */}
+                      <p className={is50x25 ? "text-[8.5px] text-black font-black truncate leading-none" : "text-[10.5px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -4670,8 +4670,8 @@ ${rows}
                         })()}
                       </p>
 
-                      {/* Line 4: Prices - Bold */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[9.5px] font-black text-black leading-none" : "flex justify-between items-end text-[11px] font-black text-black leading-none"}>
+                      {/* Line 4: Prices - Slightly larger font */}
+                      <div className={is50x25 ? "flex justify-between items-end text-[10px] font-black text-black leading-none" : "flex justify-between items-end text-[12px] font-black text-black leading-none"}>
                         <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
