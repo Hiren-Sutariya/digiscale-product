@@ -1638,26 +1638,26 @@ export default function QuotationView() {
       </div>
 
       {/* Subview switcher tabs */}
-      <div className="no-print flex gap-2 mb-6">
+      <div className="no-print flex gap-2 mb-4 lg:mb-6">
         <button
           onClick={handleCreateNew}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "create"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
-              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
+              : "bg-white hover:bg-slate-50 text-slate-655 border border-slate-200/80"
           }`}
         >
           📝 {t("createQuotation")}
         </button>
         <button
           onClick={() => setActiveSubView("history")}
-          className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "history"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
-              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
+              : "bg-white hover:bg-slate-50 text-slate-655 border border-slate-200/80"
           }`}
         >
-          📜 {t("savedHistory")} ({savedQuotes.length})
+          📜 {lang === "gu" ? "ઇતિહાસ" : "History"} ({savedQuotes.length})
         </button>
       </div>
 
@@ -2337,7 +2337,7 @@ export default function QuotationView() {
         </div>
 
         {/* Right Side: Print Preview Container */}
-        <div className={`lg:col-span-8 ${mobileTab === "preview" ? "block" : "hidden lg:block"}`}>
+        <div id="mobile-preview-parent" className={`lg:col-span-8 ${mobileTab === "preview" ? "block" : "hidden lg:block"} w-full`}>
           
           <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2405,9 +2405,10 @@ export default function QuotationView() {
               >
                 <div 
                   id="print-area" 
-                  className="flex flex-col gap-8 mx-auto origin-top transition-transform duration-100"
+                  className="flex flex-col gap-8 mx-auto transition-transform duration-100"
                   style={typeof window !== "undefined" && window.innerWidth < 1024 ? {
                     transform: `scale(${mobileScale})`,
+                    transformOrigin: "top center",
                     width: "800px"
                   } : {
                     width: "100%",
