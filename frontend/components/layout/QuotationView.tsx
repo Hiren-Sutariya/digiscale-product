@@ -391,6 +391,7 @@ export default function QuotationView() {
   const [zoomLevel, setZoomLevel] = useState(2.0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<any>(null);
+  const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -1774,11 +1775,38 @@ export default function QuotationView() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Side: Inputs Panels (no-print) — Sticky on desktop with internal scroll */}
-        <div className="no-print lg:col-span-4 select-none lg:sticky lg:top-0">
-          <div className="space-y-4 pr-1 lg:overflow-y-auto lg:max-h-[calc(100vh-220px)] pb-4">
+        <div>
+          {/* Mobile Tabs Toggle (Form vs Preview) */}
+          <div className="no-print lg:hidden flex gap-2 mb-4 p-1 bg-slate-100 border border-slate-200/60 rounded-xl w-full select-none">
+            <button
+              type="button"
+              onClick={() => setMobileTab("form")}
+              className={`flex-1 py-2 text-xs font-black rounded-lg transition active:scale-95 cursor-pointer uppercase tracking-wider ${
+                mobileTab === "form"
+                  ? "bg-white text-indigo-755 shadow-sm border border-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              ✏️ {lang === "gu" ? "વિગતો ભરો" : "Fill Details"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("preview")}
+              className={`flex-1 py-2 text-xs font-black rounded-lg transition active:scale-95 cursor-pointer uppercase tracking-wider ${
+                mobileTab === "preview"
+                  ? "bg-white text-indigo-755 shadow-sm border border-slate-200/50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              📄 {lang === "gu" ? "બિલ પ્રિવ્યૂ" : "Preview Bill"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Side: Inputs Panels (no-print) — Sticky on desktop with internal scroll */}
+          <div className={`no-print lg:col-span-4 select-none lg:sticky lg:top-0 ${mobileTab === "form" ? "block" : "hidden lg:block"}`}>
+            <div className="space-y-4 pr-1 lg:overflow-y-auto lg:max-h-[calc(100vh-220px)] pb-4">
           
           {/* Warn if Profile details not filled yet */}
           {!loadingProfile && !companyInfo && (
@@ -2280,7 +2308,7 @@ export default function QuotationView() {
         </div>
 
         {/* Right Side: Print Preview Container */}
-        <div className="lg:col-span-8">
+        <div className={`lg:col-span-8 ${mobileTab === "preview" ? "block" : "hidden lg:block"}`}>
           
           <div className="no-print mb-4 flex items-center justify-between w-full max-w-5xl mx-auto px-2">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2782,6 +2810,7 @@ export default function QuotationView() {
         </div>
 
       </div>
+    </div>
     )}
 
     {/* ── PREMIUM PREVIEW MODAL ── */}
