@@ -6,9 +6,12 @@ import { usePathname } from "next/navigation";
 
 import Logo from "@/components/ui/logo";
 import { getUserProfile, getUserSettings, logout } from "@/services/api";
+import { supabase } from "@/lib/supabase";
 
 import {
   Bell,
+  ScanBarcode,
+  X,
   Settings,
   ChevronDown,
   LayoutDashboard,
@@ -119,6 +122,136 @@ export default function DashboardNavbar() {
     }
   }, []);
 
+  // Camera scanner states for global navbar
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<any | null>(null);
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const playBeepSound = (isError = false) => {
+    if (typeof window === "undefined") return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.type = "sine";
+      if (isError) {
+        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3);
+      } else {
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+      }
+    } catch (e) {}
+  };
+
+  const handleBarcodeScan = async (codeVal: string) => {
+    const cleanCode = codeVal.trim();
+    if (!cleanCode) return;
+
+    setLoadingProduct(true);
+    setScanError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("name", cleanCode)
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        playBeepSound(false);
+        
+        // Fetch warehouse location details
+        const { data: assigns } = await supabase
+          .from("warehouse_assignments")
+          .select("location_key")
+          .eq("product_id", data[0].id);
+
+        let locationStr = "";
+        if (assigns && assigns.length > 0) {
+          locationStr = assigns
+            .map((a: any) => {
+              const parts = a.location_key.split("-");
+              if (parts.length >= 3) {
+                const row = parts[0];
+                const slot = parts[1];
+                const zone = parts[2];
+                const zoneShort = zone.toLowerCase() === "upper" ? "U" : zone.toLowerCase() === "lower" ? "L" : zone;
+                return `${row}-${slot} (${zoneShort})`;
+              }
+              return a.location_key;
+            })
+            .join(", ");
+        }
+
+        setScannedProduct({
+          ...data[0],
+          location: locationStr
+        });
+        setShowCameraScanner(false);
+      } else {
+        playBeepSound(true);
+        setScanError(lang === "gu" ? `પ્રોડક્ટ મળી નથી: ${cleanCode}` : `Product not found: ${cleanCode}`);
+        setTimeout(() => setScanError(null), 3000);
+      }
+    } catch (err: any) {
+      console.error("Lookup error:", err);
+      playBeepSound(true);
+      setScanError("Failed to lookup product.");
+      setTimeout(() => setScanError(null), 3000);
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
+  useEffect(() => {
+    let scannerInstance: any = null;
+    if (showCameraScanner && typeof window !== "undefined") {
+      const startScanner = async () => {
+        try {
+          const { Html5Qrcode } = await import("html5-qrcode");
+          await new Promise(resolve => setTimeout(resolve, 300));
+          const scannerContainer = document.getElementById("navbar-scanner-reader");
+          if (!scannerContainer) return;
+
+          scannerInstance = new Html5Qrcode("navbar-scanner-reader");
+          await scannerInstance.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 260, height: 160 }
+            },
+            (decodedText: string) => {
+              handleBarcodeScan(decodedText);
+            },
+            () => {
+              // Ignore standard scanning noise
+            }
+          );
+        } catch (err) {
+          console.error("Navbar camera scanner failed to start:", err);
+        }
+      };
+      startScanner();
+    }
+    return () => {
+      if (scannerInstance && scannerInstance.isScanning) {
+        scannerInstance.stop()
+          .then(() => console.log("Navbar scanner stopped."))
+          .catch((err: any) => console.error("Error stopping navbar scanner:", err));
+      }
+    };
+  }, [showCameraScanner]);
+
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -211,15 +344,15 @@ export default function DashboardNavbar() {
           : "h-20 bg-white/95 border-b border-slate-200"
       }`}
     >
-      <div className="mx-auto max-w-[1400px] w-full h-full flex items-center justify-between px-8">
+      <div className="mx-auto max-w-[1400px] w-full h-full flex items-center justify-between px-4 lg:px-8">
 
         {/* Left — Clickable Logo */}
-        <div className="flex items-center w-44 flex-shrink-0">
+        <div className="flex items-center w-auto lg:w-44 flex-shrink-0">
           <Logo />
         </div>
 
-        {/* Center — Navigation Links */}
-        <nav className="flex-1 flex items-center justify-center gap-1">
+        {/* Center — Navigation Links (Desktop Only) */}
+        <nav className="hidden lg:flex flex-1 items-center justify-center gap-1">
           {navLinks
             .filter((link) => isLoggedIn)
             .map((link) => {
@@ -242,10 +375,23 @@ export default function DashboardNavbar() {
             })}
         </nav>
 
-        {/* Right — Bell + Profile */}
-        <div className="flex items-center gap-2.5 w-64 flex-shrink-0 justify-end">
+        {/* Right — Bell + Profile (Responsive widths) */}
+        <div className="flex items-center gap-2.5 w-auto lg:w-64 flex-shrink-0 justify-end">
           {isLoggedIn ? (
             <>
+              {/* Camera Scanner Button */}
+              <button 
+                onClick={() => setShowCameraScanner(true)}
+                title={lang === "gu" ? "મોબાઈલથી બારકોડ સ્કેન કરો" : "Scan Barcode"}
+                className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-indigo-50/50 text-indigo-600 transition hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 cursor-pointer shadow-sm relative group"
+              >
+                <ScanBarcode className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                </span>
+              </button>
+
               {/* Bell — full navbar height pill */}
               <button className="flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 hover:border-slate-300 cursor-pointer shadow-sm">
                 <Bell className="h-[18px] w-[18px] text-slate-500" />
@@ -392,6 +538,156 @@ export default function DashboardNavbar() {
         </div>
 
       </div>
+
+      {/* NAVBAR CAMERA SCANNER OVERLAY */}
+      {showCameraScanner && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 text-slate-800">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📷</span>
+                {lang === "gu" ? "કેમેરા બારકોડ સ્કેનર" : "Camera Barcode Scanner"}
+              </h3>
+              <button
+                onClick={() => setShowCameraScanner(false)}
+                className="p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col items-center justify-center space-y-4">
+              <p className="text-[11px] text-slate-500 font-bold text-center">
+                {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the box to lookup product"}
+              </p>
+              
+              <div 
+                id="navbar-scanner-reader" 
+                className="w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200"
+                style={{ minHeight: "260px" }}
+              />
+
+              {scanError && (
+                <div className="w-full p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl text-center animate-bounce">
+                  ⚠️ {scanError}
+                </div>
+              )}
+              
+              <button
+                onClick={() => setShowCameraScanner(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition w-full active:scale-95 cursor-pointer"
+              >
+                {lang === "gu" ? "બંધ કરો" : "Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SCANNED PRODUCT DETAILS MODAL */}
+      {scannedProduct && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 text-slate-800">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📦</span>
+                {lang === "gu" ? "ઉત્પાદન વિગતો" : "Product Details"}
+              </h3>
+              <button
+                onClick={() => setScannedProduct(null)}
+                className="p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div className="h-40 w-full rounded-xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center p-2 relative">
+                {scannedProduct.photoUrl ? (
+                  <img 
+                    src={scannedProduct.photoUrl} 
+                    alt={scannedProduct.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center space-y-1">
+                    <span className="text-2xl block">📦</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">No Photo Available</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-black text-slate-900 uppercase tracking-tight truncate border-b border-slate-100 pb-1">
+                  {scannedProduct.name}
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Rate / Price</span>
+                    <span className="text-sm font-black text-indigo-750">₹{scannedProduct.rate || "-"}</span>
+                  </div>
+                  
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Carton Qty</span>
+                    <span className="text-sm font-black text-slate-800">{scannedProduct.cartonQty || 1} pcs/ctn</span>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Stock</span>
+                    <span className={`text-sm font-black ${scannedProduct.stock > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {scannedProduct.stock || 0}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Location</span>
+                    <span className="text-xs font-black text-slate-800 truncate block">
+                      {scannedProduct.location || "-"}
+                    </span>
+                  </div>
+                </div>
+
+                {scannedProduct.description && (
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Description / Note</span>
+                    <p className="font-semibold text-slate-600 mt-0.5 leading-relaxed">{scannedProduct.description}</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setScannedProduct(null)}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer uppercase tracking-wider shadow-sm mt-2"
+              >
+                {lang === "gu" ? "સમજી ગયા" : "Done"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation Bar */}
+      {isLoggedIn && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-2px_15px_rgba(0,0,0,0.06)] px-4 py-2.5 flex justify-around items-center select-none pb-safe">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition duration-150 cursor-pointer ${
+                  isActive ? "text-blue-600 font-black" : "text-slate-500 font-semibold hover:text-slate-900"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[9px] font-bold tracking-tight uppercase">{t(link.label.toLowerCase())}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
     </header>
   );
 }

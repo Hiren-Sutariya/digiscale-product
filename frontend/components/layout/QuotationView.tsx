@@ -380,6 +380,13 @@ export default function QuotationView() {
   const [printQuoteData, setPrintQuoteData] = useState<any | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "full">("fit");
+
+  // Barcode Scanner states
+  const [barcodeQuery, setBarcodeQuery] = useState("");
+  const barcodeInputRef = useRef<HTMLInputElement | null>(null);
+  const [barcodeFeedback, setBarcodeFeedback] = useState<{ text: string; isError: boolean } | null>(null);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
+
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -493,6 +500,51 @@ export default function QuotationView() {
     }
     return rate;
   };
+
+  // HTML5 Barcode/QR Camera Scanner Effect
+  useEffect(() => {
+    let scannerInstance: any = null;
+    
+    if (showCameraScanner && typeof window !== "undefined") {
+      const startScanner = async () => {
+        try {
+          const { Html5Qrcode } = await import("html5-qrcode");
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          const scannerContainer = document.getElementById("camera-scanner-reader");
+          if (!scannerContainer) return;
+
+          scannerInstance = new Html5Qrcode("camera-scanner-reader");
+          await scannerInstance.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 260, height: 160 }
+            },
+            (decodedText: string) => {
+              handleBarcodeSubmit(decodedText);
+              setShowCameraScanner(false);
+            },
+            () => {
+              // Standard scanning noise, ignore
+            }
+          );
+        } catch (err) {
+          console.error("Failed to start Html5Qrcode:", err);
+        }
+      };
+
+      startScanner();
+    }
+
+    return () => {
+      if (scannerInstance && scannerInstance.isScanning) {
+        scannerInstance.stop()
+          .then(() => console.log("Scanner stopped successfully."))
+          .catch((err: any) => console.error("Error stopping scanner:", err));
+      }
+    };
+  }, [showCameraScanner]);
 
   // Load configuration and aggregates on mount
   useEffect(() => {
@@ -1080,6 +1132,65 @@ export default function QuotationView() {
     await executePrint({ ...quote, items: itemsToLoad });
   };
 
+  const playBeepSound = (isError = false) => {
+    if (typeof window === "undefined") return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.type = "sine";
+      if (isError) {
+        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3);
+      } else {
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+      }
+    } catch (err) {
+      console.warn("AudioContext beep failed:", err);
+    }
+  };
+
+  const handleBarcodeSubmit = (codeVal: string) => {
+    const cleanCode = codeVal.trim();
+    if (!cleanCode) return;
+
+    // Search product whose name matches the code
+    const matchedProduct = products.find(p => p.name.trim().toLowerCase() === cleanCode.toLowerCase());
+
+    if (matchedProduct) {
+      playBeepSound(false);
+      handleToggleProduct(matchedProduct);
+      setBarcodeFeedback({ 
+        text: lang === "gu" ? `પ્રોડક્ટ ઉમેરાઈ: ${matchedProduct.name}` : `Product Added: ${matchedProduct.name}`, 
+        isError: false 
+      });
+    } else {
+      playBeepSound(true);
+      setBarcodeFeedback({ 
+        text: lang === "gu" ? `પ્રોડક્ટ મળી નથી: ${cleanCode}` : `Product not found: ${cleanCode}`, 
+        isError: true 
+      });
+    }
+
+    setBarcodeQuery("");
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+
+    setTimeout(() => {
+      setBarcodeFeedback(null);
+    }, 3000);
+  };
+
   // Toggle item selection (now increments if already exists)
   const handleToggleProduct = (product: Product) => {
     setSelectedItems(prev => {
@@ -1548,9 +1659,9 @@ export default function QuotationView() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Side: Inputs Panels (no-print) — Sticky with internal scroll */}
+        {/* Left Side: Inputs Panels (no-print) — Sticky on desktop with internal scroll */}
         <div className="no-print lg:col-span-4 select-none lg:sticky lg:top-0">
-          <div className="space-y-4 pr-1 overflow-y-auto max-h-[calc(100vh-220px)] pb-4">
+          <div className="space-y-4 pr-1 lg:overflow-y-auto lg:max-h-[calc(100vh-220px)] pb-4">
           
           {/* Warn if Profile details not filled yet */}
           {!loadingProfile && !companyInfo && (
@@ -1879,29 +1990,84 @@ export default function QuotationView() {
           {/* Section 3: Global Search and Select Products (Rounded Search Bar) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-450 block mb-2">
-                {t("searchAddProducts")}
-              </h3>
-              
-              <div className="relative mt-2">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder={t("searchProductsPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-450 block">
+                  {t("searchAddProducts")}
+                </h3>
+                
+                {/* Camera Scanner Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowCameraScanner(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-[10px] font-black tracking-wider uppercase transition shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                  </span>
+                  📷 {lang === "gu" ? "મોબાઈલ કેમેરા સ્કેન" : "Camera Scanner"}
+                </button>
               </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={t("searchProductsPlaceholder")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-11 pr-10 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-655 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* USB Barcode Scanner Input */}
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-[12px] select-none">
+                    █║
+                  </div>
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    placeholder={lang === "gu" ? "અહીં ક્લિક કરી બારકોડ સ્કેન કરો..." : "Focus here to scan barcode..."}
+                    value={barcodeQuery}
+                    onChange={(e) => setBarcodeQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleBarcodeSubmit(barcodeQuery);
+                      }
+                    }}
+                    className="w-full rounded-xl border-2 border-indigo-200 bg-indigo-50/20 pl-11 pr-10 py-2.5 text-xs font-black text-indigo-900 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 placeholder:text-indigo-400/80"
+                  />
+                  {barcodeQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setBarcodeQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-indigo-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Barcode feedback message / toast inline */}
+              {barcodeFeedback && (
+                <div className={`mt-2.5 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition animate-bounce ${barcodeFeedback.isError ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+                  <span>{barcodeFeedback.isError ? "⚠️" : "✅"}</span>
+                  <p>{barcodeFeedback.text}</p>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-slate-100 pt-3">
@@ -3168,6 +3334,44 @@ export default function QuotationView() {
               className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition active:scale-95"
             >
               Keep Editing
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* CAMERA BARCODE SCANNER MODAL */}
+    {showCameraScanner && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span>📷</span>
+              {lang === "gu" ? "કેમેરા બારકોડ સ્કેનર" : "Camera Barcode Scanner"}
+            </h3>
+            <button
+              onClick={() => setShowCameraScanner(false)}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="p-5 flex flex-col items-center justify-center space-y-4">
+            <p className="text-[11px] text-slate-500 font-bold text-center">
+              {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the box to scan"}
+            </p>
+            
+            <div 
+              id="camera-scanner-reader" 
+              className="w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200"
+              style={{ minHeight: "260px" }}
+            />
+            
+            <button
+              onClick={() => setShowCameraScanner(false)}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition w-full active:scale-95 cursor-pointer"
+            >
+              {lang === "gu" ? "બંધ કરો" : "Close"}
             </button>
           </div>
         </div>
