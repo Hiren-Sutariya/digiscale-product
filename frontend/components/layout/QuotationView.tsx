@@ -392,6 +392,7 @@ export default function QuotationView() {
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<any>(null);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
+  const [mobileScale, setMobileScale] = useState(1);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -452,6 +453,34 @@ export default function QuotationView() {
       setZoomScale(1);
     }
   }, [selectedQuoteForPreview, zoomMode]);
+
+  // Handle responsive scaling of the A4 print preview on mobile viewports
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const handleResize = () => {
+      const parent = document.getElementById("mobile-preview-parent");
+      if (parent) {
+        const parentWidth = parent.getBoundingClientRect().width || 360;
+        const targetWidth = 800; // Target width of the print preview page
+        if (window.innerWidth < 1024) {
+          const scale = Math.min(1, Math.max(0.35, parentWidth / targetWidth));
+          setMobileScale(scale);
+        } else {
+          setMobileScale(1);
+        }
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    // Delay to let DOM elements render and resolve width
+    const timer = setTimeout(handleResize, 150);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer);
+    };
+  }, [mobileTab]);
 
   const getNextQuoteNumber = (quotesList: any[]) => {
     let maxNum = 0;
@@ -1580,8 +1609,8 @@ export default function QuotationView() {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3">
+        {/* Actions - hidden on mobile, visible on desktop */}
+        <div className="hidden lg:flex items-center gap-3">
           {activeSubView === "create" && (
             <button
               onClick={handleSaveQuotation}
@@ -2368,9 +2397,25 @@ export default function QuotationView() {
             }
 
             return (
-              <div id="print-area" className="flex flex-col gap-8 w-full max-w-5xl mx-auto">
-                {chunkedPages.map((page, pageIndex) => (
-                  <div key={pageIndex} className="print-container w-full min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm overflow-x-auto flex flex-col relative">
+              <div 
+                className="w-full flex justify-center overflow-hidden no-print"
+                style={typeof window !== "undefined" && window.innerWidth < 1024 ? {
+                  height: `${(1123 * chunkedPages.length + 32 * (chunkedPages.length - 1)) * mobileScale + 40}px`
+                } : {}}
+              >
+                <div 
+                  id="print-area" 
+                  className="flex flex-col gap-8 mx-auto origin-top transition-transform duration-100"
+                  style={typeof window !== "undefined" && window.innerWidth < 1024 ? {
+                    transform: `scale(${mobileScale})`,
+                    width: "800px"
+                  } : {
+                    width: "100%",
+                    maxWidth: "800px"
+                  }}
+                >
+                  {chunkedPages.map((page, pageIndex) => (
+                    <div key={pageIndex} className="print-container w-[800px] min-h-[1123px] mx-auto rounded-md border border-slate-200 bg-white p-6 sm:p-8 md:p-10 shadow-sm flex flex-col relative shrink-0 overflow-hidden">
                     
                     {page.isFirst && (
                       <>
@@ -2805,6 +2850,7 @@ export default function QuotationView() {
                   </div>
                 ))}
               </div>
+            </div>
             );
           })()}
         </div>
@@ -3562,6 +3608,32 @@ export default function QuotationView() {
             </button>
           </div>
         </div>
+      </div>
+    )}
+
+    {/* Sticky Bottom Actions Bar on Mobile */}
+    {activeSubView === "create" && selectedItems.length > 0 && (
+      <div className="lg:hidden fixed bottom-[65px] left-0 right-0 z-45 bg-white/90 backdrop-blur-md border-t border-slate-200/80 p-3 shadow-lg flex gap-3 px-4 no-print select-none">
+        <button
+          onClick={handleSaveQuotation}
+          disabled={isSaving}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
+        >
+          {isSaving ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          {isSaving ? t("savingQuotation") : t("saveQuotation")}
+        </button>
+        
+        <button
+          onClick={handlePrint}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
+        >
+          <Printer className="h-4 w-4" />
+          {t("printExportPdf")}
+        </button>
       </div>
     )}
 
