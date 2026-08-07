@@ -86,10 +86,10 @@ export default function DashboardPage() {
           {t("selectDestination")}
         </p>
 
-        {/* Grid layout for 6 items - equal styling */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-6 lg:gap-8 w-full max-w-[1300px]">
+        {/* Grid layout for 5 items - equal styling */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6 lg:gap-8 w-full max-w-[1300px]">
 
-          {/* Workspace */}
+          {/* Workspace commented out as requested
           <Link
             href="/workspace"
             className="group hidden sm:flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
@@ -104,6 +104,7 @@ export default function DashboardPage() {
               </p>
             </div>
           </Link>
+          */}
 
           {/* Collections */}
           <Link
