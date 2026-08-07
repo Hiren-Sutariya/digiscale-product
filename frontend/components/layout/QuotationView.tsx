@@ -386,6 +386,8 @@ export default function QuotationView() {
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
   const [barcodeFeedback, setBarcodeFeedback] = useState<{ text: string; isError: boolean } | null>(null);
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [cameras, setCameras] = useState<any[]>([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -516,38 +518,49 @@ export default function QuotationView() {
 
           scannerInstance = new Html5Qrcode("camera-scanner-reader");
           
-          let cameraDevice: any = { facingMode: "environment" };
+          // 1. Resolve camera list
+          let deviceList: any[] = [];
           try {
-            const cameras = await Html5Qrcode.getCameras();
-            if (cameras && cameras.length > 0) {
-              const backCameras = cameras.filter(c => 
+            const available = await Html5Qrcode.getCameras();
+            if (available && available.length > 0) {
+              const backCameras = available.filter(c => 
                 c.label.toLowerCase().includes("back") || 
                 c.label.toLowerCase().includes("rear") || 
                 c.label.toLowerCase().includes("environment") ||
                 c.label.toLowerCase().includes("camera 0") ||
                 c.label.toLowerCase().includes("main")
               );
-              const mainBackCameras = (backCameras.length > 0 ? backCameras : cameras).filter(c => {
+              const mainBack = (backCameras.length > 0 ? backCameras : available).filter(c => {
                 const label = c.label.toLowerCase();
                 return !label.includes("tele") && 
                        !label.includes("zoom") && 
                        !label.includes("ultra") && 
                        !label.includes("macro");
               });
-              if (mainBackCameras.length > 0) {
-                cameraDevice = mainBackCameras[0].id;
-              } else if (backCameras.length > 0) {
-                cameraDevice = backCameras[0].id;
-              } else {
-                cameraDevice = cameras[0].id;
-              }
+              
+              const orderedList = [...mainBack];
+              available.forEach(c => {
+                if (!orderedList.some(item => item.id === c.id)) {
+                  orderedList.push(c);
+                }
+              });
+              
+              deviceList = orderedList;
+              setCameras(orderedList);
             }
           } catch (e) {
-            console.warn("Failed to query cameras, falling back to environment facingMode:", e);
+            console.warn("Failed to get cameras:", e);
+          }
+
+          // 2. Select camera based on current index
+          let activeCamera: any = { facingMode: "environment" };
+          if (deviceList.length > 0) {
+            const index = Math.min(currentCameraIndex, deviceList.length - 1);
+            activeCamera = deviceList[index].id;
           }
 
           await scannerInstance.start(
-            cameraDevice,
+            activeCamera,
             {
               fps: 24, // Scan faster
               qrbox: { width: 280, height: 140 }, // Optimized horizontal aspect for barcodes
@@ -582,7 +595,7 @@ export default function QuotationView() {
           .catch((err: any) => console.error("Error stopping scanner:", err));
       }
     };
-  }, [showCameraScanner]);
+  }, [showCameraScanner, currentCameraIndex]);
 
   // Load configuration and aggregates on mount
   useEffect(() => {
@@ -3392,7 +3405,11 @@ export default function QuotationView() {
               {lang === "gu" ? "કેમેરા બારકોડ સ્કેનર" : "Camera Barcode Scanner"}
             </h3>
             <button
-              onClick={() => setShowCameraScanner(false)}
+              onClick={() => {
+                setShowCameraScanner(false);
+                setCameras([]);
+                setCurrentCameraIndex(0);
+              }}
               className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -3409,8 +3426,24 @@ export default function QuotationView() {
               style={{ minHeight: "260px" }}
             />
             
+            {cameras.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentCameraIndex(prev => (prev + 1) % cameras.length);
+                }}
+                className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-755 text-xs font-black rounded-xl transition w-full active:scale-95 cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5"
+              >
+                🔄 {lang === "gu" ? "કેમેરો બદલો (બીજો કેમેરો ટ્રાય કરો)" : "Switch Camera (Try other lens)"}
+              </button>
+            )}
+
             <button
-              onClick={() => setShowCameraScanner(false)}
+              onClick={() => {
+                setShowCameraScanner(false);
+                setCameras([]);
+                setCurrentCameraIndex(0);
+              }}
               className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition w-full active:scale-95 cursor-pointer"
             >
               {lang === "gu" ? "બંધ કરો" : "Close"}
