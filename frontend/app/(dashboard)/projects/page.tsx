@@ -4625,8 +4625,8 @@ ${rows}
                   className={`collection-labels-page bg-white flex flex-row items-center ${is50x25 ? "justify-start gap-[3mm] px-[2.5mm]" : "justify-center"} ${isLastPage ? "" : "page-break-after-always"}`} 
                   style={
                     is50x25
-                      ? { width: '106mm', height: '24.8mm', boxSizing: 'border-box', overflow: 'hidden' }
-                      : { width: '56mm', height: '35.5mm', boxSizing: 'border-box', overflow: 'hidden' }
+                      ? { width: '106mm', height: '25mm', boxSizing: 'border-box', overflow: 'hidden' }
+                      : { width: '56mm', height: '38mm', boxSizing: 'border-box', overflow: 'hidden' }
                   }
                 >
                   {page.items.map((prod, idx) => (
@@ -4635,8 +4635,8 @@ ${rows}
                       className="label-card-item border-2 border-slate-900 rounded-md flex flex-col justify-between bg-white overflow-hidden shrink-0" 
                       style={
                         is50x25
-                          ? { width: '48.5mm', height: '24.5mm', padding: '1.5mm 2mm', boxSizing: 'border-box', flexShrink: 0 }
-                          : { width: '50mm', height: '34mm', padding: '2mm 3mm', boxSizing: 'border-box', flexShrink: 0 }
+                          ? { width: '48.5mm', height: '24mm', padding: '1.5mm 2.5mm', boxSizing: 'border-box', flexShrink: 0 }
+                          : { width: '50mm', height: '35.5mm', padding: '3mm 3.5mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
                       {/* Line 1: Product Code - Product Name size unchanged */}
@@ -4744,8 +4744,8 @@ ${rows}
           }
           .collection-labels-page {
             width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
-            height: ${labelSize === "50x25" ? "24.5mm" : "35.5mm"} !important;
-            max-height: ${labelSize === "50x25" ? "24.5mm" : "35.5mm"} !important;
+            height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
+            max-height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -4762,7 +4762,8 @@ ${rows}
           }
           .label-card-item {
             width: ${labelSize === "50x25" ? "48.5mm" : "50mm"} !important;
-            height: ${labelSize === "50x25" ? "24mm" : "34mm"} !important;
+            height: ${labelSize === "50x25" ? "24mm" : "35.5mm"} !important;
+            padding: ${labelSize === "50x25" ? "1.5mm 2.5mm" : "3mm 3.5mm"} !important;
             flex-shrink: 0 !important;
             box-sizing: border-box !important;
           }
