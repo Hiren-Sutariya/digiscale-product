@@ -1641,7 +1641,7 @@ export default function QuotationView() {
       <div className="no-print flex gap-2 mb-4 lg:mb-6">
         <button
           onClick={handleCreateNew}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
+          className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "create"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-white hover:bg-slate-50 text-slate-655 border border-slate-200/80"
@@ -1651,7 +1651,7 @@ export default function QuotationView() {
         </button>
         <button
           onClick={() => setActiveSubView("history")}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
+          className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "history"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-white hover:bg-slate-50 text-slate-655 border border-slate-200/80"
