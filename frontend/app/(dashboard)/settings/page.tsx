@@ -424,65 +424,62 @@ function SettingsPageContent() {
     { id: "company", label: t("company"), icon: Building },
     { id: "security", label: t("security"), icon: Shield },
     { id: "language", label: t("language"), icon: Languages },
-    { id: "theme", label: t("theme"), icon: Paintbrush },
-    { id: "shortcuts", label: t("shortcuts"), icon: Keyboard },
     { id: "billing", label: t("billing"), icon: CreditCard },
     { id: "storage", label: t("storage"), icon: HardDrive },
     { id: "backup", label: t("backup"), icon: HardDrive },
   ];
 
   return (
-    <div className="p-8 h-[calc(100vh-80px)] flex flex-col overflow-hidden">
+    <div className="p-3 sm:p-8 min-h-0 lg:h-[calc(100vh-80px)] flex flex-col lg:overflow-hidden">
 
       <PageTitle
         title={t("settings")}
       />
 
-      <div className="mt-8 flex-1 grid gap-8 lg:grid-cols-[280px_1fr] overflow-hidden min-h-0">
+      <div className="mt-4 sm:mt-8 flex-1 grid gap-4 lg:gap-8 lg:grid-cols-[280px_1fr] lg:overflow-hidden min-h-0">
 
         {/* Sidebar Tabs */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 space-y-1.5 shadow-sm h-fit shrink-0 overflow-y-auto max-h-[70vh]">
+        <div className="flex overflow-x-auto lg:overflow-y-auto whitespace-nowrap lg:whitespace-normal scrollbar-none lg:flex-col gap-2 lg:gap-1.5 pb-2 lg:pb-0 rounded-2xl border border-slate-200/80 bg-white p-3 lg:p-4.5 shadow-sm h-fit shrink-0 w-full lg:w-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${activeTab === tab.id
+                className={`flex items-center gap-2 lg:gap-3 rounded-xl px-3 lg:px-4 py-2.5 text-xs font-bold transition cursor-pointer shrink-0 ${activeTab === tab.id
                     ? "bg-blue-50 text-blue-700 font-extrabold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
-                <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-50" />
+                <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-50 hidden lg:block" />
               </button>
             );
           })}
 
-          <hr className="my-3 border-slate-100" />
+          <hr className="hidden lg:block my-3 border-slate-100" />
 
           <button
             onClick={() => {
               logout();
               window.location.href = "/login";
             }}
-            className="flex w-full items-center gap-4 rounded-xl px-4 py-2.5 text-xs font-bold text-red-650 transition hover:bg-red-50 cursor-pointer"
+            className="flex items-center gap-2 lg:gap-4 rounded-xl px-3 lg:px-4 py-2.5 text-xs font-bold text-red-650 transition hover:bg-rose-50 hover:text-red-700 cursor-pointer shrink-0"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600">
+            <div className="hidden lg:flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600">
               <LogOut className="h-4 w-4" />
             </div>
+            <LogOut className="lg:hidden h-4 w-4 text-red-500" />
             {t("signOut")}
           </button>
         </div>
 
         {/* Content */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 overflow-y-auto h-full shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-8 pb-32 sm:pb-8 overflow-y-auto lg:h-full shadow-sm min-h-[400px]">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
-          {activeTab === "theme" && <ThemeSection />}
           {activeTab === "language" && <LanguageSection />}
-          {activeTab === "shortcuts" && <KeyboardShortcutsSection />}
           {activeTab === "storage" && <StorageSection />}
           {activeTab === "billing" && <BillingSection />}
           {activeTab === "security" && <SecuritySection />}
@@ -824,22 +821,6 @@ function ProfileSection() {
             <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
         </div>
-
-        <div className="sm:col-span-2 mt-4 p-4 rounded-xl border border-blue-100 bg-blue-50/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-bold text-slate-900 text-sm">Auto Remove Background</p>
-              <p className="mt-1 text-xs text-slate-500">Automatically remove image backgrounds when uploading in Collections.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAutoRemoveBg(!autoRemoveBg)}
-              className={`relative h-7 w-12 rounded-full transition ${autoRemoveBg ? "bg-blue-600" : "bg-slate-300"}`}
-            >
-              <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition ${autoRemoveBg ? "left-[22px]" : "left-0.5"}`} />
-            </button>
-          </div>
-        </div>
       </div>
 
       <button
@@ -988,9 +969,9 @@ function BillingSection() {
 
       {/* Current Plan */}
       <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Gem className="h-5 w-5 text-blue-600" />
               <span className="text-lg font-bold text-slate-900">
                 {user?.plan === "Starter" ? "7-Day Free Trial" : `${user?.plan} Plan`}
@@ -1008,7 +989,7 @@ function BillingSection() {
           {user?.plan === "Starter" && (
             <Link
               href="/pricing"
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/10"
+              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/10 w-full sm:w-auto text-center shrink-0"
             >
               Upgrade to Pro
             </Link>
@@ -1528,62 +1509,64 @@ function CompanySection() {
         </div>
       )}
 
-      {/* Company Logo Uploader */}
-      <div className="flex items-center gap-6">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleLogoChange}
-          accept="image/*"
-          className="hidden"
-        />
-
-        <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-inner text-slate-400">
-          {logo ? (
-            <img src={logo} alt="Company Logo" className="h-full w-full object-cover" />
-          ) : (
-            <Building className="h-10 w-10 text-slate-400" />
-          )}
+      {/* Company Logo & QR Code Uploader */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        {/* Logo block */}
+        <div className="flex items-center gap-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleLogoChange}
+            accept="image/*"
+            className="hidden"
+          />
+          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-inner text-slate-400 shrink-0">
+            {logo ? (
+              <img src={logo} alt="Company Logo" className="h-full w-full object-cover" />
+            ) : (
+              <Building className="h-10 w-10 text-slate-400" />
+            )}
+          </div>
+          <div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95 whitespace-nowrap"
+            >
+              Upload Company Logo
+            </button>
+            <p className="mt-1 text-[10px] text-slate-400 font-semibold">
+              Square PNG or JPG. Max 2MB
+            </p>
+          </div>
         </div>
 
-        <div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95"
-          >
-            Upload Company Logo
-          </button>
-          <p className="mt-2 text-xs text-slate-400">
-            Square PNG or JPG. Max 2MB
-          </p>
-        </div>
-
-        <input
-          type="file"
-          ref={qrInputRef}
-          onChange={handleQrCodeChange}
-          accept="image/*"
-          className="hidden"
-        />
-
-        <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-inner text-slate-400 ml-6">
-          {qrCode ? (
-            <img src={qrCode} alt="Custom QR Code" className="h-full w-full object-cover" />
-          ) : (
-            <QrCode className="h-10 w-10 text-slate-400" />
-          )}
-        </div>
-
-        <div>
-          <button
-            onClick={() => qrInputRef.current?.click()}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95"
-          >
-            Upload Custom QR
-          </button>
-          <p className="mt-2 text-xs text-slate-400">
-            Square PNG or JPG. Max 2MB
-          </p>
+        {/* QR block */}
+        <div className="flex items-center gap-4">
+          <input
+            type="file"
+            ref={qrInputRef}
+            onChange={handleQrCodeChange}
+            accept="image/*"
+            className="hidden"
+          />
+          <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-inner text-slate-400 shrink-0">
+            {qrCode ? (
+              <img src={qrCode} alt="Custom QR Code" className="h-full w-full object-cover" />
+            ) : (
+              <QrCode className="h-10 w-10 text-slate-400" />
+            )}
+          </div>
+          <div>
+            <button
+              onClick={() => qrInputRef.current?.click()}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm active:scale-95 whitespace-nowrap"
+            >
+              Upload Custom QR
+            </button>
+            <p className="mt-1 text-[10px] text-slate-400 font-semibold">
+              Square PNG or JPG. Max 2MB
+            </p>
+          </div>
         </div>
       </div>
 
@@ -2450,7 +2433,7 @@ function ThemeSection() {
       <div className="space-y-6">
         <div>
           <label className="mb-3 block text-sm font-bold text-slate-700">{t("themeMode")}</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { id: "light", label: t("lightMode"), desc: lang === "gu" ? "પ્રકાશિત શૈલી" : lang === "hi" ? "प्रकाशित शैली" : "Classic bright appearance" },
               { id: "dark", label: t("darkMode"), desc: lang === "gu" ? "આંખો માટે અનુકૂળ" : lang === "hi" ? "आंखों के लिए अनुकूल" : "Easy on eyes in dark rooms" },
@@ -2645,8 +2628,8 @@ function KeyboardShortcutsSection() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
+      <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto shadow-sm">
+        <table className="w-full min-w-[500px] sm:min-w-0 text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black tracking-wider text-slate-500 uppercase">
               <th className="py-3 px-5">{t("shortcutHeader")}</th>
