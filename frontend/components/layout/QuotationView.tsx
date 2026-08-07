@@ -388,6 +388,9 @@ export default function QuotationView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
+  const [zoomLevel, setZoomLevel] = useState(2.0);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
+  const scannerRef = useRef<any>(null);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -573,12 +576,17 @@ export default function QuotationView() {
             activeCamera = deviceList[index].id;
           }
 
+          scannerRef.current = scannerInstance;
+
           await scannerInstance.start(
             activeCamera,
             {
               fps: 30, // Max frame rate for speed
               qrbox: { width: 300, height: 120 }, // Wider and thinner box for physical labels
               aspectRatio: 1.777778, // HD 16:9 aspect ratio
+              experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true // Enforce native Chrome/Safari hardware-accelerated bar code detection
+              },
               videoConstraints: {
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
@@ -599,6 +607,25 @@ export default function QuotationView() {
               // Standard scanning noise, ignore
             }
           );
+
+          // Get capabilities and set zoom limits
+          try {
+            const capabilities = scannerInstance.getRunningTrackCapabilities();
+            if (capabilities.zoom) {
+              setZoomRange({
+                min: capabilities.zoom.min || 1,
+                max: capabilities.zoom.max || 4
+              });
+              // Set default zoom to 2.0x to magnify the thin barcode lines
+              const defaultZoom = Math.min(2.0, capabilities.zoom.max || 1);
+              setZoomLevel(defaultZoom);
+              await scannerInstance.applyVideoConstraints({
+                advanced: [{ zoom: defaultZoom }]
+              });
+            }
+          } catch (e) {
+            console.warn("Zoom capabilities not supported on this device:", e);
+          }
         } catch (err) {
           console.error("Failed to start Html5Qrcode:", err);
         }
@@ -3455,12 +3482,43 @@ export default function QuotationView() {
               {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the box to scan"}
             </p>
             
-            <div 
-              id="camera-scanner-reader" 
-              className="w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200"
-              style={{ minHeight: "260px" }}
-            />
+            {/* Camera scanner container with red laser line overlay */}
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+              <div 
+                id="camera-scanner-reader" 
+                className="w-full"
+                style={{ minHeight: "260px" }}
+              />
+              {/* Laser line guide */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse pointer-events-none z-10" />
+            </div>
             
+            {/* Zoom Slider Control (only show if zoom is supported on device) */}
+            {zoomRange && zoomRange.max > zoomRange.min && (
+              <div className="w-full space-y-1.5 px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  <span>🔍 {lang === "gu" ? "ઝૂમ (નજીક કરવા માટે સ્લાઇડ કરો)" : "Zoom (Slide to focus)"}</span>
+                  <span className="text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">{zoomLevel.toFixed(1)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min={zoomRange.min}
+                  max={zoomRange.max}
+                  step={0.1}
+                  value={zoomLevel}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setZoomLevel(val);
+                    if (scannerRef.current) {
+                      scannerRef.current.applyVideoConstraints({
+                        advanced: [{ zoom: val }]
+                      }).catch((err: any) => console.warn("Failed to apply zoom:", err));
+                    }
+                  }}
+                  className="w-full accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+            )}
 
 
             <button
