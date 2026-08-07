@@ -586,8 +586,8 @@ export default function StockBookPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
       {/* Static Toolbar Header (Warehouse style) */}
-      <div className="shrink-0 px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="shrink-0 px-3 sm:px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
             {/* Search Input */}
@@ -606,108 +606,155 @@ export default function StockBookPage() {
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner w-full sm:w-auto">
               <button
                 onClick={() => setStatusFilter("all")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer text-center ${
                   statusFilter === "all"
                     ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {t("allProducts")}
+                {lang === "gu" ? "બધા" : "All"}
               </button>
               <button
                 onClick={() => setStatusFilter("in_stock")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer text-center ${
                   statusFilter === "in_stock"
                     ? "bg-white text-emerald-700 shadow-sm border border-slate-200/40"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {t("inStock")}
+                {lang === "gu" ? "સ્ટોક" : "In Stock"}
               </button>
               <button
                 onClick={() => setStatusFilter("low_stock")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer text-center ${
                   statusFilter === "low_stock"
                     ? "bg-white text-amber-700 shadow-sm border border-slate-200/40"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {t("lowStock")}
+                {lang === "gu" ? "ઓછો" : "Low"}
               </button>
               <button
                 onClick={() => setStatusFilter("out_of_stock")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer text-center ${
                   statusFilter === "out_of_stock"
                     ? "bg-white text-red-700 shadow-sm border border-slate-200/40"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {t("outOfStock")}
+                {lang === "gu" ? "ખાલી" : "Out"}
               </button>
             </div>
           </div>
-
-          {/* Action Button */}
-          <button
-            onClick={refreshData}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-655 transition shadow-sm active:scale-95 shrink-0 cursor-pointer"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
         </div>
       </div>
 
       {/* Scrollable Body */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 px-3 py-3 sm:px-8 sm:py-6">
         <div className="space-y-6">
           {/* Stats Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-6">
             {/* Total Stock cartons */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 items-center justify-center text-blue-600 shrink-0">
                 <Layers className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("stockAvailable")}</p>
-                <p className="text-xl font-black text-slate-800 mt-1">{totalStockCartons.toLocaleString()} <span className="text-xs font-bold text-slate-400">Cartons</span></p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">{totalProducts} active products</p>
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "સ્ટોક" : "Stock"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  {t("stockAvailable")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                  {totalStockCartons} <span className="text-[8px] font-bold text-slate-400">Ctn</span>
+                </p>
+                <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
+                  {totalStockCartons.toLocaleString()} <span className="text-xs font-bold text-slate-400">Cartons</span>
+                </p>
+                
+                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                  {totalProducts} active products
+                </p>
               </div>
             </div>
 
             {/* Total Stock Value */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 items-center justify-center text-emerald-600 shrink-0">
                 <TrendingUp className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("totalStockVal")}</p>
-                <p className="text-xl font-black text-slate-800 mt-1">₹{totalStockVal.toLocaleString("en-IN")}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">estimated valuation</p>
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "કિંમત" : "Value"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  {t("totalStockVal")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-850 mt-0.5 truncate">
+                  ₹{totalStockVal >= 100000 ? (totalStockVal / 1000).toFixed(0) + 'k' : totalStockVal.toLocaleString()}
+                </p>
+                <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
+                  ₹{totalStockVal.toLocaleString("en-IN")}
+                </p>
+                
+                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                  estimated valuation
+                </p>
               </div>
             </div>
 
             {/* Low Stock count */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 items-center justify-center text-amber-600 shrink-0">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("lowStockCount")}</p>
-                <p className="text-xl font-black text-amber-600 mt-1">{lowStockCount}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">need replenishment soon</p>
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "ઓછો" : "Low"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  {t("lowStockCount")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-amber-600 mt-0.5 truncate">
+                  {lowStockCount}
+                </p>
+                <p className="hidden sm:block text-xl font-black text-amber-650 mt-1">
+                  {lowStockCount}
+                </p>
+                
+                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                  need replenishment
+                </p>
               </div>
             </div>
 
             {/* Out of stock count */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-red-50 border border-red-100 items-center justify-center text-red-600 shrink-0">
                 <Inbox className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t("outOfStockCount")}</p>
-                <p className="text-xl font-black text-red-600 mt-1">{outOfStockCount}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">zero inventory available</p>
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "ખાલી" : "Out"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  {t("outOfStockCount")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-red-600 mt-0.5 truncate">
+                  {outOfStockCount}
+                </p>
+                <p className="hidden sm:block text-xl font-black text-red-650 mt-1">
+                  {outOfStockCount}
+                </p>
+                
+                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                  zero inventory
+                </p>
               </div>
             </div>
           </div>
@@ -723,7 +770,7 @@ export default function StockBookPage() {
                 </div>
               ) : (
                 <>
-                  <table className="w-full text-left border-collapse">
+                  <table className="hidden sm:table w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-100">
                         <th className="py-3 px-6 text-center w-16">Photo</th>
@@ -859,10 +906,129 @@ export default function StockBookPage() {
                     </tbody>
                   </table>
 
+                  {/* Mobile Cards List */}
+                  <div className="block sm:hidden divide-y divide-slate-100">
+                    {paginatedProducts.map(p => {
+                      const isAdjustLoading = actionLoading[p.id] || false;
+                      return (
+                        <div key={p.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/40 transition">
+                          {/* Top row: Photo + Product Info */}
+                          <div className="flex gap-3">
+                            {/* Photo */}
+                            <div className="h-16 w-16 rounded-xl bg-slate-50 border border-slate-150 overflow-hidden flex items-center justify-center p-1.5 relative shrink-0 shadow-sm">
+                              {p.photoUrl ? (
+                                <img
+                                  src={p.photoUrl}
+                                  alt=""
+                                  className="h-full w-full object-contain"
+                                />
+                              ) : (
+                                <ImageIcon className="h-6 w-6 text-slate-355" />
+                              )}
+                            </div>
+
+                            {/* Product Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-extrabold text-slate-900 text-sm leading-tight truncate">{p.name}</p>
+                              <p className="text-[10px] text-slate-405 mt-0.5 font-bold">Code: {p.id}</p>
+                              
+                              <div className="flex flex-wrap gap-x-2.5 gap-y-1 mt-1 text-[10px] text-slate-500 font-semibold">
+                                {p.length && (
+                                  <span><span className="text-slate-400">Size:</span> {p.length} cm</span>
+                                )}
+                                {p.color && (
+                                  <span><span className="text-slate-400">Color:</span> {p.color}</span>
+                                )}
+                              </div>
+
+                              {p.collectionName && (
+                                <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-bold border border-slate-200">
+                                  {p.collectionName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Middle row: Stats / Info Grid */}
+                          <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 rounded-xl p-3 border border-slate-100">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Current Stock</p>
+                              <p className="font-black text-slate-800 text-xs mt-0.5">{p.stock} Cartons</p>
+                              <p className="text-[9px] text-slate-400 font-bold">{(p.stock * p.cartonQty).toLocaleString()} {p.unit_type || "pcs"} total</p>
+                              
+                              <div className="mt-1">
+                                {p.stock <= 0 ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-red-50 text-red-700 border border-red-200">
+                                    Out of Stock
+                                  </span>
+                                ) : p.stock <= 5 ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                                    Low Stock
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Packing / Rate</p>
+                              <p className="font-extrabold text-slate-700 text-xs mt-0.5">{p.cartonQty} pcs / box</p>
+                              <p className="text-[9px] text-slate-400 font-bold mt-0.5">Rate: ₹{p.rate}</p>
+                              
+                              <div className="mt-1.5">
+                                {p.warehouse ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-50/50 text-blue-755 border border-blue-100 text-[9px] font-bold">
+                                    {p.warehouse.replace(/-upper/g, " (U)").replace(/-lower/g, " (L)")}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-350 text-[9px] italic">Not located</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bottom row: Quick Adjustment */}
+                          <div className="flex items-center gap-3 mt-1 pb-1">
+                            <div className="w-24 shrink-0">
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Qty"
+                                value={adjustQty[p.id] || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setAdjustQty(prev => ({ ...prev, [p.id]: val }));
+                                }}
+                                className="w-full px-2 py-1.5 border border-slate-200 rounded-xl text-xs font-bold text-center text-slate-800 focus:outline-none focus:border-blue-500 bg-white shadow-sm"
+                              />
+                            </div>
+
+                            <div className="flex-1 flex gap-2">
+                              <button
+                                onClick={() => handleAdjustStock(p, "add")}
+                                disabled={isAdjustLoading || !adjustQty[p.id]}
+                                className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 active:scale-95 transition shadow-sm cursor-pointer select-none"
+                              >
+                                + Add
+                              </button>
+
+                              <button
+                                onClick={() => handleAdjustStock(p, "remove")}
+                                disabled={isAdjustLoading || !adjustQty[p.id]}
+                                className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-[11px] flex items-center justify-center gap-0.5 active:scale-95 transition shadow-sm cursor-pointer select-none"
+                              >
+                                - Deduct
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {/* Pagination Footer Controls */}
                   {filteredProducts.length > 0 && (
-                    <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-6 py-4 backdrop-blur-sm">
-                      <p className="text-xs text-slate-500 font-semibold select-none">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 justify-between border-t border-slate-100 bg-slate-50/60 px-6 py-4 backdrop-blur-sm">
+                      <p className="text-xs text-slate-500 font-semibold select-none text-center sm:text-left">
                         Showing <span className="text-slate-800 font-extrabold">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
                         <span className="text-slate-800 font-extrabold">
                           {Math.min(currentPage * itemsPerPage, filteredProducts.length)}

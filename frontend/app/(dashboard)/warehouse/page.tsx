@@ -689,9 +689,9 @@ export default function WarehousePage() {
     : [];
 
   return (
-    <div className="px-2.5 sm:px-8 pt-2.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
+    <div className="px-2.5 sm:px-8 pt-1.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
       {/* Static Toolbar Header */}
-      <div className="shrink-0 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-3 w-full">
+      <div className="shrink-0 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-1.5 sm:mb-3 w-full">
         {/* Search Inputs Row */}
         <div className="flex gap-2 w-full lg:max-w-3xl">
           {/* Shelf Rows Search */}
@@ -739,39 +739,57 @@ export default function WarehousePage() {
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 pt-6 pb-24">
+      <div className="flex-1 overflow-y-auto min-h-0 pt-1 sm:pt-6 pb-24">
         <div className="space-y-6">
 
-        {/* Stats Section Removed on Mobile */}
-
-        {/* Desktop View stats section (hidden on mobile) */}
+        {/* Stats Section (Visible on both desktop and mobile in 4-column layout) */}
         {globalSearchQuery.trim() === "" && (
-          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-6">
+            {/* Total Rows & Slots */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 items-center justify-center text-blue-600 shrink-0">
                 <Layers className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("totalRowsSlots")}</p>
-                <h3 className="text-xl font-black text-slate-800 mt-0.5">
-                  {totalRows} {lang === "gu" ? "હરોળ" : lang === "hi" ? "पंक्तियाँ" : "Rows"} / {totalSlots} {lang === "gu" ? "સ્લોટ્સ" : lang === "hi" ? "સ્લૉટ" : "Slots"}
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "હરોળ/સ્લોટ" : "Rows/Slots"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("totalRowsSlots")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                  {totalRows}R / {totalSlots}S
+                </p>
+                <h3 className="hidden sm:block text-xl font-black text-slate-800 mt-0.5">
+                  {totalRows} {lang === "gu" ? "હરોળ" : lang === "hi" ? "पंक्तियाँ" : "Rows"} / {totalSlots} {lang === "gu" ? "સ્લોટ્સ" : lang === "hi" ? "સ્લોટ" : "Slots"}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            {/* Space Occupancy */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 items-center justify-center text-emerald-600 shrink-0">
                 <PieChart className="h-6 w-6" />
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("spaceOccupancy")}</p>
-                <div className="flex items-center justify-between mt-0.5">
+              <div className="min-w-0 w-full text-center sm:text-left flex-1">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "ભરાયેલ" : "Occupied"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("spaceOccupancy")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                  {occupancyPercentage}%
+                </p>
+                <div className="hidden sm:flex items-center justify-between mt-0.5">
                   <h3 className="text-xl font-black text-slate-800">{occupancyPercentage}%</h3>
                   <span className="text-[10px] text-slate-400 font-semibold">
                     {t("occupiedOfTotal").replace("{occupied}", occupiedSlots.toString()).replace("{total}", totalSlots.toString())}
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                <div className="hidden sm:block w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${occupancyPercentage}%` }}
@@ -780,25 +798,45 @@ export default function WarehousePage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600">
+            {/* Products Assigned */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-violet-50 border border-violet-100 items-center justify-center text-violet-600 shrink-0">
                 <Package className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("productsAssigned")}</p>
-                <h3 className="text-xl font-black text-slate-800 mt-0.5">
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "હાજર" : "Stocked"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("productsAssigned")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                  {totalAssignmentsCount}
+                </p>
+                <h3 className="hidden sm:block text-xl font-black text-slate-800 mt-0.5">
                   {t("itemsStocked").replace("{count}", totalAssignmentsCount.toString())}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center gap-5">
-              <div className="h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+            {/* Available Slots */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 items-center justify-center text-amber-600 shrink-0">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("availableSlots")}</p>
-                <h3 className="text-xl font-black text-slate-800 mt-0.5">
+              <div className="min-w-0 w-full text-center sm:text-left">
+                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                  {lang === "gu" ? "ખાલી" : "Empty"}
+                </p>
+                <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t("availableSlots")}
+                </p>
+                
+                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                  {totalSlots - occupiedSlots}
+                </p>
+                <h3 className="hidden sm:block text-xl font-black text-slate-800 mt-0.5">
                   {t("emptySlots").replace("{count}", (totalSlots - occupiedSlots).toString())}
                 </h3>
               </div>

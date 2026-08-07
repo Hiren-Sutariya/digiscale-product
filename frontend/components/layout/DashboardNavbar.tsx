@@ -104,6 +104,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 const navLinks = [
   { href: "/projects", label: "Collections", icon: FolderOpen },
   { href: "/warehouse", label: "Warehouse", icon: Warehouse },
+  { href: "/stock-book", label: "stock book", icon: ClipboardList },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/quotation", label: "Quotation", icon: FileText },
 ];
@@ -251,7 +252,7 @@ export default function DashboardNavbar() {
             <>
 
 
-              {/* Mobile-only Camera Scanner button next to Profile on all pages */}
+              {/* Camera Scanner button next to Profile on all pages */}
               <button 
                 onClick={() => {
                   if (pathname !== "/quotation") {
@@ -260,7 +261,7 @@ export default function DashboardNavbar() {
                     window.dispatchEvent(new CustomEvent("open-mobile-camera-scanner"));
                   }
                 }}
-                className="lg:hidden flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50/70 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm shrink-0"
+                className="flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50/70 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm shrink-0"
                 title="Open Camera Scanner"
               >
                 <Camera className="h-[18px] w-[18px]" />
@@ -420,7 +421,7 @@ export default function DashboardNavbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 active:scale-90 cursor-pointer ${
+                className={`relative flex flex-col items-center gap-0.5 px-1.5 sm:px-3 py-1 rounded-xl transition-all duration-200 active:scale-90 cursor-pointer ${
                   isActive ? "text-blue-600 scale-105" : "text-slate-500 hover:text-slate-800"
                 }`}
               >

@@ -130,6 +130,7 @@ import {
   Phone,
   Copy,
   Columns,
+  MoreVertical,
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
@@ -214,6 +215,8 @@ function CollectionsPageContent() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCopyDropdownOpen, setIsCopyDropdownOpen] = useState(false);
+  const [isMobileMoreActionsOpen, setIsMobileMoreActionsOpen] = useState(false);
+  const [isPrintingLabels, setIsPrintingLabels] = useState(false);
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -1200,6 +1203,7 @@ ${rows}
       setActiveLabelProducts(markupOrProducts);
     }
     setActiveLabelMarkup(markup);
+    setIsPrintingLabels(true);
     const originalTitle = document.title;
     if (selectedCol?.name) {
       document.title = `${selectedCol.name}-Labels`;
@@ -1212,6 +1216,7 @@ ${rows}
         document.title = originalTitle;
         setActiveLabelMarkup(null);
         setActiveLabelProducts(null);
+        setIsPrintingLabels(false);
       }, 300);
     }, 100);
   };
@@ -2522,11 +2527,14 @@ ${rows}
                       title="Delete Selected"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline ml-1">Delete Selected</span> ({selectedProductIds.size})
+                      <span className="ml-1">
+                        <span className="hidden sm:inline">Delete Selected</span>
+                        <span className="sm:hidden">Delete</span>
+                      </span> ({selectedProductIds.size})
                     </button>
 
                     {isCodeCollection(selectedCol) && (
-                      <div className="relative shrink-0">
+                      <div className="hidden sm:block relative shrink-0">
                         <button
                           onClick={() => setIsCopyDropdownOpen(!isCopyDropdownOpen)}
                           className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition active:scale-95 cursor-pointer shrink-0"
@@ -2582,7 +2590,10 @@ ${rows}
                     className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3 py-2 text-xs font-bold text-white transition active:scale-95 shrink-0"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>Add Product</span>
+                    <span>
+                      <span className="hidden sm:inline">Add Product</span>
+                      <span className="sm:hidden">Add</span>
+                    </span>
                   </button>
                 )}
 
@@ -2601,7 +2612,7 @@ ${rows}
                     setWholesalePrefix("A9");
                     setShowLabelModal(true);
                   }}
-                  className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition active:scale-95 shrink-0"
+                  className="hidden sm:flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition active:scale-95 shrink-0"
                   title="Download Label"
                 >
                   <Tag className="h-3.5 w-3.5" />
@@ -2612,7 +2623,7 @@ ${rows}
                   <>
                     <button
                       onClick={() => excelImportRef.current?.click()}
-                      className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-700 transition active:scale-95 shrink-0"
+                      className="hidden sm:flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-700 transition active:scale-95 shrink-0"
                       title="Import from Excel"
                     >
                       <Download className="h-3.5 w-3.5 rotate-180" />
@@ -2628,7 +2639,7 @@ ${rows}
 
                     <button
                       onClick={downloadExcelTemplate}
-                      className="flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition active:scale-95 shrink-0"
+                      className="hidden sm:flex items-center justify-center p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition active:scale-95 shrink-0"
                       title="Get Template"
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -2636,6 +2647,80 @@ ${rows}
                     </button>
                   </>
                 )}
+
+                {/* Mobile More Actions Dropdown Menu */}
+                <div className="relative sm:hidden shrink-0">
+                  <button
+                    onClick={() => setIsMobileMoreActionsOpen(!isMobileMoreActionsOpen)}
+                    className="flex items-center justify-center p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 active:scale-95 transition shadow-sm cursor-pointer"
+                    title="More Actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+
+                  {isMobileMoreActionsOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsMobileMoreActionsOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-xl flex flex-col gap-0.5">
+                        
+                        {/* Copy To (Only if items selected and code collection) */}
+                        {selectedProductIds.size > 0 && isCodeCollection(selectedCol) && (
+                          <button
+                            onClick={() => {
+                              setIsMobileMoreActionsOpen(false);
+                              setIsCopyDropdownOpen(true);
+                            }}
+                            className="w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition cursor-pointer"
+                          >
+                            <Copy className="h-3.5 w-3.5 text-blue-650" />
+                            <span>Copy to...</span>
+                          </button>
+                        )}
+
+                        {/* Label */}
+                        <button
+                          onClick={() => {
+                            setIsMobileMoreActionsOpen(false);
+                            setLabelMarkupPercent("30");
+                            setWholesalePrefix("A9");
+                            setShowLabelModal(true);
+                          }}
+                          className="w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-650 transition cursor-pointer"
+                        >
+                          <Tag className="h-3.5 w-3.5 text-indigo-650" />
+                          <span>Download Label</span>
+                        </button>
+
+                        {/* Import & Template */}
+                        {isCodeCollection(selectedCol) && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setIsMobileMoreActionsOpen(false);
+                                excelImportRef.current?.click();
+                              }}
+                              className="w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-650 transition cursor-pointer"
+                            >
+                              <Download className="h-3.5 w-3.5 rotate-180 text-emerald-650" />
+                              <span>Import Excel</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setIsMobileMoreActionsOpen(false);
+                                downloadExcelTemplate();
+                              }}
+                              className="w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+                            >
+                              <Download className="h-3.5 w-3.5 text-slate-500" />
+                              <span>Template</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -3867,7 +3952,7 @@ ${rows}
 
       {/* CREATE COLLECTION DIALOG MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">Create New Collection</h3>
@@ -3969,7 +4054,7 @@ ${rows}
 
       {/* RENAME COLLECTION DIALOG MODAL */}
       {renamingCol && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">Rename Collection</h3>
@@ -4638,18 +4723,24 @@ ${rows}
 
             {/* Body */}
             <div className="px-6 py-5 space-y-4">
-              <p className="text-xs text-slate-500 font-medium">
-                Generate and print stickers for products in <span className="font-bold text-slate-800">{selectedCol?.name}</span>.
-                {selectedProductIds.size > 0 ? (
-                  <span className="text-blue-600 font-bold block mt-1">
-                    🎯 Only printing {selectedProductIds.size} selected products.
-                  </span>
-                ) : (
-                  <span className="text-slate-500 font-semibold block mt-1">
-                    📦 Printing all {products.length} products in this collection.
-                  </span>
-                )}
-              </p>
+              {/* Event Markup Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Event Price Markup %
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    value={labelMarkupPercent}
+                    onChange={(e) => setLabelMarkupPercent(e.target.value)}
+                    placeholder="e.g. 30"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
+                </div>
+              </div>
 
               {/* Wholesale Prefix */}
               <div className="space-y-1">
@@ -4673,37 +4764,18 @@ ${rows}
                 <div className="flex gap-3">
                   <label className={`flex-1 flex flex-col items-start gap-1 p-3 border rounded-xl cursor-pointer transition ${labelSize === "50x25" ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
                     <div className="flex items-center gap-2">
-                      <input type="radio" name="labelSize" value="50x25" checked={labelSize === "50x25"} onChange={() => setLabelSize("50x25")} className="text-indigo-600" />
+                      <input type="radio" name="labelSize" value="50x25" checked={labelSize === "50x25"} onChange={() => setLabelSize("50x25")} className="text-indigo-600 cursor-pointer" />
                       <span className="text-xs font-bold text-slate-800">50mm × 25mm</span>
                     </div>
                     <span className="text-[10px] text-indigo-700 font-semibold pl-5">2-Up Roll (Set printer paper to 106mm × 25mm)</span>
                   </label>
                   <label className={`flex-1 flex flex-col items-start gap-1 p-3 border rounded-xl cursor-pointer transition ${labelSize === "50x38" ? "border-indigo-500 bg-indigo-50/50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
                     <div className="flex items-center gap-2">
-                      <input type="radio" name="labelSize" value="50x38" checked={labelSize === "50x38"} onChange={() => setLabelSize("50x38")} className="text-indigo-600" />
+                      <input type="radio" name="labelSize" value="50x38" checked={labelSize === "50x38"} onChange={() => setLabelSize("50x38")} className="text-indigo-600 cursor-pointer" />
                       <span className="text-xs font-bold text-slate-800">50mm × 38mm</span>
                     </div>
                     <span className="text-[10px] text-indigo-700 font-semibold pl-5">1-Up Roll (Set printer paper to 56mm × 38mm)</span>
                   </label>
-                </div>
-              </div>
-
-              {/* Event Markup Input */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Event Price Markup %
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    max="500"
-                    value={labelMarkupPercent}
-                    onChange={(e) => setLabelMarkupPercent(e.target.value)}
-                    placeholder="e.g. 30"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
                 </div>
               </div>
             </div>
@@ -4753,7 +4825,7 @@ ${rows}
               const isLastPage = pageIndex === chunkedPages.length - 1;
 
               return (
-                <div key={pageIndex} className={`collection-pdf-page bg-white flex flex-col ${isLastPage ? "" : "page-break-after-always"}`} style={{ width: '210mm', height: '277mm', padding: '8mm 10mm', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <div key={pageIndex} className={`collection-pdf-page bg-white flex flex-col ${isLastPage ? "" : "page-break-after-always"}`} style={{ width: '210mm', height: '297mm', padding: '12mm 10mm', boxSizing: 'border-box', overflow: 'hidden' }}>
 
                   {/* === HEADER - only on page 1 === */}
                   {isFirstPage && (
@@ -4976,89 +5048,110 @@ ${rows}
       )}
 
       {/* Global CSS for Print Portal */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: ${labelSize === "50x25" ? "106mm 25mm" : "56mm 38mm"};
-            margin: 0 !important;
+      {/* Global CSS for Print Portal */}
+      {isPrintingLabels ? (
+        <style jsx global>{`
+          @media print {
+            @page {
+              size: ${labelSize === "50x25" ? "106mm 25mm" : "56mm 38mm"};
+              margin: 0 !important;
+            }
+            html, body, #__next {
+              background-color: white !important;
+              color: black !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              height: auto !important;
+              min-height: 0 !important;
+              max-height: none !important;
+              overflow: hidden !important;
+              width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            /* Hide everything except the print labels portal */
+            body.is-printing-labels > *:not(.print-labels-portal) {
+              display: none !important;
+            }
+            body.is-printing-labels .print-labels-portal {
+              display: block !important;
+              width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: none !important;
+              background: white !important;
+              height: auto !important;
+              font-size: 0 !important;
+              line-height: 0 !important;
+            }
+            .collection-labels-page {
+              width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
+              height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
+              max-height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
+              box-sizing: border-box !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              margin: 0 !important;
+              font-size: 12px !important;
+              line-height: normal !important;
+            }
+            .collection-labels-page:last-child,
+            .collection-labels-page:last-of-type {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+            }
+            .label-card-item {
+              width: ${labelSize === "50x25" ? "49.5mm" : "52mm"} !important;
+              height: ${labelSize === "50x25" ? "24.5mm" : "36.5mm"} !important;
+              padding: ${labelSize === "50x25" ? "0.8mm 1.2mm" : "1mm 1.5mm"} !important;
+              border: none !important;
+              border-radius: 0 !important;
+              flex-shrink: 0 !important;
+              box-sizing: border-box !important;
+            }
+            .label-card-item * {
+              font-weight: 900 !important;
+              color: #000000 !important;
+            }
+            .page-break-after-always {
+              page-break-after: always !important;
+              break-after: page !important;
+            }
           }
-          html, body, #__next {
-            background-color: white !important;
-            color: black !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            overflow: hidden !important;
-            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+        `}</style>
+      ) : (
+        <style jsx global>{`
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 0 !important;
+            }
+            html, body, #__next {
+              background-color: white !important;
+              color: black !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            /* Hide everything except the print portal */
+            body.is-printing-portal > *:not(.print-portal) {
+              display: none !important;
+            }
+            body.is-printing-portal .print-portal {
+              display: block !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: none !important;
+              background: white !important;
+            }
           }
-          /* Hide everything except the print portal */
-          body.is-printing-portal > *:not(.print-portal) {
-            display: none !important;
-          }
-          body.is-printing-portal .print-portal {
-            display: block !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            background: white !important;
-          }
-          /* Hide everything except the print labels portal */
-          body.is-printing-labels > *:not(.print-labels-portal) {
-            display: none !important;
-          }
-          body.is-printing-labels .print-labels-portal {
-            display: block !important;
-            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            background: white !important;
-            height: auto !important;
-            font-size: 0 !important;
-            line-height: 0 !important;ba
-          }
-          .collection-labels-page {
-            width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
-            height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
-            max-height: ${labelSize === "50x25" ? "25mm" : "38mm"} !important;
-            box-sizing: border-box !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            margin: 0 !important;
-            font-size: 12px !important;
-            line-height: normal !important;
-          }
-          .collection-labels-page:last-child,
-          .collection-labels-page:last-of-type {
-            page-break-after: avoid !important;
-            break-after: avoid !important;
-          }
-          .label-card-item {
-            width: ${labelSize === "50x25" ? "49.5mm" : "52mm"} !important;
-            height: ${labelSize === "50x25" ? "24.5mm" : "36.5mm"} !important;
-            padding: ${labelSize === "50x25" ? "0.8mm 1.2mm" : "1mm 1.5mm"} !important;
-            border: none !important;
-            border-radius: 0 !important;
-            flex-shrink: 0 !important;
-            box-sizing: border-box !important;
-          }
-          .label-card-item * {
-            font-weight: 900 !important;
-            color: #000000 !important;
-          }
-          .page-break-after-always {
-            page-break-after: always !important;
-            break-after: page !important;
-          }
-        }
-      `}</style>
+        `}</style>
+      )}
     </div>
   );
 }

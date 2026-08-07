@@ -132,6 +132,29 @@ interface CompanyInfo {
   termsAndConditions?: string;
 }
 
+const getStatusStyles = (status: string) => {
+  switch (status) {
+    case "dispatch":
+      return {
+        bg: "bg-purple-50 hover:bg-purple-100/80 border-purple-250 text-purple-700",
+        dot: "bg-purple-500",
+        label: "Dispatch",
+      };
+    case "done":
+      return {
+        bg: "bg-emerald-50 hover:bg-emerald-100/80 border-emerald-250 text-emerald-700",
+        dot: "bg-emerald-500",
+        label: "Done",
+      };
+    default: // follow_up
+      return {
+        bg: "bg-amber-50 hover:bg-amber-100/80 border-amber-250 text-amber-700",
+        dot: "bg-amber-500",
+        label: "Follow Up",
+      };
+  }
+};
+
 export default function QuotationView() {
   const [lang, setLang] = useState("en");
 
@@ -381,7 +404,21 @@ export default function QuotationView() {
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [activeSubView, setActiveSubView] = useState<"create" | "history">("create");
-  const [historyTab, setHistoryTab] = useState<"follow_up" | "done">("follow_up");
+  const [historyTab, setHistoryTab] = useState<"follow_up" | "done" | "dispatch">("follow_up");
+  const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".status-dropdown-container")) {
+        setOpenStatusDropdownId(null);
+      }
+    };
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, []);
+
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [selectedQuoteForPreview, setSelectedQuoteForPreview] = useState<any | null>(null);
   const [printQuoteData, setPrintQuoteData] = useState<any | null>(null);
@@ -400,6 +437,7 @@ export default function QuotationView() {
   const scannerRef = useRef<any>(null);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [mobileScale, setMobileScale] = useState(1);
+  const [scaleMarginLeft, setScaleMarginLeft] = useState(0);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -492,12 +530,14 @@ export default function QuotationView() {
       if (parent) {
         const parentWidth = parent.getBoundingClientRect().width || 360;
         const targetWidth = 800; // Target width of the print preview page
-        if (window.innerWidth < 1024) {
-          const scale = Math.min(1, Math.max(0.35, parentWidth / targetWidth));
-          setMobileScale(scale);
-        } else {
-          setMobileScale(1);
-        }
+        const isMobile = window.innerWidth < 1024;
+        const availableWidth = isMobile ? parentWidth : parentWidth - 32;
+        const scale = Math.min(1, Math.max(0.35, availableWidth / targetWidth));
+        setMobileScale(scale);
+        
+        const scaledWidth = targetWidth * scale;
+        const marginLeft = Math.max(0, (parentWidth - scaledWidth) / 2);
+        setScaleMarginLeft(marginLeft);
       }
     };
 
@@ -728,7 +768,7 @@ export default function QuotationView() {
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, items').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -791,6 +831,13 @@ export default function QuotationView() {
           const parsedQuotes = quotesData.map((q: any) => {
             let addr = q.client_address || "";
             let validDate = "";
+            let orderStatus = q.is_order_done ? "done" : "follow_up";
+            
+            if (addr.includes(" ||status:")) {
+              const parts = addr.split(" ||status:");
+              addr = parts[0];
+              orderStatus = parts[1];
+            }
             if (addr.includes(" ||validUntil:")) {
               const parts = addr.split(" ||validUntil:");
               addr = parts[0];
@@ -803,6 +850,7 @@ export default function QuotationView() {
               clientCompany: q.client_company,
               clientAddress: addr,
               validUntil: validDate,
+              orderStatus: orderStatus,
               quoteDate: q.quote_date,
               taxInput: q.tax_input || "",
               cashAmount: q.cash_amount?.toString() || "",
@@ -1097,27 +1145,50 @@ export default function QuotationView() {
     setActiveSubView("create");
   };
 
-  const handleToggleOrderStatus = async (id: string, currentStatus: boolean) => {
-    const actionStr = currentStatus ? "Follow Up" : "Done";
+  const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
+    const quote = savedQuotes.find(q => q.id === id);
+    if (!quote) return;
+
+    const oldStatus = quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up");
+    if (oldStatus === newStatus) return;
+
+    // Stock is deducted if status is 'done' or 'dispatch'
+    const wasDeducted = (oldStatus === "done" || oldStatus === "dispatch");
+    const shouldBeDeducted = (newStatus === "done" || newStatus === "dispatch");
+
+    let actionStr = "";
+    if (newStatus === "done") actionStr = "Done";
+    else if (newStatus === "dispatch") actionStr = "Dispatch";
+    else actionStr = "Follow Up";
+
     setConfirmModal({
       isOpen: true,
-      title: `Mark as ${actionStr}`,
-      message: `Are you sure you want to mark this order as ${actionStr}?`,
-      confirmText: actionStr,
+      title: `Change Status to ${actionStr}`,
+      message: `Are you sure you want to change this order status to ${actionStr}?`,
+      confirmText: "Change",
       isDanger: false,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
+          // Parse client address and inject/update status metadata
+          let originalAddr = quote.clientAddress || "";
+          let validPart = quote.validUntil ? ` ||validUntil:${quote.validUntil}` : "";
+          let newClientAddressWithStatus = originalAddr + validPart + ` ||status:${newStatus}`;
+
           const { error } = await supabase
             .from('quotations')
-            .update({ is_order_done: !currentStatus })
+            .update({
+              is_order_done: shouldBeDeducted, // Keep is_order_done aligned for legacy and DB constraint
+              client_address: newClientAddressWithStatus
+            })
             .eq('id', id);
 
           if (error) throw error;
 
-          // Adjust stock for each item in the quotation
-          const quote = savedQuotes.find(q => q.id === id);
-          if (quote && quote.items && quote.items.length > 0) {
+          // Adjust stocks if we transitioned across the deduction boundary
+          if (wasDeducted !== shouldBeDeducted && quote.items && quote.items.length > 0) {
+            const isRevert = wasDeducted && !shouldBeDeducted; // transitioning back to follow_up (revert stock)
+            
             await Promise.all(quote.items.map(async (item: any) => {
               // 1. Fetch current stock from Supabase
               const { data: prodData } = await supabase
@@ -1128,7 +1199,9 @@ export default function QuotationView() {
               
               const currentStock = prodData ? prodData.stock : 0;
               const productName = prodData ? prodData.name : item.name;
-              const change = currentStatus ? item.cartons : -item.cartons; // Revert (+) or Deduct (-)
+              
+              // If it's a revert, we add back (+ cartons). If it's a new deduction, we subtract (- cartons).
+              const change = isRevert ? item.cartons : -item.cartons;
               const newStock = currentStock + change;
 
               // 2. Update stock in DB
@@ -1143,10 +1216,10 @@ export default function QuotationView() {
                 product_id: item.id,
                 product_name: productName,
                 quantity_changed: change,
-                transaction_type: currentStatus ? 'return' : 'sale',
+                transaction_type: isRevert ? 'return' : 'sale',
                 reference_id: id,
                 reference_type: 'quotation',
-                description: currentStatus 
+                description: isRevert 
                   ? `Reverted/Returned from Bill #${quote.quoteNumber}` 
                   : `Sold via Bill #${quote.quoteNumber}`
               }]);
@@ -1156,15 +1229,18 @@ export default function QuotationView() {
             setProducts(prev => prev.map(p => {
               const item = quote.items.find((i: any) => i.id === p.id);
               if (item) {
-                const change = currentStatus ? item.cartons : -item.cartons;
+                const change = isRevert ? item.cartons : -item.cartons;
                 return { ...p, stock: p.stock + change };
               }
               return p;
             }));
           }
 
-          setSavedQuotes(savedQuotes.map(q => 
-            q.id === id ? { ...q, isOrderDone: !currentStatus } : q
+          // 5. Update local savedQuotes state
+          setSavedQuotes(prev => prev.map(q => 
+            q.id === id 
+              ? { ...q, orderStatus: newStatus, isOrderDone: shouldBeDeducted, clientAddress: originalAddr } 
+              : q
           ));
         } catch (err) {
           console.error("Failed to update order status:", err);
@@ -1727,6 +1803,16 @@ export default function QuotationView() {
             >
               Done
             </button>
+            <button
+              onClick={() => setHistoryTab("dispatch")}
+              className={`px-6 py-2 text-xs font-bold rounded-lg transition ${
+                historyTab === "dispatch"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+              }`}
+            >
+              Dispatch
+            </button>
           </div>
 
           <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
@@ -1760,7 +1846,10 @@ export default function QuotationView() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {savedQuotes
-                      .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
+                      .filter((q) => {
+                        const status = q.orderStatus || (q.isOrderDone ? "done" : "follow_up");
+                        return status === historyTab;
+                      })
                       .filter((q) => {
                         const qNum = (q.quoteNumber || "").toLowerCase();
                         const client = (q.clientName || "").toLowerCase();
@@ -1789,14 +1878,51 @@ export default function QuotationView() {
                         <td className="py-4 px-4 text-right font-black text-slate-900">
                           ₹{(quote.total || 0).toLocaleString("en-IN")}
                         </td>
-                        <td className="py-4 px-4 text-center">
-                          <button
-                            onClick={() => handleToggleOrderStatus(quote.id, quote.isOrderDone)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 mx-auto rounded-lg text-[10px] font-black tracking-wide uppercase transition active:scale-95 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                          >
-                            {quote.isOrderDone ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <Clock className="h-3 w-3 text-amber-500" />}
-                            {quote.isOrderDone ? "Done" : "Follow Up"}
-                          </button>
+                        <td className="py-4 px-4 text-center overflow-visible">
+                          <div className="relative status-dropdown-container inline-block text-left">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenStatusDropdownId(openStatusDropdownId === quote.id ? null : quote.id);
+                              }}
+                              className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition border shadow-sm cursor-pointer select-none min-w-[110px] mx-auto ${
+                                getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).bg
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).dot
+                              }`} />
+                              <span>{getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).label}</span>
+                              <ChevronDown className="h-3 w-3 opacity-65 ml-0.5" />
+                            </button>
+
+                            {openStatusDropdownId === quote.id && (
+                              <div className="absolute right-0 z-[100] mt-1.5 w-36 rounded-xl border border-slate-205 bg-white p-1.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-100">
+                                {[
+                                  { id: "follow_up", label: "Follow Up", color: "text-amber-700", bg: "hover:bg-amber-50/60" },
+                                  { id: "done", label: "Done", color: "text-emerald-700", bg: "hover:bg-emerald-50/60" },
+                                  { id: "dispatch", label: "Dispatch", color: "text-purple-700", bg: "hover:bg-purple-50/60" }
+                                ].map((opt) => {
+                                  const isSelected = (quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")) === opt.id;
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      onClick={() => {
+                                        handleUpdateOrderStatus(quote.id, opt.id);
+                                        setOpenStatusDropdownId(null);
+                                      }}
+                                      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[10px] font-bold transition-all cursor-pointer ${opt.bg} ${
+                                        isSelected ? "bg-slate-50 font-extrabold" : "text-slate-655"
+                                      }`}
+                                    >
+                                      <span className={opt.color}>{opt.label}</span>
+                                      {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 stroke-[3px]" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-center gap-2">
@@ -1832,7 +1958,10 @@ export default function QuotationView() {
               {/* Mobile List Card View */}
               <div className="md:hidden space-y-4">
                 {savedQuotes
-                  .filter((q) => historyTab === "done" ? q.isOrderDone : !q.isOrderDone)
+                  .filter((q) => {
+                    const status = q.orderStatus || (q.isOrderDone ? "done" : "follow_up");
+                    return status === historyTab;
+                  })
                   .filter((q) => {
                     const qNum = (q.quoteNumber || "").toLowerCase();
                     const client = (q.clientName || "").toLowerCase();
@@ -1874,13 +2003,50 @@ export default function QuotationView() {
 
                       {/* Bottom Actions Row */}
                       <div className="border-t border-slate-200/60 pt-3 flex items-center justify-between gap-3">
-                        <button
-                          onClick={() => handleToggleOrderStatus(quote.id, quote.isOrderDone)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition active:scale-95 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-sm"
-                        >
-                          {quote.isOrderDone ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5 text-amber-500" />}
-                          {quote.isOrderDone ? "Done" : "Follow Up"}
-                        </button>
+                        <div className="relative status-dropdown-container inline-block text-left overflow-visible">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenStatusDropdownId(openStatusDropdownId === quote.id ? null : quote.id);
+                            }}
+                            className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition border shadow-sm cursor-pointer select-none min-w-[110px] ${
+                              getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).bg
+                            }`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                              getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).dot
+                            }`} />
+                            <span>{getStatusStyles(quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")).label}</span>
+                            <ChevronDown className="h-3 w-3 opacity-65 ml-0.5" />
+                          </button>
+
+                          {openStatusDropdownId === quote.id && (
+                            <div className="absolute left-0 z-[100] mt-1.5 w-36 rounded-xl border border-slate-205 bg-white p-1.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-100">
+                              {[
+                                { id: "follow_up", label: "Follow Up", color: "text-amber-700", bg: "hover:bg-amber-50/60" },
+                                { id: "done", label: "Done", color: "text-emerald-700", bg: "hover:bg-emerald-50/60" },
+                                { id: "dispatch", label: "Dispatch", color: "text-purple-700", bg: "hover:bg-purple-50/60" }
+                              ].map((opt) => {
+                                const isSelected = (quote.orderStatus || (quote.isOrderDone ? "done" : "follow_up")) === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    onClick={() => {
+                                      handleUpdateOrderStatus(quote.id, opt.id);
+                                      setOpenStatusDropdownId(null);
+                                    }}
+                                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[10px] font-bold transition-all cursor-pointer ${opt.bg} ${
+                                      isSelected ? "bg-slate-50 font-extrabold" : "text-slate-655"
+                                    }`}
+                                  >
+                                    <span className={opt.color}>{opt.label}</span>
+                                    {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 stroke-[3px]" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
 
                         <div className="flex gap-2">
                           <button
@@ -2274,23 +2440,10 @@ export default function QuotationView() {
           {/* Section 3: Global Search and Select Products (Rounded Search Bar) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="mb-2">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-450 block">
                   {t("searchAddProducts")}
                 </h3>
-                
-                {/* Camera Scanner Toggle Button - Hidden on mobile view */}
-                <button
-                  type="button"
-                  onClick={() => setShowCameraScanner(true)}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-[10px] font-black tracking-wider uppercase transition shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
-                  </span>
-                  📷 {lang === "gu" ? "મોબાઈલ કેમેરા સ્કેન" : "Camera Scanner"}
-                </button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3">
@@ -2508,21 +2661,24 @@ export default function QuotationView() {
 
             return (
               <div 
-                className="w-full flex justify-center overflow-hidden no-print"
-                style={typeof window !== "undefined" && window.innerWidth < 1024 ? {
+                className={`w-full flex overflow-hidden no-print ${mobileScale < 1 ? 'justify-start' : 'justify-center'}`}
+                style={mobileScale < 1 ? {
                   height: `${(1123 * chunkedPages.length + 32 * (chunkedPages.length - 1)) * mobileScale + 40}px`
                 } : {}}
               >
                 <div 
                   id="print-area" 
-                  className="flex flex-col gap-8 mx-auto transition-transform duration-100"
-                  style={typeof window !== "undefined" && window.innerWidth < 1024 ? {
+                  className="flex flex-col gap-8 transition-transform duration-100 shrink-0"
+                  style={mobileScale < 1 ? {
                     transform: `scale(${mobileScale})`,
-                    transformOrigin: "top center",
-                    width: "800px"
+                    transformOrigin: "top left",
+                    width: "800px",
+                    marginLeft: `${scaleMarginLeft}px`
                   } : {
                     width: "100%",
-                    maxWidth: "800px"
+                    maxWidth: "800px",
+                    marginLeft: "auto",
+                    marginRight: "auto"
                   }}
                 >
                   {chunkedPages.map((page, pageIndex) => (
@@ -2615,12 +2771,12 @@ export default function QuotationView() {
                   <thead>
                     <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">{lang === "gu" ? "ક્રમ" : lang === "hi" ? "क्रम" : "SR."}</th>
-                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">{lang === "gu" ? "પ્રોડક્ટ ફોટો" : lang === "hi" ? "उत्पाद फोटो" : "PRODUCT PHOTO"}</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 text-center w-24">{lang === "gu" ? "પ્રોડક્ટ ફોટો" : lang === "hi" ? "उत्पाद फोटो" : "PRODUCT PHOTO"}</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">{lang === "gu" ? "વર્ણન" : lang === "hi" ? "विवरण" : "DESCRIPTION"}</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">{lang === "gu" ? "કાર્ટન્સ" : lang === "hi" ? "कार्टन" : "CTNS"}</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">{lang === "gu" ? "માત્રા" : lang === "hi" ? "मात्रा" : "QTY"}</th>
                       <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">{lang === "gu" ? "ભાવ" : lang === "hi" ? "मूल्य" : "PRICE"}</th>
-                      <th className="py-2.5 px-3 text-right w-28">{lang === "gu" ? "કુલ" : lang === "hi" ? "कुल" : "TOTAL"}</th>
+                      <th className="py-2.5 pl-3 pr-6 text-right w-28">{lang === "gu" ? "કુલ" : lang === "hi" ? "कुल" : "TOTAL"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
@@ -2677,21 +2833,21 @@ export default function QuotationView() {
 
                         {/* CTNS */}
                         <td className="py-2 px-2 border-r border-slate-300 align-middle text-center">
-                          <div className="no-print flex items-center justify-center gap-1.5">
+                          <div className="no-print flex items-center justify-center gap-1">
                             <button
                               type="button"
                               onClick={() => handleUpdateCartons(item.id, item.cartons - 1)}
-                              className="h-7 w-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center font-extrabold text-slate-655 hover:bg-slate-50 hover:border-slate-300 active:scale-90 transition shadow-sm"
+                              className="h-6 w-6 rounded-lg border border-slate-200 bg-white flex items-center justify-center font-extrabold text-slate-655 hover:bg-slate-50 hover:border-slate-300 active:scale-90 transition shadow-sm"
                             >
                               -
                             </button>
-                            <span className="w-8 text-center font-extrabold text-slate-900 text-xs select-none">
+                            <span className="w-6 text-center font-extrabold text-slate-900 text-xs select-none">
                               {item.cartons}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleUpdateCartons(item.id, item.cartons + 1)}
-                              className="h-7 w-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center font-extrabold text-slate-655 hover:bg-slate-50 hover:border-slate-300 active:scale-90 transition shadow-sm"
+                              className="h-6 w-6 rounded-lg border border-slate-200 bg-white flex items-center justify-center font-extrabold text-slate-655 hover:bg-slate-50 hover:border-slate-300 active:scale-90 transition shadow-sm"
                             >
                               +
                             </button>
@@ -2702,7 +2858,7 @@ export default function QuotationView() {
                         </td>
 
                         {/* QTY */}
-                        <td className="py-2.5 px-2.5 border-r border-slate-300 align-middle text-center">
+                        <td className="py-2 px-1 border-r border-slate-300 align-middle text-center">
                           <input
                             type="number"
                             min="0"
@@ -2712,7 +2868,7 @@ export default function QuotationView() {
                               handleUpdateQuantity(item.id, isNaN(val) ? 0 : val);
                             }}
                             placeholder="0"
-                            className="no-print w-16 rounded-lg border border-slate-205 bg-white py-1 px-1.5 text-center text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="no-print w-11 rounded-lg border border-slate-205 bg-white py-1 px-1 text-center text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                           <span className="hidden print:inline font-bold text-slate-700">
                             {item.quantity}
@@ -2720,7 +2876,7 @@ export default function QuotationView() {
                         </td>
 
                         {/* PRICE CODE */}
-                        <td className="py-3 px-3 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
+                        <td className="py-2 px-1 border-r border-slate-300 align-middle text-right font-bold text-slate-800">
                           <input
                             type="number"
                             min="0"
@@ -2737,7 +2893,7 @@ export default function QuotationView() {
                               handleUpdateRate(item.id, val);
                             }}
                             placeholder="0"
-                            className="no-print w-20 rounded-lg border border-slate-205 bg-white py-1 px-1.5 text-right text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ml-auto"
+                            className="no-print w-14 rounded-lg border border-slate-205 bg-white py-1 px-1 text-right text-xs font-black text-slate-800 outline-none transition focus:border-blue-550 focus:ring-2 focus:ring-blue-500/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ml-auto"
                           />
                           <span className="hidden print:inline">
                             {getItemRate(item.rate)}
@@ -2745,7 +2901,7 @@ export default function QuotationView() {
                         </td>
 
                         {/* TOTAL */}
-                        <td className="py-3 px-3 align-middle text-right font-black text-slate-950">
+                        <td className="py-3 pl-3 pr-6 align-middle text-right font-black text-slate-950">
                           <div className="flex items-center justify-end gap-2">
                             <span>₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN")}</span>
                             <button
@@ -3360,12 +3516,12 @@ export default function QuotationView() {
               <thead>
                 <tr className="bg-slate-100 border-b-2 border-slate-900 text-[10px] font-black text-slate-955 uppercase tracking-wider">
                   <th className="py-2.5 px-3 border-r border-slate-900 text-center w-10">SR.</th>
-                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-28">PRODUCT PHOTO</th>
+                  <th className="py-2.5 px-3 border-r border-slate-900 text-center w-24">PRODUCT PHOTO</th>
                   <th className="py-2.5 px-3 border-r border-slate-900 text-left min-w-[200px]">DESCRIPTION</th>
                   <th className="py-2.5 px-3 border-r border-slate-900 text-center w-20">CTNS</th>
                   <th className="py-2.5 px-3 border-r border-slate-900 text-center w-16">QTY</th>
                   <th className="py-2.5 px-3 border-r border-slate-900 text-right w-24">PRICE</th>
-                  <th className="py-2.5 px-3 text-right w-28">TOTAL</th>
+                  <th className="py-2.5 pl-3 pr-6 text-right w-28">TOTAL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300 text-xs font-semibold text-slate-900">
@@ -3413,7 +3569,7 @@ export default function QuotationView() {
                     </td>
 
                     {/* TOTAL */}
-                    <td className="py-3 px-3 text-right align-middle font-black text-slate-900">
+                    <td className="py-3 pl-3 pr-6 text-right align-middle font-black text-slate-900">
                       ₹{(item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)).toLocaleString("en-IN")}
                     </td>
                   </tr>

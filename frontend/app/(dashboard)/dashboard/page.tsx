@@ -92,7 +92,7 @@ export default function DashboardPage() {
           {/* Workspace */}
           <Link
             href="/workspace"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group hidden sm:flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <Paintbrush className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
@@ -108,7 +108,7 @@ export default function DashboardPage() {
           {/* Collections */}
           <Link
             href="/projects"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <FolderOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           {/* Warehouse */}
           <Link
             href="/warehouse"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <Warehouse className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
@@ -140,7 +140,7 @@ export default function DashboardPage() {
           {/* Clients */}
           <Link
             href="/clients"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <Users className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
@@ -156,7 +156,7 @@ export default function DashboardPage() {
           {/* Quotation */}
           <Link
             href="/quotation"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <FileText className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
@@ -172,7 +172,7 @@ export default function DashboardPage() {
           {/* Stock Book */}
           <Link
             href="/stock-book"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
               <BookOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
