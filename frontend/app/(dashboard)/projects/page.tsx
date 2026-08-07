@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import Tesseract from 'tesseract.js';
+import JsBarcode from "jsbarcode";
 import {
   getUserProfile,
   getUserSettings,
@@ -10,6 +11,47 @@ import { supabase } from "@/lib/supabase";
 
 // Global cache to prevent re-fetching the same empty photoUrl across components
 const photoUrlCache = new Map<string, string | null>();
+
+// --- Barcode component for printable labels ---
+function LabelBarcode({ value, is50x25 }: { value: string; is50x25: boolean }) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  useEffect(() => {
+    if (svgRef.current && value) {
+      try {
+        JsBarcode(svgRef.current, value, {
+          format: "CODE128",
+          displayValue: false,
+          margin: 0,
+          height: is50x25 ? 20 : 28,
+          width: is50x25 ? 1.4 : 1.8,
+          lineColor: "#000000",
+          background: "transparent",
+        });
+      } catch (e) {
+        try {
+          JsBarcode(svgRef.current, value.replace(/[^a-zA-Z0-9-]/g, ""), {
+            format: "CODE128",
+            displayValue: false,
+            margin: 0,
+            height: is50x25 ? 20 : 28,
+            width: is50x25 ? 1.4 : 1.8,
+            lineColor: "#000000",
+            background: "transparent",
+          });
+        } catch (err) {
+          console.error("Barcode render error:", err);
+        }
+      }
+    }
+  }, [value, is50x25]);
+
+  return (
+    <div className="w-full flex justify-center items-center overflow-hidden py-0.5">
+      <svg ref={svgRef} className={is50x25 ? "h-[16px] max-w-full" : "h-[22px] max-w-full"} />
+    </div>
+  );
+}
 
 // --- Sub-components for optimizations ---
 function GlobalSearchImage({ productId, productName, initialUrl }: { productId: string, productName: string, initialUrl?: string }) {
@@ -4630,13 +4672,16 @@ ${rows}
                           : { width: '52mm', height: '36.5mm', padding: '1mm 1.5mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
-                      {/* Line 1: Product Code - Borderless Larger Font */}
-                      <p className={is50x25 ? "font-black text-[10.5px] text-black uppercase tracking-tight truncate leading-none" : "font-black text-[13.5px] text-black uppercase tracking-tight truncate leading-tight"}>
+                      {/* Line 1 (Topmost - First): Barcode */}
+                      <LabelBarcode value={prod.name || "DIGISCALE"} is50x25={is50x25} />
+
+                      {/* Line 2: Product Name / Code */}
+                      <p className={is50x25 ? "font-black text-[10px] text-black uppercase tracking-tight truncate leading-none text-center" : "font-black text-[12.5px] text-black uppercase tracking-tight truncate leading-tight text-center"}>
                         {prod.name}
                       </p>
 
-                      {/* Line 2: Carton Qty & Length / Location - Borderless Larger Font */}
-                      <div className={is50x25 ? "flex justify-between text-[9.5px] text-black font-black leading-none" : "flex justify-between text-[12px] text-black font-black leading-tight"}>
+                      {/* Line 3: Carton Qty & Length / Location */}
+                      <div className={is50x25 ? "flex justify-between text-[9px] text-black font-black leading-none" : "flex justify-between text-[11.5px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -4651,8 +4696,8 @@ ${rows}
                         </span>
                       </div>
 
-                      {/* Line 3: Description / Color - Borderless Larger Font */}
-                      <p className={is50x25 ? "text-[9px] text-black font-black truncate leading-none" : "text-[11px] text-black font-black truncate leading-tight"}>
+                      {/* Line 4: Description / Color */}
+                      <p className={is50x25 ? "text-[8.5px] text-black font-black truncate leading-none" : "text-[10.5px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -4661,8 +4706,8 @@ ${rows}
                         })()}
                       </p>
 
-                      {/* Line 4: Prices - Borderless Larger Font */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[11px] font-black text-black leading-none" : "flex justify-between items-end text-[13.5px] font-black text-black leading-none"}>
+                      {/* Line 5: Prices */}
+                      <div className={is50x25 ? "flex justify-between items-end text-[10.5px] font-black text-black leading-none" : "flex justify-between items-end text-[13px] font-black text-black leading-none"}>
                         <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
