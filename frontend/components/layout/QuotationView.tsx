@@ -576,9 +576,14 @@ export default function QuotationView() {
           await scannerInstance.start(
             activeCamera,
             {
-              fps: 24, // Scan faster
-              qrbox: { width: 280, height: 140 }, // Optimized horizontal aspect for barcodes
-              aspectRatio: 1.777778, // HD aspect ratio for sharp focus
+              fps: 30, // Max frame rate for speed
+              qrbox: { width: 300, height: 120 }, // Wider and thinner box for physical labels
+              aspectRatio: 1.777778, // HD 16:9 aspect ratio
+              videoConstraints: {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                facingMode: "environment"
+              },
               formatsToSupport: [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
