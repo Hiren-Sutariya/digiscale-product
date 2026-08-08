@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import Tesseract from 'tesseract.js';
 import JsBarcode from "jsbarcode";
+import { QRCodeSVG } from 'qrcode.react';
 import {
   getUserProfile,
   getUserSettings,
@@ -11,6 +12,20 @@ import { supabase } from "@/lib/supabase";
 
 // Global cache to prevent re-fetching the same empty photoUrl across components
 const photoUrlCache = new Map<string, string | null>();
+
+// --- QR Code component for printable labels (2D Matrix Code for instant scannability) ---
+function LabelQRCode({ value, is50x25 }: { value: string; is50x25: boolean }) {
+  return (
+    <div className="w-full flex justify-center items-center overflow-hidden py-0.5">
+      <QRCodeSVG
+        value={value}
+        size={is50x25 ? 46 : 64}
+        level="M"
+        includeMargin={false}
+      />
+    </div>
+  );
+}
 
 // --- Barcode component for printable labels ---
 function LabelBarcode({ value, is50x25 }: { value: string; is50x25: boolean }) {
@@ -5005,8 +5020,8 @@ ${rows}
                           : { width: '52mm', height: '36.5mm', padding: '1mm 1.5mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
-                      {/* Line 1 (Topmost - First): Barcode */}
-                      <LabelBarcode value={prod.name || "DIGISCALE"} is50x25={is50x25} />
+                      {/* Line 1 (Topmost - First): QR Matrix Code */}
+                      <LabelQRCode value={prod.name || "DIGISCALE"} is50x25={is50x25} />
 
                       {/* Line 2: Product Name / Code */}
                       <p className={is50x25 ? "font-black text-[10px] text-black uppercase tracking-tight truncate leading-none text-center" : "font-black text-[12.5px] text-black uppercase tracking-tight truncate leading-tight text-center"}>
