@@ -2228,36 +2228,11 @@ ${rows}
     const dateStr = col.createdAt || (col.created_at ? new Date(col.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Today");
     const productCount = allProducts.filter((p) => p.collectionId === col.id).length;
 
-    let touchTimer: NodeJS.Timeout | null = null;
-    let isLongPress = false;
-
     return viewMode === "grid" ? (
       /* Grid Card */
       <div
         key={col.id}
-        onTouchStart={(e) => {
-          isLongPress = false;
-          touchTimer = setTimeout(() => {
-            isLongPress = true;
-            setActiveDropdownId(col.id);
-            // Optionally trigger vibration for feedback
-            if (navigator.vibrate) navigator.vibrate(50);
-          }, 600); // 600ms hold triggers long press
-        }}
-        onTouchEnd={(e) => {
-          if (touchTimer) {
-            clearTimeout(touchTimer);
-            touchTimer = null;
-          }
-        }}
-        onClick={(e) => {
-          if (isLongPress) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
-          handleOpenCollectionDetail(col);
-        }}
+        onClick={() => handleOpenCollectionDetail(col)}
         className="group relative flex flex-col rounded-2xl sm:rounded-[22px] border border-slate-200/70 bg-white p-2.5 sm:p-3 transition-all duration-300 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer aspect-square h-auto animate-fade-in"
       >
         {/* Folder Icon / Preview Area */}
@@ -2276,7 +2251,7 @@ ${rows}
                 e.stopPropagation();
                 setActiveDropdownId(activeDropdownId === col.id ? null : col.id);
               }}
-              className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-405 opacity-0 md:opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
+              className="rounded-[10px] p-2 bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-450 opacity-100 md:opacity-0 transition-all duration-300 hover:bg-white hover:text-slate-700 hover:shadow-sm group-hover:opacity-100 focus:opacity-100"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -2417,7 +2392,7 @@ ${rows}
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+          <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-20 sm:pb-6">
             {filteredCollections.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-xs font-semibold">
                 No collections found
@@ -2474,7 +2449,7 @@ ${rows}
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-20 sm:pb-6">
               {codeCols.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-xs font-semibold">
                   No code collections found
@@ -2501,7 +2476,7 @@ ${rows}
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-6">
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-20 sm:pb-6">
               {namedCols.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-xs font-semibold">
                   No named collections found
@@ -2533,7 +2508,7 @@ ${rows}
 
 
   return (
-    <div className="px-2.5 sm:px-8 pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
+    <div className="px-2.5 sm:px-8 pt-1.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
 
       {/* DETAIL VIEW MODE */}
       {selectedCol ? (
@@ -2889,7 +2864,7 @@ ${rows}
               ) : (
                 <div className="flex-1 overflow-hidden min-h-0 flex flex-col border border-slate-200 rounded-2xl bg-white shadow-sm">
                   {/* Mobile Products List View */}
-                  <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-3.5 bg-slate-50/30">
+                  <div className="md:hidden flex-1 overflow-y-auto p-3 pb-32 space-y-3.5 bg-slate-50/30">
                     {draftProducts.map((draft, idx) => (
                       <div key={`draft-${idx}`} className="bg-blue-50/20 border-l-4 border-l-blue-400 p-4 rounded-xl shadow-sm border border-slate-200/60 space-y-3">
                         <div className="flex items-center gap-3">
@@ -3550,7 +3525,7 @@ ${rows}
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1">
+                  <div className="flex-1 overflow-y-auto min-h-0 pb-20 sm:pb-6 pr-1">
                     {globalSearchQuery.trim() !== "" ? (
                       renderGlobalSearchResults()
                     ) : (
@@ -3584,7 +3559,7 @@ ${rows}
                   </div>
 
                   {/* Hidable warehouse content */}
-                  <div className="flex-1 overflow-y-auto min-h-0 pb-6 pr-1">
+                  <div className="flex-1 overflow-y-auto min-h-0 pb-20 sm:pb-6 pr-1">
                     {globalSearchQuery.trim() !== "" ? (
                       renderGlobalSearchResults()
                     ) : (

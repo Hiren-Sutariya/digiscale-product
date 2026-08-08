@@ -1684,9 +1684,9 @@ export default function QuotationView() {
       `}</style>
 
       {/* Header / Toolbar */}
-      <div className="no-print flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-3">
+      <div className="no-print flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-1.5 sm:mb-3">
         {/* Search Inputs Row */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+        <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-sm">
           {/* History Search */}
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-400" />
@@ -1743,7 +1743,7 @@ export default function QuotationView() {
       </div>
 
       {/* Subview switcher tabs */}
-      <div className="no-print flex gap-2 mb-3 lg:mb-3">
+      <div className="no-print flex gap-2 mb-2.5 lg:mb-3">
         <button
           onClick={handleCreateNew}
           className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
@@ -1778,7 +1778,7 @@ export default function QuotationView() {
           </button>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto min-h-0 pb-24 pr-1 no-print">
+      <div className="flex-1 overflow-y-auto min-h-0 pb-20 sm:pb-8 pr-1 no-print">
       {activeSubView === "history" ? (
         <div className="no-print bg-white rounded-3xl border border-slate-200 p-3 sm:p-6 md:p-8 shadow-sm">
           

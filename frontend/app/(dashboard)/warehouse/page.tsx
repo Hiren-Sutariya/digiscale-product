@@ -738,12 +738,9 @@ export default function WarehousePage() {
         </div>
       </div>
 
-      {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 pt-1 sm:pt-6 pb-24">
-        <div className="space-y-6">
-
-        {/* Stats Section (Visible on both desktop and mobile in 4-column layout) */}
-        {globalSearchQuery.trim() === "" && (
+      {/* Stats Section (Visible on both desktop and mobile in 4-column layout) - Stationary at the top */}
+      {globalSearchQuery.trim() === "" && (
+        <div className="shrink-0 mb-3 sm:mb-5 mt-1.5">
           <div className="grid grid-cols-4 gap-1.5 sm:gap-6">
             {/* Total Rows & Slots */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
@@ -842,7 +839,12 @@ export default function WarehousePage() {
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto min-h-0 pt-1 sm:pt-6 pb-20 sm:pb-8">
+        <div className="space-y-6">
 
         {/* Global Finder / Shelf Map Grid */}
         {globalSearchQuery.trim() !== "" && (

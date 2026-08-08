@@ -430,13 +430,25 @@ function SettingsPageContent() {
   ];
 
   return (
-    <div className="p-3 sm:p-8 min-h-0 lg:h-[calc(100vh-80px)] flex flex-col lg:overflow-hidden">
+    <div className="px-2.5 sm:px-8 pt-1.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
 
-      <PageTitle
-        title={t("settings")}
-      />
+      <div className="flex items-center justify-between w-full no-print mb-1 sm:mb-0">
+        <PageTitle
+          title={t("settings")}
+        />
+        <button
+          onClick={() => {
+            logout();
+            window.location.href = "/login";
+          }}
+          className="lg:hidden flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-red-655 hover:text-red-700 bg-rose-50/75 border border-rose-200 rounded-xl px-3 py-1.5 transition active:scale-95 shadow-sm shrink-0 cursor-pointer"
+        >
+          <LogOut className="h-3 w-3" />
+          {t("signOut")}
+        </button>
+      </div>
 
-      <div className="mt-4 sm:mt-8 flex-1 grid gap-4 lg:gap-8 lg:grid-cols-[280px_1fr] lg:overflow-hidden min-h-0">
+      <div className="mt-2 sm:mt-8 flex-1 flex flex-col lg:grid gap-2.5 lg:gap-8 lg:grid-cols-[280px_1fr] lg:overflow-hidden min-h-0">
 
         {/* Sidebar Tabs */}
         <div className="flex overflow-x-auto lg:overflow-y-auto whitespace-nowrap lg:whitespace-normal scrollbar-none lg:flex-col gap-2 lg:gap-1.5 pb-2 lg:pb-0 rounded-2xl border border-slate-200/80 bg-white p-3 lg:p-4.5 shadow-sm h-fit shrink-0 w-full lg:w-auto">
@@ -465,18 +477,17 @@ function SettingsPageContent() {
               logout();
               window.location.href = "/login";
             }}
-            className="flex items-center gap-2 lg:gap-4 rounded-xl px-3 lg:px-4 py-2.5 text-xs font-bold text-red-650 transition hover:bg-rose-50 hover:text-red-700 cursor-pointer shrink-0"
+            className="hidden lg:flex items-center gap-2 lg:gap-4 rounded-xl px-3 lg:px-4 py-2.5 text-xs font-bold text-red-655 transition hover:bg-rose-50 hover:text-red-700 cursor-pointer shrink-0"
           >
             <div className="hidden lg:flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 text-red-600">
               <LogOut className="h-4 w-4" />
             </div>
-            <LogOut className="lg:hidden h-4 w-4 text-red-500" />
             {t("signOut")}
           </button>
         </div>
 
         {/* Content */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-8 pb-32 sm:pb-8 overflow-y-auto lg:h-full shadow-sm min-h-[400px]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-8 pb-20 sm:pb-8 overflow-y-auto lg:h-full shadow-sm min-h-[400px]">
           {activeTab === "profile" && <ProfileSection />}
           {activeTab === "company" && <CompanySection />}
           {activeTab === "language" && <LanguageSection />}
@@ -678,7 +689,7 @@ function ProfileSection() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Profile</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -729,7 +740,7 @@ function ProfileSection() {
       </div>
 
       {/* Form */}
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-bold text-slate-700">
             Full Name
@@ -959,7 +970,7 @@ function BillingSection() {
   const progressPercent = Math.min(100, Math.round((creditsUsed / creditsLimit) * 100));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Plan & Billing</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -968,7 +979,7 @@ function BillingSection() {
       </div>
 
       {/* Current Plan */}
-      <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-6">
+      <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -998,8 +1009,8 @@ function BillingSection() {
       </div>
 
       {/* Usage */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <Image className="h-5 w-5 text-slate-400" />
           <p className="mt-3 text-2xl font-bold text-slate-900">{creditsUsed} / {creditsLimit}</p>
           <p className="mt-1 text-sm text-slate-550 font-bold">Credits Used</p>
@@ -1008,7 +1019,7 @@ function BillingSection() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <HardDrive className="h-5 w-5 text-slate-400" />
           <p className="mt-3 text-2xl font-bold text-slate-900">{(creditsUsed * 1.8).toFixed(1)} MB</p>
           <p className="mt-1 text-sm text-slate-550 font-bold">Storage Used</p>
@@ -1017,7 +1028,7 @@ function BillingSection() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <Image className="h-5 w-5 text-slate-400" />
           <p className="mt-3 text-2xl font-bold text-slate-900">{creditsUsed}</p>
           <p className="mt-1 text-sm text-slate-550 font-bold">Total Exports</p>
@@ -2119,7 +2130,7 @@ function BackupSection() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Custom Alert/Confirm Modal Popup */}
       {modalConfig && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -2189,7 +2200,7 @@ function BackupSection() {
       )}
 
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4 border-b border-slate-100 pb-3 sm:pb-5">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900">Data & Backup</h2>
           <p className="mt-1 text-xs text-slate-500 font-medium">
@@ -2209,9 +2220,9 @@ function BackupSection() {
       </div>
 
       {/* Top Controls Grid: Auto-Backup, Manual Actions, Danger Zone */}
-      <div className="grid gap-5 md:grid-cols-3 relative z-20">
+      <div className="grid gap-3 sm:gap-5 md:grid-cols-3 relative z-20">
         {/* 1. Auto Backup Configuration */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col h-full">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col h-full">
           <div>
             <h3 className="font-bold text-slate-900 flex items-center gap-2">
               <Clock className="h-5 w-5 text-blue-600" />
@@ -2263,7 +2274,7 @@ function BackupSection() {
         </div>
 
         {/* 2. Manual Backup Actions */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm flex flex-col h-full">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm flex flex-col h-full">
           <div>
             <h3 className="font-bold text-slate-900 flex items-center gap-2">
               <Database className="h-5 w-5 text-blue-600" />
@@ -2292,7 +2303,7 @@ function BackupSection() {
         </div>
 
         {/* 3. Danger Zone */}
-        <div className="rounded-xl border border-red-200 bg-red-50/80 p-5 flex flex-col h-full shadow-sm">
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 sm:p-5 flex flex-col h-full shadow-sm">
           <div>
             <h3 className="font-bold text-red-700 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
@@ -2518,7 +2529,7 @@ function LanguageSection() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900">{t("langHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -2537,7 +2548,7 @@ function LanguageSection() {
           <button
             key={langObj.id}
             onClick={() => setSelectedLang(langObj.id)}
-            className={`p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${selectedLang === langObj.id
+            className={`p-3.5 sm:p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${selectedLang === langObj.id
                 ? "border-blue-600 bg-blue-50/40"
                 : "border-slate-200 bg-white hover:bg-slate-50"
               }`}
@@ -2721,7 +2732,7 @@ function StorageSection() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900">{t("storageHeading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -2735,20 +2746,20 @@ function StorageSection() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("exportLogs")}</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{cachedHistoryCount} {lang === "gu" ? "વસ્તુઓ" : lang === "hi" ? "आइटम" : "items"}</p>
           <p className="mt-1 text-xs text-slate-500 font-semibold">{t("cachedBrowser")}</p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("snapshotsTitle")}</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{cachedSnapshotsCount} {lang === "gu" ? "સ્નેપશોટ" : lang === "hi" ? "स्नैपशॉट" : "snapshots"}</p>
           <p className="mt-1 text-xs text-slate-500 font-semibold">{t("snapshotsDesc")}</p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
           <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("localSize")}</div>
           <p className="mt-2 text-2xl font-bold text-slate-900">{localStorageKB} KB</p>
           <p className="mt-1 text-xs text-slate-500 font-semibold">{t("localSizeDesc")}</p>

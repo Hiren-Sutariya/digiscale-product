@@ -12,17 +12,17 @@ export default function Logo({ href }: { href?: string }) {
   }, [href, logoHref]);
 
   return (
-    <Link href={logoHref} className="flex items-center gap-3">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white shadow-sm">
+    <Link href={logoHref} className="flex items-center gap-2 sm:gap-3">
+      <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-blue-600 text-sm sm:text-lg font-bold text-white shadow-sm">
         D
       </div>
 
       <div className="flex-shrink-0">
-        <h1 className="whitespace-nowrap text-lg font-bold tracking-tight text-gray-900">
+        <h1 className="whitespace-nowrap text-sm sm:text-lg font-bold tracking-tight text-gray-900 leading-tight sm:leading-normal">
           DigiScale
         </h1>
 
-        <p className="whitespace-nowrap text-xs text-gray-500">
+        <p className="whitespace-nowrap text-[9px] sm:text-xs text-gray-500 leading-tight">
           Product Studio
         </p>
       </div>

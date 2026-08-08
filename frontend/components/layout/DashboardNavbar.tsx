@@ -211,8 +211,8 @@ export default function DashboardNavbar() {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 shrink-0 ${
         scrolled
-          ? "h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)]"
-          : "h-20 bg-white/95 border-b border-slate-200"
+          ? "lg:h-16 h-13 bg-white/80 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)]"
+          : "lg:h-20 h-14 bg-white/95 border-b border-slate-200"
       }`}
     >
       <div className="mx-auto max-w-[1400px] w-full h-full flex items-center justify-between px-4 lg:px-8">
@@ -261,20 +261,20 @@ export default function DashboardNavbar() {
                     window.dispatchEvent(new CustomEvent("open-mobile-camera-scanner"));
                   }
                 }}
-                className="flex items-center justify-center h-10 w-10 rounded-xl border border-indigo-200 bg-indigo-50/70 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm shrink-0"
+                className="flex items-center justify-center h-[34px] w-[34px] sm:h-10 sm:w-10 rounded-xl border border-indigo-200 bg-indigo-50/70 text-indigo-600 transition active:scale-95 cursor-pointer shadow-sm shrink-0"
                 title="Open Camera Scanner"
               >
-                <Camera className="h-[18px] w-[18px]" />
+                <Camera className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               </button>
 
               {/* Profile button — tall pill */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-3 h-10 rounded-xl border border-slate-200 bg-white pl-2 pr-3 transition hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] cursor-pointer shadow-sm"
+                  className="flex items-center gap-2 sm:gap-3 h-[34px] sm:h-10 rounded-xl border border-slate-200 bg-white pl-1.5 pr-2 sm:pl-2 sm:pr-3 transition hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] cursor-pointer shadow-sm"
                 >
                   {/* Avatar */}
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-[11px] font-black text-white overflow-hidden shrink-0">
+                  <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-blue-600 text-[10px] sm:text-[11px] font-black text-white overflow-hidden shrink-0">
                     {mounted ? (
                       avatarUrl ? (
                         <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />

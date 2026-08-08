@@ -584,10 +584,10 @@ export default function StockBookPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-slate-50/50">
+    <div className="px-2.5 sm:px-8 pt-1.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
       {/* Static Toolbar Header (Warehouse style) */}
-      <div className="shrink-0 px-3 sm:px-8 pt-4 pb-3 border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="shrink-0 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between mb-1.5 sm:mb-3 w-full">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center w-full">
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
             {/* Search Input */}
@@ -649,115 +649,118 @@ export default function StockBookPage() {
         </div>
       </div>
 
-      {/* Scrollable Body */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 px-3 py-3 sm:px-8 sm:py-6">
-        <div className="space-y-6">
-          {/* Stats Summary Cards */}
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-6">
-            {/* Total Stock cartons */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
-              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 items-center justify-center text-blue-600 shrink-0">
-                <Layers className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 w-full text-center sm:text-left">
-                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
-                  {lang === "gu" ? "સ્ટોક" : "Stock"}
-                </p>
-                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  {t("stockAvailable")}
-                </p>
-                
-                <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
-                  {totalStockCartons} <span className="text-[8px] font-bold text-slate-400">Ctn</span>
-                </p>
-                <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
-                  {totalStockCartons.toLocaleString()} <span className="text-xs font-bold text-slate-400">Cartons</span>
-                </p>
-                
-                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
-                  {totalProducts} active products
-                </p>
-              </div>
+      {/* Stats Summary Cards - Stationary at the top */}
+      <div className="shrink-0 mb-3 sm:mb-5 mt-1.5">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-6">
+          {/* Total Stock cartons */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+            <div className="hidden sm:flex h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 items-center justify-center text-blue-600 shrink-0">
+              <Layers className="h-6 w-6" />
             </div>
-
-            {/* Total Stock Value */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
-              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 items-center justify-center text-emerald-600 shrink-0">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 w-full text-center sm:text-left">
-                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
-                  {lang === "gu" ? "કિંમત" : "Value"}
-                </p>
-                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  {t("totalStockVal")}
-                </p>
-                
-                <p className="sm:hidden text-xs font-black text-slate-850 mt-0.5 truncate">
-                  ₹{totalStockVal >= 100000 ? (totalStockVal / 1000).toFixed(0) + 'k' : totalStockVal.toLocaleString()}
-                </p>
-                <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
-                  ₹{totalStockVal.toLocaleString("en-IN")}
-                </p>
-                
-                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
-                  estimated valuation
-                </p>
-              </div>
-            </div>
-
-            {/* Low Stock count */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
-              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 items-center justify-center text-amber-600 shrink-0">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 w-full text-center sm:text-left">
-                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
-                  {lang === "gu" ? "ઓછો" : "Low"}
-                </p>
-                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  {t("lowStockCount")}
-                </p>
-                
-                <p className="sm:hidden text-xs font-black text-amber-600 mt-0.5 truncate">
-                  {lowStockCount}
-                </p>
-                <p className="hidden sm:block text-xl font-black text-amber-650 mt-1">
-                  {lowStockCount}
-                </p>
-                
-                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
-                  need replenishment
-                </p>
-              </div>
-            </div>
-
-            {/* Out of stock count */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
-              <div className="hidden sm:flex h-12 w-12 rounded-xl bg-red-50 border border-red-100 items-center justify-center text-red-600 shrink-0">
-                <Inbox className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 w-full text-center sm:text-left">
-                <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
-                  {lang === "gu" ? "ખાલી" : "Out"}
-                </p>
-                <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  {t("outOfStockCount")}
-                </p>
-                
-                <p className="sm:hidden text-xs font-black text-red-600 mt-0.5 truncate">
-                  {outOfStockCount}
-                </p>
-                <p className="hidden sm:block text-xl font-black text-red-650 mt-1">
-                  {outOfStockCount}
-                </p>
-                
-                <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
-                  zero inventory
-                </p>
-              </div>
+            <div className="min-w-0 w-full text-center sm:text-left">
+              <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                {lang === "gu" ? "સ્ટોક" : "Stock"}
+              </p>
+              <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                {t("stockAvailable")}
+              </p>
+              
+              <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                {totalStockCartons} <span className="text-[8px] font-bold text-slate-400">Ctn</span>
+              </p>
+              <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
+                {totalStockCartons.toLocaleString()} <span className="text-xs font-bold text-slate-400">Cartons</span>
+              </p>
+              
+              <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                {totalProducts} active products
+              </p>
             </div>
           </div>
+
+          {/* Total Stock Value */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+            <div className="hidden sm:flex h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 items-center justify-center text-emerald-600 shrink-0">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 w-full text-center sm:text-left">
+              <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                {lang === "gu" ? "કિંમત" : "Value"}
+              </p>
+              <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                {t("totalStockVal")}
+              </p>
+              
+              <p className="sm:hidden text-xs font-black text-slate-800 mt-0.5 truncate">
+                ₹{totalStockVal >= 100000 ? (totalStockVal / 1000).toFixed(0) + 'k' : totalStockVal.toLocaleString()}
+              </p>
+              <p className="hidden sm:block text-xl font-black text-slate-800 mt-1">
+                ₹{totalStockVal.toLocaleString("en-IN")}
+              </p>
+              
+              <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                estimated valuation
+              </p>
+            </div>
+          </div>
+
+          {/* Low Stock count */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+            <div className="hidden sm:flex h-12 w-12 rounded-xl bg-amber-50 border border-amber-100 items-center justify-center text-amber-600 shrink-0">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 w-full text-center sm:text-left">
+              <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                {lang === "gu" ? "ઓછો" : "Low"}
+              </p>
+              <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                {t("lowStockCount")}
+              </p>
+              
+              <p className="sm:hidden text-xs font-black text-amber-600 mt-0.5 truncate">
+                {lowStockCount}
+              </p>
+              <p className="hidden sm:block text-xl font-black text-amber-650 mt-1">
+                {lowStockCount}
+              </p>
+              
+              <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                need replenishment
+              </p>
+            </div>
+          </div>
+
+          {/* Out of stock count */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-5 min-w-0">
+            <div className="hidden sm:flex h-12 w-12 rounded-xl bg-red-50 border border-red-100 items-center justify-center text-red-600 shrink-0">
+              <Inbox className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 w-full text-center sm:text-left">
+              <p className="sm:hidden text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">
+                {lang === "gu" ? "ખાલી" : "Out"}
+              </p>
+              <p className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                {t("outOfStockCount")}
+              </p>
+              
+              <p className="sm:hidden text-xs font-black text-red-600 mt-0.5 truncate">
+                {outOfStockCount}
+              </p>
+              <p className="hidden sm:block text-xl font-black text-red-650 mt-1">
+                {outOfStockCount}
+              </p>
+              
+              <p className="hidden sm:block text-[10px] text-slate-400 font-bold mt-0.5">
+                zero inventory
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable Body */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 pt-1 sm:pt-6 pb-20 sm:pb-8">
+        <div className="space-y-6">
 
           {/* Main Stock Management Grid */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
