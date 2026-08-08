@@ -284,7 +284,7 @@ function CollectionsPageContent() {
 
   // Label Download Modal States
   const [showLabelModal, setShowLabelModal] = useState(false);
-  const [labelMarkupPercent, setLabelMarkupPercent] = useState<string>("30"); // default 30% markup for event price
+  const [labelMarkupPercent, setLabelMarkupPercent] = useState<string>("25"); // default 25% markup for event price
   const [wholesalePrefix, setWholesalePrefix] = useState<string>("A9");      // default wholesale prefix
   const [activeLabelMarkup, setActiveLabelMarkup] = useState<number | null>(null); // null = not printing labels
   const [activeLabelProducts, setActiveLabelProducts] = useState<Product[] | null>(null);
@@ -2653,7 +2653,7 @@ ${rows}
 
                 <button
                   onClick={() => {
-                    setLabelMarkupPercent("30");
+                    setLabelMarkupPercent("25");
                     setWholesalePrefix("A9");
                     setShowLabelModal(true);
                   }}
@@ -2726,7 +2726,7 @@ ${rows}
                         <button
                           onClick={() => {
                             setIsMobileMoreActionsOpen(false);
-                            setLabelMarkupPercent("30");
+                            setLabelMarkupPercent("25");
                             setWholesalePrefix("A9");
                             setShowLabelModal(true);
                           }}
