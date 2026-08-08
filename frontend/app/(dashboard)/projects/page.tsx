@@ -24,7 +24,7 @@ function LabelDataMatrix({ value, is50x25 }: { value: string; is50x25: boolean }
         bwipjs.toCanvas(canvasRef.current, {
           bcid: 'datamatrix', // Barcode type: datamatrix
           text: value,        // Message to encode
-          scale: is50x25 ? 1.8 : 2.4, // Increased scale resolution for crisp print
+          scale: is50x25 ? 2.0 : 3.0, // Higher scale resolution for crisp print
           includetext: false,
         });
       } catch (err) {
@@ -35,7 +35,7 @@ function LabelDataMatrix({ value, is50x25 }: { value: string; is50x25: boolean }
 
   return (
     <div className="shrink-0 flex items-center justify-center pt-0.5">
-      <canvas ref={canvasRef} style={{ width: is50x25 ? '38px' : '52px', height: is50x25 ? '38px' : '52px' }} />
+      <canvas ref={canvasRef} style={{ width: is50x25 ? '45px' : '65px', height: is50x25 ? '45px' : '65px' }} />
     </div>
   );
 }
@@ -5034,7 +5034,7 @@ ${rows}
                       }
                     >
                       {/* Line 1: Product Code (Left) & Data Matrix (Right) */}
-                      <div className="flex justify-between items-start gap-1.5 w-full" style={{ minHeight: is50x25 ? '40px' : '52px' }}>
+                      <div className="flex justify-between items-start gap-1.5 w-full" style={{ minHeight: is50x25 ? '47px' : '65px' }}>
                         {(() => {
                           const nameLength = prod.name?.length || 0;
                           const fontSizeClass = is50x25
