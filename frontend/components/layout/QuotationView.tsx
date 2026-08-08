@@ -681,7 +681,7 @@ export default function QuotationView() {
             activeCamera,
             {
               fps: 30, // Max frame rate for speed
-              qrbox: (viewfinderWidth, viewfinderHeight) => {
+              qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
                 const width = Math.min(viewfinderWidth * 0.9, 360);
                 const height = Math.min(viewfinderHeight * 0.65, 160);
                 return { width, height };
