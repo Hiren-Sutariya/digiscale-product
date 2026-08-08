@@ -681,7 +681,11 @@ export default function QuotationView() {
             activeCamera,
             {
               fps: 30, // Max frame rate for speed
-              qrbox: { width: 300, height: 120 }, // Wider and thinner box for physical labels
+              qrbox: (viewfinderWidth, viewfinderHeight) => {
+                const width = Math.min(viewfinderWidth * 0.9, 360);
+                const height = Math.min(viewfinderHeight * 0.65, 160);
+                return { width, height };
+              }, // Dynamic wider box for physical labels
               aspectRatio: 1.777778, // HD 16:9 aspect ratio
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true // Enforce native Chrome/Safari hardware-accelerated bar code detection
