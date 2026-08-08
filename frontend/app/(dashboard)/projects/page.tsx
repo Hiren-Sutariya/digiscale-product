@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import Tesseract from 'tesseract.js';
 import JsBarcode from "jsbarcode";
-import { QRCodeSVG } from 'qrcode.react';
+// @ts-ignore
+import bwipjs from 'bwip-js';
 import {
   getUserProfile,
   getUserSettings,
@@ -13,16 +14,28 @@ import { supabase } from "@/lib/supabase";
 // Global cache to prevent re-fetching the same empty photoUrl across components
 const photoUrlCache = new Map<string, string | null>();
 
-// --- QR Code component for printable labels (2D Matrix Code for instant scannability) ---
-function LabelQRCode({ value, is50x25 }: { value: string; is50x25: boolean }) {
+// --- Data Matrix component for printable labels (2D Industrial Matrix Code for instant scannability) ---
+function LabelDataMatrix({ value, is50x25 }: { value: string; is50x25: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (canvasRef.current && value) {
+      try {
+        bwipjs.toCanvas(canvasRef.current, {
+          bcid: 'datamatrix', // Barcode type: datamatrix
+          text: value,        // Message to encode
+          scale: is50x25 ? 1.5 : 2.0, // High scale resolution for crisp print
+          includetext: false,
+        });
+      } catch (err) {
+        console.error("DataMatrix render error:", err);
+      }
+    }
+  }, [value, is50x25]);
+
   return (
-    <div className="w-full flex justify-center items-center overflow-hidden py-0.5">
-      <QRCodeSVG
-        value={value}
-        size={is50x25 ? 46 : 64}
-        level="M"
-        includeMargin={false}
-      />
+    <div className="shrink-0 flex items-center justify-center pt-0.5">
+      <canvas ref={canvasRef} style={{ width: is50x25 ? '32px' : '44px', height: is50x25 ? '32px' : '44px' }} />
     </div>
   );
 }
@@ -5020,13 +5033,21 @@ ${rows}
                           : { width: '52mm', height: '36.5mm', padding: '1mm 1.5mm', boxSizing: 'border-box', flexShrink: 0 }
                       }
                     >
-                      {/* Line 1 (Topmost - First): QR Matrix Code */}
-                      <LabelQRCode value={prod.name || "DIGISCALE"} is50x25={is50x25} />
-
-                      {/* Line 2: Product Name / Code */}
-                      <p className={is50x25 ? "font-black text-[10px] text-black uppercase tracking-tight truncate leading-none text-center" : "font-black text-[12.5px] text-black uppercase tracking-tight truncate leading-tight text-center"}>
-                        {prod.name}
-                      </p>
+                      {/* Line 1: Product Code (Left) & Data Matrix (Right) */}
+                      <div className="flex justify-between items-start gap-1.5 w-full" style={{ minHeight: is50x25 ? '36px' : '48px' }}>
+                        {(() => {
+                          const nameLength = prod.name?.length || 0;
+                          const fontSizeClass = is50x25
+                            ? (nameLength > 16 ? "text-[8.5px]" : nameLength > 12 ? "text-[9.5px]" : "text-[10.5px]")
+                            : (nameLength > 16 ? "text-[10px]" : nameLength > 12 ? "text-[11.5px]" : "text-[13.5px]");
+                          return (
+                            <p className={`font-black ${fontSizeClass} text-black uppercase tracking-tight break-words leading-tight pt-1 flex-1 pr-1`}>
+                              {prod.name}
+                            </p>
+                          );
+                        })()}
+                        <LabelDataMatrix value={prod.name || "DIGISCALE"} is50x25={is50x25} />
+                      </div>
 
                       {/* Line 3: Carton Qty & Length / Location */}
                       <div className={is50x25 ? "flex justify-between text-[9px] text-black font-black leading-none" : "flex justify-between text-[11.5px] text-black font-black leading-tight"}>

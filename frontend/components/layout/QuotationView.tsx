@@ -435,6 +435,7 @@ export default function QuotationView() {
   const [zoomLevel, setZoomLevel] = useState(2.0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<any>(null);
+  const lastScannedRef = useRef<{ code: string; time: number } | null>(null);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [mobileScale, setMobileScale] = useState(1);
   const [scaleMarginLeft, setScaleMarginLeft] = useState(0);
@@ -610,6 +611,7 @@ export default function QuotationView() {
     let scannerInstance: any = null;
     
     if (showCameraScanner && typeof window !== "undefined") {
+      lastScannedRef.current = null;
       const startScanner = async () => {
         try {
           const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
@@ -699,12 +701,17 @@ export default function QuotationView() {
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
                 Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.QR_CODE
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.DATA_MATRIX
               ]
             },
             (decodedText: string) => {
+              const now = Date.now();
+              if (lastScannedRef.current && lastScannedRef.current.code === decodedText && (now - lastScannedRef.current.time) < 1800) {
+                return; // Ignore duplicate scan within 1.8 seconds to avoid double trigger
+              }
+              lastScannedRef.current = { code: decodedText, time: now };
               handleBarcodeSubmit(decodedText);
-              setShowCameraScanner(false);
             },
             () => {
               // Standard scanning noise, ignore
@@ -2108,6 +2115,7 @@ export default function QuotationView() {
               }`}
             >
               📄 {lang === "gu" ? "બિલ પ્રિવ્યૂ" : "Preview Bill"}
+              {selectedItems.length > 0 && ` (${selectedItems.length})`}
             </button>
           </div>
 
