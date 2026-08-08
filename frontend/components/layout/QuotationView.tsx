@@ -3854,8 +3854,9 @@ export default function QuotationView() {
     {/* CAMERA BARCODE SCANNER MODAL */}
     {showCameraScanner && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
-          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden">
+          {/* Header (Sticky at top) */}
+          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 shrink-0">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <span>📷</span>
               {lang === "gu" ? "કેમેરા બારકોડ સ્કેનર" : "Camera Barcode Scanner"}
@@ -3871,17 +3872,19 @@ export default function QuotationView() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="p-5 flex flex-col items-center justify-center space-y-4">
+          
+          {/* Body Content (Scrollable if needed, keeps layout intact) */}
+          <div className="p-5 flex-1 overflow-y-auto space-y-4 flex flex-col justify-start">
             <p className="text-[11px] text-slate-500 font-bold text-center">
               {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the box to scan"}
             </p>
             
             {/* Camera scanner container with red laser line overlay */}
-            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mx-auto max-w-[320px] shrink-0">
               <div 
                 id="camera-scanner-reader" 
                 className="w-full"
-                style={{ minHeight: "260px" }}
+                style={{ minHeight: "220px", maxHeight: "280px" }}
               />
               {/* Laser line guide */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse pointer-events-none z-10" />
@@ -3889,7 +3892,7 @@ export default function QuotationView() {
             
             {/* Zoom Slider Control (only show if zoom is supported on device) */}
             {zoomRange && zoomRange.max > zoomRange.min && (
-              <div className="w-full space-y-1.5 px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl">
+              <div className="w-full space-y-1.5 px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl shrink-0">
                 <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 tracking-wider">
                   <span>🔍 {lang === "gu" ? "ઝૂમ (નજીક કરવા માટે સ્લાઇડ કરો)" : "Zoom (Slide to focus)"}</span>
                   <span className="text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">{zoomLevel.toFixed(1)}x</span>
@@ -3905,7 +3908,7 @@ export default function QuotationView() {
                     setZoomLevel(val);
                     if (scannerRef.current) {
                       scannerRef.current.applyVideoConstraints({
-                        advanced: [{ zoom: val }]
+                        advanced: [{ zoom: val } as any]
                       }).catch((err: any) => console.warn("Failed to apply zoom:", err));
                     }
                   }}
@@ -3913,8 +3916,10 @@ export default function QuotationView() {
                 />
               </div>
             )}
+          </div>
 
-
+          {/* Footer (Sticky at bottom) */}
+          <div className="p-5 border-t border-slate-100 bg-slate-50 shrink-0">
             <div className="flex gap-3 w-full">
               {cameras.length > 1 && (
                 <button
