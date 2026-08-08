@@ -5039,7 +5039,7 @@ ${rows}
                           const nameLength = prod.name?.length || 0;
                           const fontSizeClass = is50x25
                             ? (nameLength > 16 ? "text-[8.5px]" : nameLength > 12 ? "text-[9.5px]" : "text-[10.5px]")
-                            : (nameLength > 16 ? "text-[10px]" : nameLength > 12 ? "text-[11.5px]" : "text-[13.5px]");
+                            : (nameLength > 16 ? "text-[10.5px]" : nameLength > 12 ? "text-[12px]" : "text-[13.5px]");
                           return (
                             <p className={`font-black ${fontSizeClass} text-black uppercase tracking-tight break-words leading-tight pt-1 flex-1 pr-1`}>
                               {prod.name}
@@ -5050,7 +5050,7 @@ ${rows}
                       </div>
 
                       {/* Line 3: Carton Qty & Length / Location */}
-                      <div className={is50x25 ? "flex justify-between text-[10px] text-black font-black leading-none" : "flex justify-between text-[12.5px] text-black font-black leading-tight"}>
+                      <div className={is50x25 ? "flex justify-between text-[8.5px] text-black font-black leading-none" : "flex justify-between text-[11px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -5066,7 +5066,7 @@ ${rows}
                       </div>
 
                       {/* Line 4: Description / Color */}
-                      <p className={is50x25 ? "text-[9.5px] text-black font-black truncate leading-none" : "text-[12.5px] text-black font-black truncate leading-tight"}>
+                      <p className={is50x25 ? "text-[8px] text-black font-black truncate leading-none" : "text-[10px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -5076,7 +5076,7 @@ ${rows}
                       </p>
 
                       {/* Line 5: Prices */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[11px] font-black text-black leading-none" : "flex justify-between items-end text-[13.5px] font-black text-black leading-none"}>
+                      <div className={is50x25 ? "flex justify-between items-end text-[9.5px] font-black text-black leading-none" : "flex justify-between items-end text-[12px] font-black text-black leading-none"}>
                         <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
