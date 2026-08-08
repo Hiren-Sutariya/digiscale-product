@@ -432,7 +432,7 @@ export default function QuotationView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
-  const [zoomLevel, setZoomLevel] = useState(2.0);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<any>(null);
   const lastScannedRef = useRef<{ code: string; time: number } | null>(null);
@@ -608,7 +608,8 @@ export default function QuotationView() {
 
   // HTML5 Barcode/QR Camera Scanner Effect
   useEffect(() => {
-    let scannerInstance: any = null;
+    let activeScanner: any = null;
+    let isMounted = true;
     
     if (showCameraScanner && typeof window !== "undefined") {
       lastScannedRef.current = null;
@@ -616,11 +617,26 @@ export default function QuotationView() {
         try {
           const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
           await new Promise(resolve => setTimeout(resolve, 300));
+          if (!isMounted) return;
           
           const scannerContainer = document.getElementById("camera-scanner-reader");
           if (!scannerContainer) return;
 
-          scannerInstance = new Html5Qrcode("camera-scanner-reader");
+          // If there is an existing scanner instance running, stop and clear it first
+          if (scannerRef.current) {
+            try {
+              if (scannerRef.current.isScanning) {
+                await scannerRef.current.stop();
+              }
+              scannerRef.current.clear();
+            } catch (err) {
+              console.warn("Failed to stop previous scanner instance:", err);
+            }
+          }
+
+          const scannerInstance = new Html5Qrcode("camera-scanner-reader");
+          activeScanner = scannerInstance;
+          scannerRef.current = scannerInstance;
           
           // 1. Trigger camera permission to populate labels
           try {
@@ -677,7 +693,7 @@ export default function QuotationView() {
             activeCamera = deviceList[index].id;
           }
 
-          scannerRef.current = scannerInstance;
+          if (!isMounted) return;
 
           await scannerInstance.start(
             activeCamera,
@@ -704,7 +720,7 @@ export default function QuotationView() {
                 Html5QrcodeSupportedFormats.QR_CODE,
                 Html5QrcodeSupportedFormats.DATA_MATRIX
               ]
-            },
+            } as any,
             (decodedText: string) => {
               const now = Date.now();
               if (lastScannedRef.current && lastScannedRef.current.code === decodedText && (now - lastScannedRef.current.time) < 1800) {
@@ -720,17 +736,17 @@ export default function QuotationView() {
 
           // Get capabilities and set zoom limits
           try {
-            const capabilities = scannerInstance.getRunningTrackCapabilities();
-            if (capabilities.zoom) {
+            const capabilities = scannerInstance.getRunningTrackCapabilities() as any;
+            if (capabilities && capabilities.zoom) {
               setZoomRange({
                 min: capabilities.zoom.min || 1,
                 max: capabilities.zoom.max || 4
               });
-              // Set default zoom to 2.0x to magnify the thin barcode lines
-              const defaultZoom = Math.min(2.0, capabilities.zoom.max || 1);
+              // Set default zoom to 1.0x to keep it normal and not zoomed in
+              const defaultZoom = 1.0;
               setZoomLevel(defaultZoom);
               await scannerInstance.applyVideoConstraints({
-                advanced: [{ zoom: defaultZoom }]
+                advanced: [{ zoom: defaultZoom } as any]
               });
             }
           } catch (e) {
@@ -745,10 +761,33 @@ export default function QuotationView() {
     }
 
     return () => {
-      if (scannerInstance && scannerInstance.isScanning) {
-        scannerInstance.stop()
-          .then(() => console.log("Scanner stopped successfully."))
-          .catch((err: any) => console.error("Error stopping scanner:", err));
+      isMounted = false;
+      // Stop and clear the camera scanner instance immediately on clean up
+      if (activeScanner) {
+        try {
+          if (activeScanner.isScanning) {
+            activeScanner.stop().then(() => {
+              activeScanner.clear();
+            }).catch((err: any) => console.warn("Failed to stop scanner on cleanup async:", err));
+          } else {
+            activeScanner.clear();
+          }
+        } catch (e) {
+          console.warn("Cleanup stop error:", e);
+        }
+      } else if (scannerRef.current) {
+        const refInstance = scannerRef.current;
+        try {
+          if (refInstance.isScanning) {
+            refInstance.stop().then(() => {
+              refInstance.clear();
+            }).catch((err: any) => console.warn("Failed to stop scanner ref on cleanup:", err));
+          } else {
+            refInstance.clear();
+          }
+        } catch (e) {
+          console.warn("Cleanup ref stop error:", e);
+        }
       }
     };
   }, [showCameraScanner, currentCameraIndex]);
@@ -1385,17 +1424,18 @@ export default function QuotationView() {
       oscillator.connect(gainNode);
       gainNode.connect(audioCtx.destination);
       
-      oscillator.type = "sine";
       if (isError) {
-        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        oscillator.type = "sawtooth"; // Buzzer-like sound for error
+        oscillator.frequency.setValueAtTime(180, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
         oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.3);
+        oscillator.stop(audioCtx.currentTime + 0.35);
       } else {
-        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        oscillator.type = "triangle"; // Loud Honeywell scanner-like beep
+        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.9, audioCtx.currentTime);
         oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
+        oscillator.stop(audioCtx.currentTime + 0.16);
       }
     } catch (err) {
       console.warn("AudioContext beep failed:", err);
