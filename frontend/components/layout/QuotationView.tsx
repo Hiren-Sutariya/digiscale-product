@@ -671,8 +671,9 @@ export default function QuotationView() {
           }
 
           // 3. Select camera based on current index
+          // On index 0, we use facingMode: "environment" so the browser natively launches the main 1x rear camera.
           let activeCamera: any = { facingMode: "environment" };
-          if (deviceList.length > 0) {
+          if (currentCameraIndex > 0 && deviceList.length > 0) {
             const index = Math.min(currentCameraIndex, deviceList.length - 1);
             activeCamera = deviceList[index].id;
           }
