@@ -23,8 +23,8 @@ function LabelBarcode({ value, is50x25 }: { value: string; is50x25: boolean }) {
           format: "CODE128",
           displayValue: false,
           margin: 0,
-          height: is50x25 ? 32 : 45,
-          width: is50x25 ? 1.0 : 1.2,
+          height: is50x25 ? 40 : 55,
+          width: is50x25 ? 1.35 : 1.55,
           lineColor: "#000000",
           background: "transparent",
         });
@@ -34,8 +34,8 @@ function LabelBarcode({ value, is50x25 }: { value: string; is50x25: boolean }) {
             format: "CODE128",
             displayValue: false,
             margin: 0,
-            height: is50x25 ? 32 : 45,
-            width: is50x25 ? 1.0 : 1.2,
+            height: is50x25 ? 40 : 55,
+            width: is50x25 ? 1.35 : 1.55,
             lineColor: "#000000",
             background: "transparent",
           });
@@ -48,7 +48,7 @@ function LabelBarcode({ value, is50x25 }: { value: string; is50x25: boolean }) {
 
   return (
     <div className="w-full flex justify-center items-center overflow-hidden py-0.5">
-      <svg ref={svgRef} className={is50x25 ? "h-[22px] max-w-[70%]" : "h-[30px] max-w-[75%]"} />
+      <svg ref={svgRef} className={is50x25 ? "h-[25px] max-w-[88%]" : "h-[36px] max-w-[88%]"} />
     </div>
   );
 }
