@@ -24,7 +24,7 @@ function LabelDataMatrix({ value, is50x25 }: { value: string; is50x25: boolean }
         bwipjs.toCanvas(canvasRef.current, {
           bcid: 'datamatrix', // Barcode type: datamatrix
           text: value,        // Message to encode
-          scale: is50x25 ? 1.5 : 2.0, // High scale resolution for crisp print
+          scale: is50x25 ? 1.8 : 2.4, // Increased scale resolution for crisp print
           includetext: false,
         });
       } catch (err) {
@@ -35,7 +35,7 @@ function LabelDataMatrix({ value, is50x25 }: { value: string; is50x25: boolean }
 
   return (
     <div className="shrink-0 flex items-center justify-center pt-0.5">
-      <canvas ref={canvasRef} style={{ width: is50x25 ? '32px' : '44px', height: is50x25 ? '32px' : '44px' }} />
+      <canvas ref={canvasRef} style={{ width: is50x25 ? '38px' : '52px', height: is50x25 ? '38px' : '52px' }} />
     </div>
   );
 }
@@ -5034,7 +5034,7 @@ ${rows}
                       }
                     >
                       {/* Line 1: Product Code (Left) & Data Matrix (Right) */}
-                      <div className="flex justify-between items-start gap-1.5 w-full" style={{ minHeight: is50x25 ? '36px' : '48px' }}>
+                      <div className="flex justify-between items-start gap-1.5 w-full" style={{ minHeight: is50x25 ? '40px' : '52px' }}>
                         {(() => {
                           const nameLength = prod.name?.length || 0;
                           const fontSizeClass = is50x25
@@ -5050,7 +5050,7 @@ ${rows}
                       </div>
 
                       {/* Line 3: Carton Qty & Length / Location */}
-                      <div className={is50x25 ? "flex justify-between text-[9px] text-black font-black leading-none" : "flex justify-between text-[11.5px] text-black font-black leading-tight"}>
+                      <div className={is50x25 ? "flex justify-between text-[10px] text-black font-black leading-none" : "flex justify-between text-[12.5px] text-black font-black leading-tight"}>
                         <span>{prod.cartonQty || 1} {prod.unit_type || "pcs"}/ctn</span>
                         <span>
                           {(() => {
@@ -5066,7 +5066,7 @@ ${rows}
                       </div>
 
                       {/* Line 4: Description / Color */}
-                      <p className={is50x25 ? "text-[8.5px] text-black font-black truncate leading-none" : "text-[10.5px] text-black font-black truncate leading-tight"}>
+                      <p className={is50x25 ? "text-[9.5px] text-black font-black truncate leading-none" : "text-[12.5px] text-black font-black truncate leading-tight"}>
                         {(() => {
                           const parts = [];
                           if (prod.description?.trim()) parts.push(prod.description.trim());
@@ -5076,7 +5076,7 @@ ${rows}
                       </p>
 
                       {/* Line 5: Prices */}
-                      <div className={is50x25 ? "flex justify-between items-end text-[10.5px] font-black text-black leading-none" : "flex justify-between items-end text-[13px] font-black text-black leading-none"}>
+                      <div className={is50x25 ? "flex justify-between items-end text-[11px] font-black text-black leading-none" : "flex justify-between items-end text-[13.5px] font-black text-black leading-none"}>
                         <span className="font-black">
                           {wholesalePrefix}{prod.rate}
                         </span>
