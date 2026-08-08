@@ -1185,11 +1185,22 @@ ${rows}
     // Small delay to let state update, then print
     setTimeout(() => {
       document.body.classList.add("is-printing-portal");
-      setTimeout(() => {
-        window.print();
+      
+      let isCleanedUp = false;
+      const cleanup = () => {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
         document.body.classList.remove("is-printing-portal");
         document.title = originalTitle;
         setActivePdfMarkup(0);
+        window.removeEventListener("afterprint", cleanup);
+      };
+
+      window.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(() => {
+        window.print();
+        // Fallback cleanup timer (3000ms delay ensures mobile safari captures preview)
+        setTimeout(cleanup, 3000);
       }, 300);
     }, 100);
   };
@@ -1210,13 +1221,24 @@ ${rows}
     }
     setTimeout(() => {
       document.body.classList.add("is-printing-labels");
-      setTimeout(() => {
-        window.print();
+
+      let isCleanedUp = false;
+      const cleanup = () => {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
         document.body.classList.remove("is-printing-labels");
         document.title = originalTitle;
         setActiveLabelMarkup(null);
         setActiveLabelProducts(null);
         setIsPrintingLabels(false);
+        window.removeEventListener("afterprint", cleanup);
+      };
+
+      window.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(() => {
+        window.print();
+        // Fallback cleanup timer (3000ms delay ensures mobile safari captures preview)
+        setTimeout(cleanup, 3000);
       }, 300);
     }, 100);
   };
@@ -5070,10 +5092,12 @@ ${rows}
               print-color-adjust: exact !important;
             }
             /* Hide everything except the print labels portal */
-            body.is-printing-labels > *:not(.print-labels-portal) {
+            body.is-printing-labels > *:not(.print-labels-portal),
+            body > *:not(.print-labels-portal) {
               display: none !important;
             }
-            body.is-printing-labels .print-labels-portal {
+            body.is-printing-labels .print-labels-portal,
+            body .print-labels-portal {
               display: block !important;
               width: ${labelSize === "50x25" ? "106mm" : "56mm"} !important;
               margin: 0 !important;
@@ -5138,10 +5162,12 @@ ${rows}
               print-color-adjust: exact !important;
             }
             /* Hide everything except the print portal */
-            body.is-printing-portal > *:not(.print-portal) {
+            body.is-printing-portal > *:not(.print-portal),
+            body > *:not(.print-portal) {
               display: none !important;
             }
-            body.is-printing-portal .print-portal {
+            body.is-printing-portal .print-portal,
+            body .print-portal {
               display: block !important;
               width: 100% !important;
               margin: 0 !important;
