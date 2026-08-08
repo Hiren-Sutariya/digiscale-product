@@ -699,12 +699,7 @@ export default function QuotationView() {
             activeCamera,
             {
               fps: 30, // Max frame rate for speed
-              qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-                const width = Math.min(viewfinderWidth * 0.9, 360);
-                const height = Math.min(viewfinderHeight * 0.65, 160);
-                return { width, height };
-              }, // Dynamic wider box for physical labels
-              aspectRatio: 1.777778, // HD 16:9 aspect ratio
+              aspectRatio: 1.0, // Compact square aspect ratio to prevent vertical screen overflow
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true // Enforce native Chrome/Safari hardware-accelerated bar code detection
               },
@@ -738,10 +733,6 @@ export default function QuotationView() {
           try {
             const capabilities = scannerInstance.getRunningTrackCapabilities() as any;
             if (capabilities && capabilities.zoom) {
-              setZoomRange({
-                min: capabilities.zoom.min || 1,
-                max: capabilities.zoom.max || 4
-              });
               // Set default zoom to 1.0x to keep it normal and not zoomed in
               const defaultZoom = 1.0;
               setZoomLevel(defaultZoom);
@@ -3873,76 +3864,19 @@ export default function QuotationView() {
             </button>
           </div>
           
-          {/* Body Content (Scrollable if needed, keeps layout intact) */}
+          {/* Body Content (Pure clear camera stream, no overlays) */}
           <div className="p-5 flex-1 overflow-y-auto space-y-4 flex flex-col justify-start">
             <p className="text-[11px] text-slate-500 font-bold text-center">
-              {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the box to scan"}
+              {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the camera to scan"}
             </p>
             
-            {/* Camera scanner container with red laser line overlay */}
+            {/* Camera scanner container */}
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mx-auto max-w-[320px] shrink-0">
               <div 
                 id="camera-scanner-reader" 
                 className="w-full"
                 style={{ minHeight: "220px", maxHeight: "280px" }}
               />
-              {/* Laser line guide */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse pointer-events-none z-10" />
-            </div>
-            
-            {/* Zoom Slider Control (only show if zoom is supported on device) */}
-            {zoomRange && zoomRange.max > zoomRange.min && (
-              <div className="w-full space-y-1.5 px-2.5 py-2 bg-slate-50 border border-slate-100 rounded-xl shrink-0">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                  <span>🔍 {lang === "gu" ? "ઝૂમ (નજીક કરવા માટે સ્લાઇડ કરો)" : "Zoom (Slide to focus)"}</span>
-                  <span className="text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">{zoomLevel.toFixed(1)}x</span>
-                </div>
-                <input
-                  type="range"
-                  min={zoomRange.min}
-                  max={zoomRange.max}
-                  step={0.1}
-                  value={zoomLevel}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setZoomLevel(val);
-                    if (scannerRef.current) {
-                      scannerRef.current.applyVideoConstraints({
-                        advanced: [{ zoom: val } as any]
-                      }).catch((err: any) => console.warn("Failed to apply zoom:", err));
-                    }
-                  }}
-                  className="w-full accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Footer (Sticky at bottom) */}
-          <div className="p-5 border-t border-slate-100 bg-slate-50 shrink-0">
-            <div className="flex gap-3 w-full">
-              {cameras.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentCameraIndex((prev) => (prev + 1) % cameras.length);
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-150 transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  🔄 {lang === "gu" ? "કેમેરો બદલો" : "Switch Camera"}
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  setShowCameraScanner(false);
-                  setCameras([]);
-                  setCurrentCameraIndex(0);
-                }}
-                className={`px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer ${cameras.length > 1 ? 'flex-1' : 'w-full'}`}
-              >
-                {lang === "gu" ? "બંધ કરો" : "Close"}
-              </button>
             </div>
           </div>
         </div>
