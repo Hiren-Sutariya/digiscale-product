@@ -671,9 +671,8 @@ export default function QuotationView() {
           }
 
           // 3. Select camera based on current index
-          // On index 0, we use facingMode: "environment" so the browser natively launches the main 1x rear camera.
           let activeCamera: any = { facingMode: "environment" };
-          if (currentCameraIndex > 0 && deviceList.length > 0) {
+          if (deviceList.length > 0) {
             const index = Math.min(currentCameraIndex, deviceList.length - 1);
             activeCamera = deviceList[index].id;
           }
@@ -3876,16 +3875,30 @@ export default function QuotationView() {
             )}
 
 
-            <button
-              onClick={() => {
-                setShowCameraScanner(false);
-                setCameras([]);
-                setCurrentCameraIndex(0);
-              }}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition w-full active:scale-95 cursor-pointer"
-            >
-              {lang === "gu" ? "બંધ કરો" : "Close"}
-            </button>
+            <div className="flex gap-3 w-full">
+              {cameras.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentCameraIndex((prev) => (prev + 1) % cameras.length);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-150 transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  🔄 {lang === "gu" ? "કેમેરો બદલો" : "Switch Camera"}
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowCameraScanner(false);
+                  setCameras([]);
+                  setCurrentCameraIndex(0);
+                }}
+                className={`px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition active:scale-95 cursor-pointer ${cameras.length > 1 ? 'flex-1' : 'w-full'}`}
+              >
+                {lang === "gu" ? "બંધ કરો" : "Close"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
