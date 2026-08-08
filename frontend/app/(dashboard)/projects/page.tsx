@@ -1186,6 +1186,7 @@ ${rows}
     setTimeout(() => {
       document.body.classList.add("is-printing-portal");
       
+      const isMobile = window.innerWidth < 640;
       let isCleanedUp = false;
       const cleanup = () => {
         if (isCleanedUp) return;
@@ -1196,11 +1197,15 @@ ${rows}
         window.removeEventListener("afterprint", cleanup);
       };
 
-      window.addEventListener("afterprint", cleanup, { once: true });
+      // Only clean up automatically on desktop; mobile will use longer timeout and manual exit button
+      if (!isMobile) {
+        window.addEventListener("afterprint", cleanup, { once: true });
+      }
+
       setTimeout(() => {
         window.print();
-        // Fallback cleanup timer (3000ms delay ensures mobile safari captures preview)
-        setTimeout(cleanup, 3000);
+        // Fallback cleanup timer (on mobile 15 seconds to ensure print engine finishes)
+        setTimeout(cleanup, isMobile ? 15000 : 3000);
       }, 300);
     }, 100);
   };
@@ -1222,6 +1227,7 @@ ${rows}
     setTimeout(() => {
       document.body.classList.add("is-printing-labels");
 
+      const isMobile = window.innerWidth < 640;
       let isCleanedUp = false;
       const cleanup = () => {
         if (isCleanedUp) return;
@@ -1234,13 +1240,27 @@ ${rows}
         window.removeEventListener("afterprint", cleanup);
       };
 
-      window.addEventListener("afterprint", cleanup, { once: true });
+      // Only clean up automatically on desktop; mobile will use longer timeout and manual exit button
+      if (!isMobile) {
+        window.addEventListener("afterprint", cleanup, { once: true });
+      }
+
       setTimeout(() => {
         window.print();
-        // Fallback cleanup timer (3000ms delay ensures mobile safari captures preview)
-        setTimeout(cleanup, 3000);
+        // Fallback cleanup timer (on mobile 15 seconds to ensure print engine finishes)
+        setTimeout(cleanup, isMobile ? 15000 : 3000);
       }, 300);
     }, 100);
+  };
+
+  const exitMobilePrintMode = () => {
+    document.body.classList.remove("is-printing-portal");
+    setActivePdfMarkup(0);
+
+    document.body.classList.remove("is-printing-labels");
+    setActiveLabelMarkup(null);
+    setActiveLabelProducts(null);
+    setIsPrintingLabels(false);
   };
 
   // ── Excel / CSV Upload & Parse (supports .xlsx and .csv) ───────────
@@ -5177,6 +5197,19 @@ ${rows}
             }
           }
         `}</style>
+      )}
+
+      {/* Floating Exit Button for Mobile Print Preview */}
+      {(activePdfMarkup !== 0 || activeLabelMarkup !== null) && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] no-print sm:hidden">
+          <button
+            onClick={exitMobilePrintMode}
+            className="rounded-full bg-slate-900 text-white px-6 py-3 font-bold text-xs shadow-2xl flex items-center gap-2 hover:bg-slate-800 transition active:scale-95 border border-slate-700"
+          >
+            <X className="h-4 w-4" />
+            <span>Exit Print Mode</span>
+          </button>
+        </div>
       )}
     </div>
   );
