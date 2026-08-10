@@ -82,6 +82,7 @@ interface Collection {
   name: string;
   createdAt?: string;
   created_at?: string;
+  collection_type?: "code" | "named";
 }
 
 interface Product {
@@ -339,6 +340,17 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   };
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
+  const isCodeCollection = (nameOrCol: string | Collection) => {
+    if (typeof nameOrCol === 'object') {
+      if (nameOrCol.collection_type) return nameOrCol.collection_type === 'code';
+      const name = nameOrCol.name;
+      if (!name) return false;
+      return /^[A-Z]{3}-\d+-\d+/.test(name) || name.startsWith("PJD");
+    }
+    if (!nameOrCol) return false;
+    return /^[A-Z]{3}-\d+-\d+/.test(nameOrCol) || nameOrCol.startsWith("PJD");
+  };
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -823,7 +835,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, items').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -1073,7 +1085,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, items').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -1232,8 +1244,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       if (error) throw error;
 
       if (clientName) {
-        const clientExists = clientsList.some(c => c.name.toLowerCase() === clientName.toLowerCase());
-        if (!clientExists) {
+        const existingClient = clientsList.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+        if (!existingClient) {
           const newClient = {
             name: clientName,
             company: clientCompany || null,
@@ -1241,9 +1253,39 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             contact: clientContact || null,
             user_id: currentUserId
           };
-          const { error: clientError } = await supabase.from('clients').insert([newClient]);
-          if (!clientError) {
-            setClientsList([...clientsList, newClient]);
+          const { data: insertedClient, error: clientError } = await supabase
+            .from('clients')
+            .insert([newClient])
+            .select()
+            .single();
+          if (!clientError && insertedClient) {
+            setClientsList([...clientsList, insertedClient]);
+          }
+        } else {
+          // If details changed, update the client
+          const hasChanged = 
+            existingClient.company !== (clientCompany || null) ||
+            existingClient.address !== (clientAddress || null) ||
+            existingClient.contact !== (clientContact || null);
+          
+          if (hasChanged) {
+            const updatedClient = {
+              ...existingClient,
+              company: clientCompany || null,
+              address: clientAddress || null,
+              contact: clientContact || null
+            };
+            const { error: clientError } = await supabase
+              .from('clients')
+              .update({
+                company: clientCompany || null,
+                address: clientAddress || null,
+                contact: clientContact || null
+              })
+              .eq('id', existingClient.id);
+            if (!clientError) {
+              setClientsList(clientsList.map(c => c.id === existingClient.id ? updatedClient : c));
+            }
           }
         }
       }
@@ -1292,6 +1334,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setBankAmount(quote.bankAmount || "");
     setApplyEventMarkup(quote.applyEventMarkup || false);
     setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
+    
+    // Auto lookup and sync client contact details from database
+    const matchedClient = clientsList.find(c => c.name.toLowerCase() === (quote.clientName || "").toLowerCase());
+    if (matchedClient) {
+      setClientContact(matchedClient.contact || "");
+    } else {
+      setClientContact("");
+    }
+
     setActiveSubView("create");
   };
 
@@ -1300,6 +1351,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setClientName("");
     setClientCompany("");
     setClientAddress("");
+    setClientContact("");
     setQuoteDate(() => getLocalDateString());
     setSelectedItems([]);
     setTaxInput("");
@@ -1715,6 +1767,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   // Filter products by global search query
   const filteredProducts = products.filter(p => {
+    // Only include products from Code Collections (exclude Named Collections)
+    const col = collections.find(c => c.id === p.collectionId);
+    const isCode = col ? isCodeCollection(col) : isCodeCollection(p.collectionName || "");
+    if (!isCode) return false;
+
     const q = searchQuery.trim().toLowerCase();
     if (!q) return false; // Show nothing if query is empty
     return (
