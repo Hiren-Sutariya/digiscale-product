@@ -756,7 +756,8 @@ export default function WarehousePage() {
   const occupiedSlots = warehouseRows.reduce((sum, row) => {
     return sum + getSlotsForRow(row).filter((slot) => {
       const locId = `${row}-${slot}`;
-      return (warehouseAssignments[locId] || []).length > 0;
+      return (warehouseAssignments[`${locId}-upper`] || []).length > 0 ||
+             (warehouseAssignments[`${locId}-lower`] || []).length > 0;
     }).length;
   }, 0);
 
