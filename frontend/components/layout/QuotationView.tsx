@@ -1474,10 +1474,26 @@ export default function QuotationView() {
     if (matchedProduct) {
       playBeepSound(false);
       handleToggleProduct(matchedProduct);
+      
+      // Fetch missing photoUrl from DB if not present in local object
+      let photoUrl = matchedProduct.photoUrl;
+      if (!photoUrl) {
+        try {
+          const { data } = await supabase
+            .from('products')
+            .select('photoUrl')
+            .eq('id', matchedProduct.id)
+            .single();
+          if (data?.photoUrl) photoUrl = data.photoUrl;
+        } catch (e) {
+          console.warn("Failed to fetch photoUrl on scan success:", e);
+        }
+      }
+
       setBarcodeFeedback({ 
         text: matchedProduct.name, 
         isError: false,
-        photoUrl: matchedProduct.photoUrl
+        photoUrl: photoUrl
       });
     } else {
       playBeepSound(true);
@@ -3857,45 +3873,45 @@ export default function QuotationView() {
     {/* CAMERA BARCODE SCANNER MODAL */}
     {showCameraScanner && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden relative">
-          
-          {/* Top iOS-style Scan Notification Banner */}
-          {barcodeFeedback && (
-            <div className={`absolute top-3 left-3 right-3 z-50 px-4 py-3 rounded-2xl border shadow-xl flex items-center gap-3 transition-all duration-300 animate-in slide-in-from-top-5 ${
-              barcodeFeedback.isError 
-                ? "bg-rose-50 text-rose-800 border-rose-200" 
-                : "bg-white/95 backdrop-blur-md text-slate-800 border-slate-100"
-            }`}>
-              {/* Product Image or Icon */}
-              <div className="h-10 w-10 rounded-xl overflow-hidden border border-slate-150 bg-slate-50 shrink-0 flex items-center justify-center">
-                {barcodeFeedback.isError ? (
-                  <span className="text-lg">⚠️</span>
-                ) : barcodeFeedback.photoUrl ? (
-                  <img 
-                    src={barcodeFeedback.photoUrl} 
-                    alt={barcodeFeedback.text} 
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <span className="text-lg">📦</span>
-                )}
-              </div>
-
-              {/* Text Details */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none">
-                  {barcodeFeedback.isError 
-                    ? (lang === "gu" ? "ભૂલ" : "Scan Error")
-                    : (lang === "gu" ? "પ્રોડક્ટ ઉમેરાઈ" : "Product Added")
-                  }
-                </p>
-                <p className="text-xs font-bold text-slate-800 truncate mt-0.5 leading-tight">
-                  {barcodeFeedback.text}
-                </p>
-              </div>
+        
+        {/* Global Screen-Level Scan Notification Banner (iOS style top notification) */}
+        {barcodeFeedback && (
+          <div className={`fixed top-4 left-4 right-4 max-w-md mx-auto z-[200] px-4 py-3 rounded-2xl border shadow-xl flex items-center gap-3 transition-all duration-300 animate-in slide-in-from-top-5 ${
+            barcodeFeedback.isError 
+              ? "bg-rose-50 text-rose-800 border-rose-200" 
+              : "bg-white/95 backdrop-blur-md text-slate-800 border-slate-100"
+          }`}>
+            {/* Product Image or Icon */}
+            <div className="h-10 w-10 rounded-xl overflow-hidden border border-slate-150 bg-slate-50 shrink-0 flex items-center justify-center">
+              {barcodeFeedback.isError ? (
+                <span className="text-lg">⚠️</span>
+              ) : barcodeFeedback.photoUrl ? (
+                <img 
+                  src={barcodeFeedback.photoUrl} 
+                  alt={barcodeFeedback.text} 
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="text-lg">📦</span>
+              )}
             </div>
-          )}
 
+            {/* Text Details */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none">
+                {barcodeFeedback.isError 
+                  ? (lang === "gu" ? "ભૂલ" : "Scan Error")
+                  : (lang === "gu" ? "પ્રોડક્ટ ઉમેરાઈ" : "Product Added")
+                }
+              </p>
+              <p className="text-xs font-bold text-slate-800 truncate mt-0.5 leading-tight">
+                {barcodeFeedback.text}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden relative">
           {/* Header (Sticky at top) */}
           <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 shrink-0">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
