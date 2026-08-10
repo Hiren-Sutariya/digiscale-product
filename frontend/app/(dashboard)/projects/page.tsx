@@ -5007,9 +5007,9 @@ ${rows}
                           {/* Header Row */}
                           <div className="grid grid-cols-12 border-b border-slate-900 uppercase text-center" style={{ fontWeight: 900 }}>
                             <div style={{ padding: '2px 1px', fontSize: '6.5px' }} className="col-span-4 border-r border-slate-900 text-slate-955 flex items-center justify-center">Description</div>
-                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-2 border-r border-slate-900 text-slate-955 flex items-center justify-center">PCS</div>
+                            <div style={{ padding: '2px 1px', fontSize: '5.5px' }} className="col-span-2 border-r border-slate-900 text-slate-955 flex items-center justify-center">Per CTN</div>
                             <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-3 border-r border-slate-900 text-slate-955 flex items-center justify-center">Code</div>
-                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-3 text-slate-955 flex items-center justify-center">Event Price</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-3 text-slate-955 flex items-center justify-center">Price</div>
                           </div>
                           {/* Data Row */}
                           <div className="grid grid-cols-12 text-slate-900 text-center" style={{ fontWeight: 700 }}>
