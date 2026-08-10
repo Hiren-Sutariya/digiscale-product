@@ -197,6 +197,46 @@ export default function StockBookPage() {
     init();
   }, []);
 
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel('realtime-stockbook-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        async (payload) => {
+          fetchData(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'collections' },
+        async (payload) => {
+          fetchData(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'warehouse_assignments' },
+        async (payload) => {
+          fetchData(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stock_entries' },
+        async (payload) => {
+          fetchData(currentUserId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
+
   // 2. Optimized Bulk Photo Fetcher for Paginated Products
   useEffect(() => {
     if (paginatedProducts.length === 0) return;
@@ -262,24 +302,42 @@ export default function StockBookPage() {
 
   const fetchData = async (userId: string) => {
     try {
-      // 1. Fetch products (without querying large base64 photoUrl column in bulk)
-      const { data: prodsData, error: prodsErr } = await supabase
-        .from("products")
-        .select(`
-          id,
-          name,
-          stock,
-          cartonQty,
-          rate,
-          unit_type,
-          color,
-          length,
-          collection_id,
-          description
-        `)
-        .eq("user_id", userId);
+      // 1. Fetch products (without querying large base64 photoUrl column in bulk) using range paginations
+      let allLoadedProducts: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (prodsErr) throw prodsErr;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("products")
+          .select(`
+            id,
+            name,
+            stock,
+            cartonQty,
+            rate,
+            unit_type,
+            color,
+            length,
+            collection_id,
+            description
+          `)
+          .eq("user_id", userId)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        if (data) {
+          allLoadedProducts = [...allLoadedProducts, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
 
       // 2. Fetch collections to resolve names
       const { data: colsData } = await supabase
@@ -290,21 +348,40 @@ export default function StockBookPage() {
       const collectionsMap = new Map<string, string>();
       colsData?.forEach(c => collectionsMap.set(c.id, c.name));
 
-      // 3. Fetch warehouse assignments to resolve location
-      const { data: assignsData } = await supabase
-        .from("warehouse_assignments")
-        .select("location_key, product_id, collection_id")
-        .eq("user_id", userId);
+      // 3. Fetch warehouse assignments with range pagination
+      let allAssigns: any[] = [];
+      let pageAssigns = 0;
+      let hasMoreAssigns = true;
+
+      while (hasMoreAssigns) {
+        const { data, error } = await supabase
+          .from("warehouse_assignments")
+          .select("location_key, product_id, collection_id")
+          .eq("user_id", userId)
+          .range(pageAssigns * 1000, (pageAssigns + 1) * 1000 - 1);
+
+        if (error) throw error;
+        if (data) {
+          allAssigns = [...allAssigns, ...data];
+          if (data.length < 1000) {
+            hasMoreAssigns = false;
+          } else {
+            pageAssigns++;
+          }
+        } else {
+          hasMoreAssigns = false;
+        }
+      }
 
       // Create a map of product_id -> warehouse location key
       const locationsMap = new Map<string, string>();
-      assignsData?.forEach(a => {
+      allAssigns?.forEach(a => {
         if (a.product_id) {
           locationsMap.set(a.product_id, a.location_key);
         }
       });
 
-      const formattedProducts: Product[] = (prodsData || []).map(p => ({
+      const formattedProducts: Product[] = allLoadedProducts.map(p => ({
         id: p.id,
         name: p.name || "",
         photoUrl: undefined, // Lazy loaded separately
