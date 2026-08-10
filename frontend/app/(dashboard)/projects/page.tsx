@@ -1346,7 +1346,7 @@ ${rows}
       const colIdx = (keys: string[]) => headerRow.findIndex(h => keys.some(k => normalize(h).includes(normalize(k))));
 
       const nameIdx = colIdx(["name", "product code", "product", "item code", "model"]);
-      const cartonIdx = colIdx(["carton", "pack", "ctn", "qty/ctn", "pcs/ctn"]);
+      const cartonIdx = colIdx(["carton", "pack", "ctn", "qty/ctn", "pcs/ctn", "per carton", "packing"]);
       const colorIdx = colIdx(["color", "colour", "design", "pattern"]);
       const lengthIdx = colIdx(["length", "dimension", "len", "dim", "size", "cm", "height", "width"]);
       const descIdx = colIdx(["desc", "description", "note", "set", "sticks", "specs", "type", "pcs set", "detail", "details"]);
@@ -1368,7 +1368,10 @@ ${rows}
         let parsedCartonQty = 1;
         if (cartonIdx >= 0) {
           const rawCarton = cols[cartonIdx]?.toLowerCase() || "";
-          parsedCartonQty = parseInt(rawCarton) || 1;
+          // extract numeric digits only
+          const digitsOnly = rawCarton.replace(/[^0-9]/g, "");
+          parsedCartonQty = parseInt(digitsOnly) || parseInt(rawCarton) || 1;
+          
           if (rawCarton.includes("dzn") || rawCarton.includes("dozen")) {
             parsedUnitType = "dzn";
           } else if (rawCarton.includes("kg") || rawCarton.includes("kilo")) {
@@ -1381,7 +1384,9 @@ ${rows}
         }
 
         const rawStock = stockIdx >= 0 ? cols[stockIdx] : "";
-        const parsedStock = parseFloat(rawStock) || 0;
+        // extract digits and decimals for stock
+        const stockDigits = rawStock.toLowerCase().replace(/[^0-9.]/g, "");
+        const parsedStock = parseFloat(stockDigits) || parseFloat(rawStock) || 0;
 
         newProducts.push({
           id: `excel_${Date.now()}_${i}`,
@@ -1543,13 +1548,22 @@ ${rows}
           let colNum = 0;
           for (let i = 0; i < colLetters.length; i++) colNum = colNum * 26 + (colLetters.charCodeAt(i) - 64);
           const t = cell.getAttribute("t");
-          const vEl = cell.querySelector("v");
-          let val = vEl?.textContent || "";
-          if (t === "s") val = sharedStrings[parseInt(val)] ?? "";
+          let val = "";
+          if (t === "s") {
+            const vEl = cell.querySelector("v");
+            const idx = parseInt(vEl?.textContent || "");
+            val = !isNaN(idx) ? (sharedStrings[idx] ?? "") : "";
+          } else if (t === "inlineStr") {
+            const tEl = cell.querySelector("is > t") || cell.querySelector("t");
+            val = tEl?.textContent || "";
+          } else {
+            const vEl = cell.querySelector("v");
+            val = vEl?.textContent || "";
+          }
           return { colNum, val };
         });
         if (!parsed.length) return [];
-        const maxCol = Math.max(...parsed.map(p => p.colNum));
+        const maxCol = Math.max(...parsed.map(p => p.colNum), 15);
         const arr = Array(maxCol).fill("");
         parsed.forEach(p => { arr[p.colNum - 1] = p.val; });
         return arr;
