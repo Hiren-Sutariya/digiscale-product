@@ -246,36 +246,54 @@ export default function WarehousePage() {
   // Fetch Collections & Products
   const fetchCollectionsAndProducts = async (userId: string) => {
     try {
-      const [colsRes, prodsRes] = await Promise.all([
-        supabase.from("collections").select("*").eq("user_id", userId),
-        supabase.from("products").select("id, name, stock, rate, color, unit_type, collection_id").eq("user_id", userId),
-      ]);
-
+      const colsRes = await supabase.from("collections").select("*").eq("user_id", userId);
       let colsData: any[] = [];
-      let prodsData: any[] = [];
-
       if (colsRes.data) {
         colsData = colsRes.data;
         setCollections(colsData);
       }
 
-      if (prodsRes.data) {
-        const colsMap: Record<string, string> = {};
-        colsData.forEach((c: any) => colsMap[c.id] = c.name);
+      // Fetch all products using paginated pages to bypass 1000 row API limit
+      let allLoadedProducts: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-        prodsData = prodsRes.data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          photoUrl: p.photoUrl,
-          stock: p.stock || 0,
-          rate: p.rate || "",
-          color: p.color || "",
-          unit_type: p.unit_type || "pcs",
-          collectionName: colsMap[p.collection_id] || "Unknown Collection",
-          collectionId: p.collection_id,
-        }));
-        setAllProducts(prodsData);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, stock, rate, color, unit_type, collection_id')
+          .eq('user_id', userId)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        if (data) {
+          allLoadedProducts = [...allLoadedProducts, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+
+      const colsMap: Record<string, string> = {};
+      colsData.forEach((c: any) => colsMap[c.id] = c.name);
+
+      const prodsData = allLoadedProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        photoUrl: p.photoUrl,
+        stock: p.stock || 0,
+        rate: p.rate || "",
+        color: p.color || "",
+        unit_type: p.unit_type || "pcs",
+        collectionName: colsMap[p.collection_id] || "Unknown Collection",
+        collectionId: p.collection_id,
+      }));
+      setAllProducts(prodsData);
       return { collections: colsData, allProducts: prodsData };
     } catch (e) {
       console.error("Failed to load catalog:", e);
@@ -286,15 +304,13 @@ export default function WarehousePage() {
   // Fetch Warehouse Configuration
   const fetchWarehouseData = async (userId: string) => {
     try {
-      const [rowsRes, slotsRes, assignsRes] = await Promise.all([
+      const [rowsRes, slotsRes] = await Promise.all([
         supabase.from("warehouse_rows").select("*").eq("user_id", userId),
         supabase.from("warehouse_slots").select("*").eq("user_id", userId),
-        supabase.from("warehouse_assignments").select("*").eq("user_id", userId),
       ]);
 
       let rowsData: string[] = [];
       let slotsMap: Record<string, number[]> = {};
-      let assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
 
       if (rowsRes.data) {
         rowsData = rowsRes.data.map((r) => r.id).sort();
@@ -312,16 +328,41 @@ export default function WarehousePage() {
         setWarehouseSlots(slotsMap);
       }
 
-      if (assignsRes.data) {
-        assignsRes.data.forEach((a) => {
-          if (!assignsMap[a.location_key]) assignsMap[a.location_key] = [];
-          assignsMap[a.location_key].push({
-            productId: a.product_id,
-            collectionId: a.collection_id,
-          });
-        });
-        setWarehouseAssignments(assignsMap);
+      // Fetch all warehouse assignments with pagination to bypass 1000 row limit
+      let allAssigns: any[] = [];
+      let pageAssigns = 0;
+      let hasMoreAssigns = true;
+
+      while (hasMoreAssigns) {
+        const { data, error } = await supabase
+          .from('warehouse_assignments')
+          .select('*')
+          .eq('user_id', userId)
+          .range(pageAssigns * 1000, (pageAssigns + 1) * 1000 - 1);
+
+        if (error) throw error;
+        if (data) {
+          allAssigns = [...allAssigns, ...data];
+          if (data.length < 1000) {
+            hasMoreAssigns = false;
+          } else {
+            pageAssigns++;
+          }
+        } else {
+          hasMoreAssigns = false;
+        }
       }
+
+      const assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
+      allAssigns.forEach((a) => {
+        if (!assignsMap[a.location_key]) assignsMap[a.location_key] = [];
+        assignsMap[a.location_key].push({
+          productId: a.product_id,
+          collectionId: a.collection_id,
+        });
+      });
+      setWarehouseAssignments(assignsMap);
+
       return { warehouseRows: rowsData, warehouseSlots: slotsMap, warehouseAssignments: assignsMap };
     } catch (err) {
       console.error("Failed to fetch warehouse details:", err);
@@ -385,6 +426,53 @@ export default function WarehousePage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel('realtime-warehouse-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'collections' },
+        async (payload) => {
+          fetchCollectionsAndProducts(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        async (payload) => {
+          fetchCollectionsAndProducts(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'warehouse_assignments' },
+        async (payload) => {
+          fetchWarehouseData(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'warehouse_rows' },
+        async (payload) => {
+          fetchWarehouseData(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'warehouse_slots' },
+        async (payload) => {
+          fetchWarehouseData(currentUserId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
 
   const getSlotsForRow = (row: string): number[] => {
     return warehouseSlots[row] || defaultSlots;

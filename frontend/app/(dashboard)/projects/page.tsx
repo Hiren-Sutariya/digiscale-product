@@ -599,6 +599,72 @@ function CollectionsPageContent() {
   }, []);
 
   useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel('realtime-db-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'collections' },
+        async (payload) => {
+          fetchCollections(currentUserId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        async (payload) => {
+          refreshAllProducts(currentUserId);
+          
+          const colParam = new URLSearchParams(window.location.search).get("colId");
+          if (colParam) {
+            const { data } = await supabase
+              .from('products')
+              .select('*')
+              .eq('collection_id', colParam)
+              .order('created_at', { ascending: false });
+            if (data) {
+              const catalogProducts = data.filter(p => !p.id.startsWith('AST-'));
+              const assetProducts = data.filter(p => p.id.startsWith('AST-')).map(p => ({
+                id: p.id,
+                processed_path: p.photoUrl,
+                name: p.name,
+                created_at: p.created_at
+              }));
+              setProducts(catalogProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                stock: p.stock || 0,
+                cartonQty: p.cartonQty || 1,
+                rate: p.rate || "",
+                length: p.length || "",
+                color: p.color || "",
+                photoUrl: p.photoUrl || "",
+                warehouse: p.warehouse || "",
+                description: p.description || "",
+                unit_type: p.unit_type || "pcs",
+                createdAt: p.created_at
+              })));
+              setDetailImages(assetProducts);
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'warehouse_assignments' },
+        async (payload) => {
+          fetchWarehouseData(currentUserId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
+
+  useEffect(() => {
     const tabParam = searchParams?.get("tab");
     const colParam = searchParams?.get("colId");
     const locParam = searchParams?.get("locId");
