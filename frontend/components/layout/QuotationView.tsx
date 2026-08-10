@@ -1056,6 +1056,115 @@ export default function QuotationView() {
     }
   }, []);
 
+  // Realtime sync: auto-refresh quotation data when changes happen from another device/user
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const refreshQuotationData = async () => {
+      try {
+        const userId = currentUserId;
+        const [
+          { data: colsData },
+          { data: prodsData },
+          { data: assignsData },
+          { data: quotesData },
+          { data: clientsData }
+        ] = await Promise.all([
+          supabase.from('collections').select('*').eq('user_id', userId),
+          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
+          supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, items').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('clients').select('*').eq('user_id', userId)
+        ]);
+
+        setClientsList(clientsData || []);
+        setCollections(colsData || []);
+
+        const assignsMap: Record<string, string[]> = {};
+        if (assignsData) {
+          assignsData.forEach((a: any) => {
+            if (!a.product_id) return;
+            if (!assignsMap[a.product_id]) assignsMap[a.product_id] = [];
+            const parts = a.location_key.split('-');
+            if (parts.length >= 3) {
+              const zoneShort = parts[2].toLowerCase() === 'upper' ? 'U' : parts[2].toLowerCase() === 'lower' ? 'L' : parts[2];
+              assignsMap[a.product_id].push(`${parts[0]}-${parts[1]} (${zoneShort})`);
+            } else {
+              assignsMap[a.product_id].push(a.location_key);
+            }
+          });
+        }
+
+        const colsMap: Record<string, string> = {};
+        if (colsData) colsData.forEach((c: any) => { colsMap[c.id] = c.name; });
+
+        const mappedProds = (prodsData || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          stock: p.stock,
+          cartonQty: p.cartonQty,
+          rate: p.rate?.toString(),
+          color: p.color,
+          length: p.length?.toString(),
+          photoUrl: p.photoUrl,
+          collectionName: colsMap[p.collection_id] || '',
+          collectionId: p.collection_id,
+          description: p.description,
+          location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
+        }));
+        setProducts(mappedProds);
+
+        if (quotesData && quotesData.length > 0) {
+          const parsedQuotes = quotesData.map((q: any) => {
+            let addr = q.client_address || "";
+            let validDate = "";
+            let orderStatus = q.is_order_done ? "done" : "follow_up";
+            if (addr.includes(" ||status:")) { const parts = addr.split(" ||status:"); addr = parts[0]; orderStatus = parts[1]; }
+            if (addr.includes(" ||validUntil:")) { const parts = addr.split(" ||validUntil:"); addr = parts[0]; validDate = parts[1]; }
+            return {
+              id: q.id, quoteNumber: q.quote_number, clientName: q.client_name, clientCompany: q.client_company,
+              clientAddress: addr, validUntil: validDate, orderStatus, quoteDate: q.quote_date,
+              taxInput: q.tax_input || "", cashAmount: q.cash_amount?.toString() || "", bankAmount: q.bank_amount?.toString() || "",
+              total: q.total_amount, applyEventMarkup: q.apply_event_markup, eventMarkupPercent: q.event_markup_percent,
+              createdAt: q.created_at, isOrderDone: q.is_order_done || false,
+              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
+            };
+          });
+          setSavedQuotes(parsedQuotes);
+        }
+      } catch (e) {
+        console.error("Realtime refresh failed:", e);
+      }
+    };
+
+    const channel = supabase
+      .channel('realtime-quotation-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, () => refreshQuotationData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => refreshQuotationData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => refreshQuotationData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_settings' }, async () => {
+        // Refresh company info
+        try {
+          const settingsData = await getUserSettings(true);
+          if (settingsData) {
+            setCompanyInfo({
+              logo: settingsData.company_logo, name: settingsData.company_name, email: settingsData.company_email,
+              primaryPhone: settingsData.company_primary_phone, secondaryPhone: settingsData.company_secondary_phone,
+              address: settingsData.company_address, website: settingsData.company_website, gst: settingsData.company_gst,
+              bankName: settingsData.company_bank_name, accountNumber: settingsData.company_account_number,
+              ifsc: settingsData.company_ifsc, upiId: settingsData.company_upi_id, qrCode: settingsData.company_qr_code,
+              termsAndConditions: settingsData.company_terms,
+            });
+          }
+        } catch (e) {}
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
+
   const handleSaveQuotation = async () => {
     if (selectedItems.length === 0) return;
     if (!currentUserId) {

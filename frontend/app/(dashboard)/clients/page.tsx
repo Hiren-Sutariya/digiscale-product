@@ -180,6 +180,23 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
+  // Realtime sync: auto-refresh when clients or quotations change from another device/user
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-clients-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
+        fetchClients();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, () => {
+        fetchClients();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchClients = async () => {
     try {
       setLoading(true);

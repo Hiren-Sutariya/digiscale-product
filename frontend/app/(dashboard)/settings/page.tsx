@@ -35,6 +35,7 @@ import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, upda
 import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
+import { supabase } from "@/lib/supabase";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
@@ -569,6 +570,39 @@ function ProfileSection() {
         });
         setLoading(false);
       });
+  }, []);
+
+  // Realtime sync: auto-refresh profile and settings when changed from another device/user
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-settings-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_settings' }, async () => {
+        try {
+          const settingsData = await getUserSettings(true);
+          if (settingsData) {
+            setPhone(settingsData.phone || "");
+            setOriginalPhone(settingsData.phone || "");
+            setGender(settingsData.gender || "Male");
+            setAutoRemoveBg(settingsData.auto_remove_background || false);
+            setAvatarUrl(settingsData.avatar_url || null);
+          }
+        } catch (e) {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, async () => {
+        try {
+          const profileData = await getUserProfile(true);
+          if (profileData) {
+            setName(profileData.name || "");
+            setEmail(profileData.email || "");
+            setOriginalEmail(profileData.email || "");
+          }
+        } catch (e) {}
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const getInitials = (n: string) => {
