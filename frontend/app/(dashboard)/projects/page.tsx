@@ -853,7 +853,7 @@ function CollectionsPageContent() {
     const newId = 'PRD-' + Math.random().toString(36).substr(2, 6).toUpperCase();
     const productPayload = {
       name: finalName,
-      stock: draft.stock ? parseInt(draft.stock as any) || 0 : 0,
+      stock: draft.stock ? parseFloat(draft.stock as any) || 0 : 0,
       cartonQty: draft.cartonQty ? parseInt(draft.cartonQty as any) || 1 : 1,
       rate: draft.rate || "",
       length: draft.length || "",
@@ -939,7 +939,7 @@ function CollectionsPageContent() {
 
     const productPayload = {
       name: editingProductState.name || "",
-      stock: editingProductState.stock ? parseInt(editingProductState.stock as any) || 0 : 0,
+      stock: editingProductState.stock ? parseFloat(editingProductState.stock as any) || 0 : 0,
       cartonQty: editingProductState.cartonQty ? parseInt(editingProductState.cartonQty as any) || 1 : 1,
       rate: editingProductState.rate || "",
       length: editingProductState.length || "",
@@ -1032,40 +1032,43 @@ function CollectionsPageContent() {
   const downloadExcelTemplate = async () => {
     const JSZip = (await import("jszip")).default;
 
-    // ── Data — columns match the Add Product form ─
+    // ── Data — columns match the UI table headers sequence ─
     const headers = [
-      "Product Name",                     // col A
-      "Description",                      // col B
-      "Carton Packing",                   // col C
-      "Unit Type (pcs/dzn/kg)",           // col D
-      "Rate",                             // col E
+      "Photo URL",                        // col A
+      "Product Name",                     // col B
+      "Description",                      // col C
+      "Per Carton",                       // col D
+      "Price Code",                       // col E
       "Color",                            // col F
       "Length",                           // col G
-      "Warehouse Location",               // col H
-      "Stock Quantity",                   // col I
-      "Photo URL",                        // col J
+      "Warehouse",                        // col H
+      "Stock Status",                     // col I
+      "Value",                            // col J
     ];
 
     let exportRows: string[][] = [];
 
     if (products.length > 0) {
-      exportRows = products.map((p) => [
-        p.name || "",
-        p.description || "",
-        p.cartonQty ? String(p.cartonQty) : "",
-        p.unit_type || "",
-        p.rate ? String(p.rate) : "",
-        p.color || "",
-        p.length || "",
-        p.warehouse || "",
-        p.stock ? String(p.stock) : "",
-        p.photoUrl || "",
-      ]);
+      exportRows = products.map((p) => {
+        const value = (p.stock || 0) * (p.cartonQty || 0) * (parseFloat(p.rate || "0") || 0);
+        return [
+          p.photoUrl || "",
+          p.name || "",
+          p.description || "",
+          p.cartonQty ? `${p.cartonQty} ${p.unit_type || "pcs"}` : "",
+          p.rate || "",
+          p.color || "",
+          p.length ? `${p.length} cm` : "",
+          p.warehouse || "",
+          p.stock ? `${p.stock} Cartons` : "0 Cartons",
+          String(value),
+        ];
+      });
     } else {
       exportRows = [
-        ["Silk Saree Premium", "Premium quality", "24", "pcs", "950", "Royal Blue, Navy", "5.5 cm", "A-1-upper", "120", "https://example.com/saree.jpg"],
-        ["Cotton Dupatta", "Lightweight", "12", "dzn", "200", "Red, Green, Yellow", "2.5 cm", "", "200", ""],
-        ["Embroidered Kurti", "", "6", "pcs", "1200", "Green", "3.0 cm", "B-2-lower", "50", "https://example.com/kurti.jpg"],
+        ["https://example.com/saree.jpg", "Silk Saree Premium", "Premium quality", "24 pcs", "950", "Royal Blue", "5.5", "A-1-upper", "120 Cartons", "2736000"],
+        ["", "Cotton Dupatta", "Lightweight", "12 dzn", "200", "Red, Green", "2.5", "", "200 Cartons", "480000"],
+        ["https://example.com/kurti.jpg", "Embroidered Kurti", "", "6 pcs", "1200", "Green", "3.0", "B-2-lower", "50 Cartons", "360000"],
       ];
     }
 
@@ -1115,8 +1118,8 @@ ${allStrings.map((s) => `  <si><t xml:space="preserve">${esc(s)}</t></si>`).join
       ...exportRows.map((r, i) => buildRow(i + 2, r, 0)), // data rows style=0
     ].join("\n");
 
-    // Column widths — 7 columns (no photo)
-    const colWidths = [30, 16, 26, 18, 26, 14, 15];
+    // Column widths — 10 columns
+    const colWidths = [30, 25, 20, 15, 12, 12, 12, 15, 15, 15];
     const colsXml = colWidths
       .map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`)
       .join("");
@@ -1360,15 +1363,34 @@ ${rows}
         const name = nameIdx >= 0 ? cols[nameIdx]?.trim() : "";
         if (!name) { errors++; return; }
         const excelImageUrl = imageIdx >= 0 ? cols[imageIdx]?.trim() : "";
-        const parsedUnitType = unitTypeIdx >= 0 ? cols[unitTypeIdx]?.trim().toLowerCase() : "";
+        
+        let parsedUnitType = "pcs";
+        let parsedCartonQty = 1;
+        if (cartonIdx >= 0) {
+          const rawCarton = cols[cartonIdx]?.toLowerCase() || "";
+          parsedCartonQty = parseInt(rawCarton) || 1;
+          if (rawCarton.includes("dzn") || rawCarton.includes("dozen")) {
+            parsedUnitType = "dzn";
+          } else if (rawCarton.includes("kg") || rawCarton.includes("kilo")) {
+            parsedUnitType = "kg";
+          }
+        } else if (unitTypeIdx >= 0) {
+          const rawUnit = cols[unitTypeIdx]?.toLowerCase() || "";
+          if (rawUnit.includes("dzn") || rawUnit.includes("dozen")) parsedUnitType = "dzn";
+          else if (rawUnit.includes("kg") || rawUnit.includes("kilo")) parsedUnitType = "kg";
+        }
+
+        const rawStock = stockIdx >= 0 ? cols[stockIdx] : "";
+        const parsedStock = parseFloat(rawStock) || 0;
+
         newProducts.push({
           id: `excel_${Date.now()}_${i}`,
           name,
-          stock: stockIdx >= 0 ? (parseInt(cols[stockIdx]) || 0) : 0,
-          cartonQty: cartonIdx >= 0 ? (parseInt(cols[cartonIdx]) || 1) : 1,
-          unit_type: parsedUnitType === "dzn" ? "dzn" : parsedUnitType === "kg" ? "kg" : "pcs",
+          stock: parsedStock,
+          cartonQty: parsedCartonQty,
+          unit_type: parsedUnitType as "pcs" | "dzn" | "kg",
           rate: rateIdx >= 0 ? (cols[rateIdx]?.trim() || "") : "",
-          length: lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "") : "",
+          length: lengthIdx >= 0 ? (cols[lengthIdx]?.trim() || "").replace(/[^0-9.]/g, "") : "",
           color: colorIdx >= 0 ? (cols[colorIdx]?.trim() || "") : "",
           description: descIdx >= 0 ? (cols[descIdx]?.trim() || "") : "",
           photoUrl: imageByRow[i] || excelImageUrl || "",
@@ -2999,8 +3021,8 @@ ${rows}
 
                         {draft.stock && draft.cartonQty ? (
                           <div className="text-[10px] text-slate-400 font-bold bg-slate-50 p-2 rounded-lg flex justify-between items-center">
-                            <span>Total Qty: <strong className="text-slate-700">{(parseInt(draft.stock as any) * draft.cartonQty).toLocaleString()} {draft.unit_type || "pcs"}</strong></span>
-                            <span>Total Value: <strong className="text-blue-600">₹{((parseInt(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}</strong></span>
+                            <span>Total Qty: <strong className="text-slate-700">{(parseFloat(draft.stock as any) * draft.cartonQty).toLocaleString()} {draft.unit_type || "pcs"}</strong></span>
+                            <span>Total Value: <strong className="text-blue-600">₹{((parseFloat(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}</strong></span>
                           </div>
                         ) : null}
 
@@ -3206,12 +3228,12 @@ ${rows}
                               <input type="number" placeholder="Cartons" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={draft.stock || ""} onChange={(e) => handleUpdateDraft(idx, "stock", e.target.value)} />
                               {draft.stock && draft.cartonQty ? (
                                 <div className="text-[10px] text-slate-400 mt-1 font-medium text-center">
-                                  {(parseInt(draft.stock as any) * draft.cartonQty).toLocaleString()} pcs
+                                  {(parseFloat(draft.stock as any) * draft.cartonQty).toLocaleString()} pcs
                                 </div>
                               ) : null}
                             </td>
                             <td className="py-3 px-4 font-black text-center">
-                              ₹{((parseInt(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}
+                              ₹{((parseFloat(draft.stock as any) || 0) * (draft.cartonQty || 0) * (parseFloat(draft.rate || "0") || 0)).toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex gap-2 justify-center">
@@ -3331,12 +3353,12 @@ ${rows}
                                   <input type="number" placeholder="Cartons" onKeyDown={handleEnterToNextField} className="w-full min-w-[60px] text-xs p-2 border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm" value={editingProductState.stock || ""} onChange={(e) => handleUpdateEditState("stock", e.target.value)} />
                                   {editingProductState.stock && editingProductState.cartonQty ? (
                                     <div className="text-[10px] text-slate-400 mt-1 font-medium text-center">
-                                      {(parseInt(editingProductState.stock as any) * editingProductState.cartonQty).toLocaleString()} pcs
+                                      {(parseFloat(editingProductState.stock as any) * editingProductState.cartonQty).toLocaleString()} pcs
                                     </div>
                                   ) : null}
                                 </td>
                                 <td className="py-3 px-4 font-black text-center">
-                                  ₹{((editingProductState.stock ? parseInt(editingProductState.stock as any) : 0) * (editingProductState.cartonQty || 0) * (parseFloat(editingProductState.rate || "0") || 0)).toLocaleString()}
+                                  ₹{((editingProductState.stock ? parseFloat(editingProductState.stock as any) : 0) * (editingProductState.cartonQty || 0) * (parseFloat(editingProductState.rate || "0") || 0)).toLocaleString()}
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <div className="flex gap-2 justify-center">

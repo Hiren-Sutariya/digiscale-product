@@ -363,22 +363,13 @@ export default function StockBookPage() {
 
   const handleAdjustStock = async (product: Product, type: "add" | "remove") => {
     const rawVal = adjustQty[product.id] || "";
-    const qty = parseInt(rawVal);
+    const qty = parseFloat(rawVal);
     if (isNaN(qty) || qty <= 0) return;
 
     setActionLoading(prev => ({ ...prev, [product.id]: true }));
     try {
-      // Calculate cartons to add/subtract based on pieces input
-      const cartonsChange = Math.round(qty / (product.cartonQty || 1));
-      if (cartonsChange <= 0) {
-        alert(lang === "gu"
-          ? `દાખલ કરેલ પીસની સંખ્યા ૧ કાર્ટન સાઈઝ (${product.cartonQty} પીસ) કરતા ઓછી છે.`
-          : `Entered pieces count is less than one carton size (${product.cartonQty} pcs).`
-        );
-        setActionLoading(prev => ({ ...prev, [product.id]: false }));
-        return;
-      }
-
+      // Calculate cartons to add/subtract based on pieces input (supporting decimals)
+      const cartonsChange = Number((qty / (product.cartonQty || 1)).toFixed(4));
       const change = type === "add" ? cartonsChange : -cartonsChange;
 
       // 1. Fetch current stock to avoid concurrency overrides
