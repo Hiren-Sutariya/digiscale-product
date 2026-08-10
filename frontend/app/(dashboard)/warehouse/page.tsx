@@ -87,9 +87,21 @@ function WarehouseProductImage({ productId, productName, initialUrl }: { product
 interface Collection {
   id: string;
   name: string;
+  collection_type?: "code" | "named";
 }
 
 export default function WarehousePage() {
+  const isCodeCollection = (nameOrCol: string | Collection) => {
+    if (typeof nameOrCol === 'object') {
+      if (nameOrCol.collection_type) return nameOrCol.collection_type === 'code';
+      const name = nameOrCol.name;
+      if (!name) return false;
+      return /^[A-Z]{3}-\d+-\d+/.test(name) || name.startsWith("PJD");
+    }
+    if (!nameOrCol) return false;
+    return /^[A-Z]{3}-\d+-\d+/.test(nameOrCol) || nameOrCol.startsWith("PJD");
+  };
+
   const router = useRouter();
   const [lang, setLang] = useState<string>("en");
 
@@ -767,6 +779,11 @@ export default function WarehousePage() {
   const query = globalSearchQuery.trim().toLowerCase();
   const filteredGlobalProducts = query
     ? allProducts.filter((product) => {
+        // Only include products from Code Collections
+        const col = collections.find(c => c.id === product.collectionId);
+        const isCode = col ? isCodeCollection(col) : isCodeCollection(product.collectionName || "");
+        if (!isCode) return false;
+
         return (
           (product.name?.toLowerCase() || "").includes(query) ||
           (product.rate && String(product.rate).toLowerCase().includes(query)) ||
@@ -1320,7 +1337,12 @@ export default function WarehousePage() {
                           ) : (
                             <>
                               {allProducts
-                                .filter((prod) => (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase()))
+                                .filter((prod) => {
+                                  // Only include products from Code Collections
+                                  const col = collections.find(c => c.id === prod.collectionId);
+                                  const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
+                                  return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
+                                })
                                 .map((p) => (
                                   <button
                                     key={p.id}
@@ -1338,7 +1360,11 @@ export default function WarehousePage() {
                                     <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
                                   </button>
                                 ))}
-                              {allProducts.filter(prod => (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase())).length === 0 && (
+                              {allProducts.filter(prod => {
+                                const col = collections.find(c => c.id === prod.collectionId);
+                                const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
+                                return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
+                              }).length === 0 && (
                                 <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
                                   No matching products found
                                 </div>

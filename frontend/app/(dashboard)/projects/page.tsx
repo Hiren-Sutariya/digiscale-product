@@ -2318,6 +2318,11 @@ ${rows}
   const query = globalSearchQuery.trim().toLowerCase();
   const filteredGlobalProducts = query
     ? globalProducts.filter((product) => {
+      // Only include products from Code Collections
+      const col = collections.find(c => c.id === product.collectionId);
+      const isCode = col ? isCodeCollection(col) : isCodeCollection(product.collectionName || "");
+      if (!isCode) return false;
+
       return (
         (product.name?.toLowerCase() || "").includes(query) ||
         (product.rate && String(product.rate).toLowerCase().includes(query)) ||
@@ -3220,24 +3225,20 @@ ${rows}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] text-slate-400 font-medium">Carton size: {prod.cartonQty} pcs</span>
                             <div className="flex gap-2">
-                              {selectedCol && isCodeCollection(selectedCol) ? (
-                              <>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
-                                className="p-1.5 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
-                              >
-                                <Edit className="h-3.5 w-3.5" />
-                              </button>
+                              {selectedCol && isCodeCollection(selectedCol) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
+                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteProduct(prod.id); }}
                                 className="p-1.5 rounded-lg border border-red-100 text-red-650 hover:bg-red-50 transition"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
-                              </>
-                              ) : (
-                                <span className="text-[10px] text-slate-400 font-medium py-1">Read Only</span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -3589,15 +3590,16 @@ ${rows}
                                 ₹{(prod.stock * prod.cartonQty * (parseFloat(prod.rate) || 0)).toLocaleString()}
                               </td>
                               <td className="py-4 px-4 text-center">
-                                {selectedCol && isCodeCollection(selectedCol) ? (
                                 <div className="flex items-center justify-center gap-2">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
-                                    className="p-2 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
-                                    title="Edit Product"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </button>
+                                  {selectedCol && isCodeCollection(selectedCol) && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
+                                      className="p-2 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
+                                      title="Edit Product"
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleDeleteProduct(prod.id); }}
                                     className="p-2 rounded-lg border border-red-100 text-red-600 hover:bg-red-50 transition"
@@ -3606,9 +3608,6 @@ ${rows}
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 font-medium">Read Only</span>
-                                )}
                               </td>
                             </tr>
                           );
@@ -4099,6 +4098,9 @@ ${rows}
               {(() => {
                 const allProducts = getAllProducts();
                 const filteredAssignProducts = allProducts.filter((p) => {
+                  const col = collections.find(c => c.id === p.collectionId);
+                  const isCode = col ? isCodeCollection(col) : isCodeCollection(p.collectionName || "");
+                  if (!isCode) return false;
                   const q = assignSearchQuery.trim().toLowerCase();
                   return p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
                 });
