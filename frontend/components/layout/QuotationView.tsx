@@ -702,7 +702,7 @@ export default function QuotationView() {
               fps: 30, // Max frame rate for speed
               aspectRatio: 1.777778, // Restore HD 16:9 aspect ratio for accurate coordinate mapping and scan success
               experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true // Enforce native Chrome/Safari hardware-accelerated bar code detection
+                useBarCodeDetectorIfSupported: false // Disable to prevent silent failures on iOS Safari / iPhone devices
               },
               videoConstraints: {
                 width: { ideal: 1920 },
