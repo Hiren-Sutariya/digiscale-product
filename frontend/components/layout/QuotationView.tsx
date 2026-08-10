@@ -701,9 +701,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             console.warn("Failed to get cameras:", e);
           }
 
-          // 3. Select camera based on current index
+          // 3. Select camera based on current index (falls back to environment constraint only if list is empty)
           let activeCamera: any = { facingMode: "environment" };
-          if (deviceList.length > 0 && currentCameraIndex > 0) {
+          if (deviceList.length > 0) {
             const index = Math.min(currentCameraIndex, deviceList.length - 1);
             activeCamera = deviceList[index].id;
           }
