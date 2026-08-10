@@ -92,8 +92,8 @@ export default function StockBookPage() {
 
     if (!matchesSearch) return false;
 
-    if (statusFilter === "in_stock") return p.stock > 5;
-    if (statusFilter === "low_stock") return p.stock > 0 && p.stock <= 5;
+    if (statusFilter === "in_stock") return p.stock >= 1;
+    if (statusFilter === "low_stock") return p.stock >= 1 && p.stock <= 5;
     if (statusFilter === "out_of_stock") return p.stock <= 0;
 
     return true;
@@ -469,7 +469,7 @@ export default function StockBookPage() {
       stockBook: "Stock Book / Ledger",
       searchPlaceholder: "Search products...",
       allProducts: "All Products",
-      inStock: "In Stock (>5)",
+      inStock: "In Stock (>=1)",
       lowStock: "Low Stock (1-5)",
       outOfStock: "Out of Stock (<=0)",
       totalStockVal: "Total Stock Value",
@@ -501,7 +501,7 @@ export default function StockBookPage() {
       stockBook: "સ્ટોક બુક (સ્ટોક રજિસ્ટર)",
       searchPlaceholder: "પ્રોડક્ટ શોધો...",
       allProducts: "બધી પ્રોડક્ટ્સ",
-      inStock: "સ્ટોકમાં છે (>૫)",
+      inStock: "સ્ટોકમાં છે (>=૧)",
       lowStock: "ઓછો સ્ટોક (૧ થી ૫)",
       outOfStock: "સ્ટોક નથી (<=૦)",
       totalStockVal: "કુલ સ્ટોક કિંમત",
@@ -533,7 +533,7 @@ export default function StockBookPage() {
       stockBook: "स्टॉक बुक / लेजर",
       searchPlaceholder: "उत्पाद खोजें...",
       allProducts: "सभी उत्पाद",
-      inStock: "स्टॉक में है (>५)",
+      inStock: "स्टॉक में है (>=१)",
       lowStock: "कम स्टॉक (१-५)",
       outOfStock: "आउट ऑफ स्टॉक (<=०)",
       totalStockVal: "कुल स्टॉक मूल्य",
@@ -571,7 +571,7 @@ export default function StockBookPage() {
   const totalProducts = products.length;
   const totalStockCartons = products.reduce((sum, p) => sum + p.stock, 0);
   const totalStockVal = products.reduce((sum, p) => sum + (p.stock * p.cartonQty * (parseFloat(p.rate) || 0)), 0);
-  const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= 5).length;
+  const lowStockCount = products.filter(p => p.stock >= 1 && p.stock <= 5).length;
   const outOfStockCount = products.filter(p => p.stock <= 0).length;
 
   if (loading) {
