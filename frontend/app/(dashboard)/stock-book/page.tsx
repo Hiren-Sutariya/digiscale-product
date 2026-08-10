@@ -368,7 +368,18 @@ export default function StockBookPage() {
 
     setActionLoading(prev => ({ ...prev, [product.id]: true }));
     try {
-      const change = type === "add" ? qty : -qty;
+      // Calculate cartons to add/subtract based on pieces input
+      const cartonsChange = Math.round(qty / (product.cartonQty || 1));
+      if (cartonsChange <= 0) {
+        alert(lang === "gu"
+          ? `દાખલ કરેલ પીસની સંખ્યા ૧ કાર્ટન સાઈઝ (${product.cartonQty} પીસ) કરતા ઓછી છે.`
+          : `Entered pieces count is less than one carton size (${product.cartonQty} pcs).`
+        );
+        setActionLoading(prev => ({ ...prev, [product.id]: false }));
+        return;
+      }
+
+      const change = type === "add" ? cartonsChange : -cartonsChange;
 
       // 1. Fetch current stock to avoid concurrency overrides
       const { data: currentData } = await supabase
@@ -391,8 +402,8 @@ export default function StockBookPage() {
 
       // 3. Log stock entry
       const description = type === "add"
-        ? `Quick adjustment (+${qty} cartons)`
-        : `Quick adjustment (-${qty} cartons)`;
+        ? `Quick adjustment (+${qty} pieces, added as ${cartonsChange} cartons)`
+        : `Quick adjustment (-${qty} pieces, deducted as ${cartonsChange} cartons)`;
 
       const { data: insertedLog } = await supabase
         .from("stock_entries")
