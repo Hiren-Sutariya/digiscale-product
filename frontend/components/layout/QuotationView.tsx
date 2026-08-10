@@ -3878,6 +3878,18 @@ export default function QuotationView() {
                 style={{ minHeight: "220px", maxHeight: "280px" }}
               />
             </div>
+
+            {/* Feedback notification banner inside camera scanner */}
+            {barcodeFeedback && (
+              <div className={`w-full max-w-[320px] mx-auto px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all border shrink-0 shadow-sm ${
+                barcodeFeedback.isError 
+                  ? "bg-red-50 text-red-700 border-red-200" 
+                  : "bg-green-50 text-green-700 border-green-200 animate-bounce"
+              }`}>
+                <span>{barcodeFeedback.isError ? "⚠️" : "✅"}</span>
+                <p>{barcodeFeedback.text}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

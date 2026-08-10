@@ -279,7 +279,7 @@ function CollectionsPageContent() {
   // PDF Download Modal States
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfDownloadType, setPdfDownloadType] = useState<"b2b" | "event">("b2b");
-  const [eventMarkupPercent, setEventMarkupPercent] = useState<string>("");
+  const [eventMarkupPercent, setEventMarkupPercent] = useState<string>("25");
   const [activePdfMarkup, setActivePdfMarkup] = useState<number>(0); // 0 = no markup
 
   // Label Download Modal States
@@ -834,9 +834,19 @@ function CollectionsPageContent() {
     if (isSavingDraftIdx !== null) return; // Prevent double-click / concurrent saves
     setIsSavingDraftIdx(idx);
     const finalName = draft.name?.trim() || `Product #${products.length + 1}`;
+    
+    // Check for duplicate product names
+    const isDuplicate = products.some(p => p.name.trim().toLowerCase() === finalName.toLowerCase());
+    if (isDuplicate) {
+      alert(`Product with name "${finalName}" already exists in this collection.`);
+      setIsSavingDraftIdx(null);
+      return;
+    }
+
     const targetCollectionId = selectedCol?.id;
     if (!targetCollectionId) {
       alert("No collection ID found for this product.");
+      setIsSavingDraftIdx(null);
       return;
     }
 
@@ -916,6 +926,16 @@ function CollectionsPageContent() {
     setIsSavingEditRow(true);
     const targetCollectionId = selectedCol?.id;
     if (!targetCollectionId) { setIsSavingEditRow(false); return; }
+
+    const finalName = editingProductState.name?.trim() || "";
+    if (finalName) {
+      const isDuplicate = products.some(p => p.id !== editingProductRowId && p.name.trim().toLowerCase() === finalName.toLowerCase());
+      if (isDuplicate) {
+        alert(`Product with name "${finalName}" already exists in this collection.`);
+        setIsSavingEditRow(false);
+        return;
+      }
+    }
 
     const productPayload = {
       name: editingProductState.name || "",
@@ -4667,7 +4687,7 @@ ${rows}
               {/* Toggle Buttons */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setPdfDownloadType("b2b"); setEventMarkupPercent(""); }}
+                  onClick={() => { setPdfDownloadType("b2b"); setEventMarkupPercent("25"); }}
                   className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all border-2 ${pdfDownloadType === "b2b"
                     ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10"
                     : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
@@ -4940,29 +4960,29 @@ ${rows}
                         {/* Details Section - fixed height */}
                         <div className="bg-white shrink-0">
                           {/* Header Row */}
-                          <div className="grid grid-cols-4 border-b border-slate-900 uppercase text-center" style={{ fontWeight: 900 }}>
-                            <div style={{ padding: '2px 1px', fontSize: '6.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">Description</div>
-                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">CTNS</div>
-                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="border-r border-slate-900 text-slate-955 flex items-center justify-center">QTY</div>
-                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="text-slate-955 flex items-center justify-center">PRICE</div>
+                          <div className="grid grid-cols-12 border-b border-slate-900 uppercase text-center" style={{ fontWeight: 900 }}>
+                            <div style={{ padding: '2px 1px', fontSize: '6.5px' }} className="col-span-4 border-r border-slate-900 text-slate-955 flex items-center justify-center">Description</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-2 border-r border-slate-900 text-slate-955 flex items-center justify-center">PCS</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-3 border-r border-slate-900 text-slate-955 flex items-center justify-center">Code</div>
+                            <div style={{ padding: '2px 1px', fontSize: '7.5px' }} className="col-span-3 text-slate-955 flex items-center justify-center">Event Price</div>
                           </div>
                           {/* Data Row */}
-                          <div className="grid grid-cols-4 text-slate-900 text-center" style={{ fontWeight: 700 }}>
-                            <div style={{ padding: '3px 2px', fontSize: '7px' }} className="border-r border-slate-900 leading-tight break-words flex items-center justify-center">
+                          <div className="grid grid-cols-12 text-slate-900 text-center" style={{ fontWeight: 700 }}>
+                            <div style={{ padding: '3px 2px', fontSize: '7px' }} className="col-span-4 border-r border-slate-900 leading-tight break-words flex items-center justify-center text-slate-950 font-black">
                               {prod.name}
                             </div>
-                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="border-r border-slate-900 flex items-center justify-center">
-                              1
-                            </div>
-                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="border-r border-slate-900 flex items-center justify-center">
+                            <div style={{ padding: '3px 1px', fontSize: '8px' }} className="col-span-2 border-r border-slate-900 flex items-center justify-center text-slate-950 font-black">
                               {prod.cartonQty || "-"}
                             </div>
-                            <div style={{ padding: '3px 1px', fontSize: '8.5px' }} className="flex items-center justify-center">
+                            <div style={{ padding: '3px 1px', fontSize: '8px' }} className="col-span-3 border-r border-slate-900 flex items-center justify-center text-slate-950 font-black">
+                              {wholesalePrefix || "A9"}{prod.rate}
+                            </div>
+                            <div style={{ padding: '3px 1px', fontSize: '8px' }} className="col-span-3 flex items-center justify-center text-slate-950 font-black">
                               {(() => {
                                 const baseRate = parseFloat(prod.rate || "0");
                                 if (!baseRate) return "-";
-                                const finalRate = activePdfMarkup > 0 ? Math.round(baseRate * (1 + activePdfMarkup / 100)) : baseRate;
-                                return finalRate;
+                                const markup = activePdfMarkup > 0 ? activePdfMarkup : 25; // default 25% if no markup selected
+                                return Math.round(baseRate * (1 + markup / 100));
                               })()}
                             </div>
                           </div>
