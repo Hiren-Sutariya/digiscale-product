@@ -416,21 +416,29 @@ function SettingsPageContent() {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
   };
 
+  const userRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "Admin" : "Admin";
+
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab) setActiveTab(tab);
-  }, [searchParams]);
-
-  const userRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "Admin" : "Admin";
+    if (tab) {
+      if (userRole !== "Admin" && ["company", "users", "storage", "backup"].includes(tab)) {
+        setActiveTab("profile");
+      } else {
+        setActiveTab(tab);
+      }
+    }
+  }, [searchParams, userRole]);
 
   const tabs = [
     { id: "profile", label: t("profile"), icon: User },
-    { id: "company", label: t("company"), icon: Building },
+    ...(userRole === "Admin" ? [{ id: "company", label: t("company"), icon: Building }] : []),
     { id: "security", label: t("security"), icon: Shield },
     { id: "language", label: t("language"), icon: Languages },
-    ...(userRole === "Admin" ? [{ id: "users", label: t("users"), icon: Users }] : []),
-    { id: "storage", label: t("storage"), icon: HardDrive },
-    { id: "backup", label: t("backup"), icon: HardDrive },
+    ...(userRole === "Admin" ? [
+      { id: "users", label: t("users"), icon: Users },
+      { id: "storage", label: t("storage"), icon: HardDrive },
+      { id: "backup", label: t("backup"), icon: HardDrive }
+    ] : []),
   ];
 
   return (

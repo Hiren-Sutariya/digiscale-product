@@ -114,10 +114,12 @@ export default function DashboardNavbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [lang, setLang] = useState<string>("en");
+  const [userRole, setUserRole] = useState<string>("Admin");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
+      setUserRole(localStorage.getItem("user_role") || "Admin");
     }
   }, []);
 
@@ -200,6 +202,7 @@ export default function DashboardNavbar() {
         Promise.all([getUserProfile(), getUserSettings()])
           .then(([data, settingsData]) => {
             setUser(data);
+            setUserRole(data.role || "Staff");
             if (typeof window !== "undefined") {
               localStorage.setItem("user_name", data.name || "");
               localStorage.setItem("user_email", data.email || "");
@@ -387,19 +390,21 @@ export default function DashboardNavbar() {
                         <span>{t("myProfile")}</span>
                       </Link>
 
-                      <Link
-                        href="/settings?tab=backup"
-                        onClick={() => setProfileOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
-                      >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 text-slate-500 transition duration-150 shrink-0">
-                          <HardDrive className="h-3.5 w-3.5" />
-                        </div>
-                        <span>{t("dataBackup")}</span>
-                      </Link>
+                      {userRole === "Admin" && (
+                        <Link
+                          href="/settings?tab=backup"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
+                        >
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 text-slate-500 transition duration-150 shrink-0">
+                            <HardDrive className="h-3.5 w-3.5" />
+                          </div>
+                          <span>{t("dataBackup")}</span>
+                        </Link>
+                      )}
 
                       <Link
-                        href="/settings?tab=company"
+                        href={userRole === "Admin" ? "/settings?tab=company" : "/settings?tab=profile"}
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition duration-150 group"
                       >

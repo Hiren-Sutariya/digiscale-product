@@ -69,14 +69,36 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 
 export default function DashboardPage() {
   const [lang, setLang] = useState<string>("en");
+  const [permissions, setPermissions] = useState({
+    collections: "edit",
+    warehouse: "edit",
+    stockBook: "edit",
+    clients: "edit",
+    quotation: "edit",
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
+      setPermissions({
+        collections: localStorage.getItem("perm_collections") || "edit",
+        warehouse: localStorage.getItem("perm_warehouse") || "edit",
+        stockBook: localStorage.getItem("perm_stockbook") || "edit",
+        clients: localStorage.getItem("perm_clients") || "edit",
+        quotation: localStorage.getItem("perm_quotations") || "edit",
+      });
     }
   }, []);
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
+
+  const visibleCount = [
+    permissions.collections !== "none",
+    permissions.warehouse !== "none",
+    permissions.clients !== "none",
+    permissions.quotation !== "none",
+    permissions.stockBook !== "none",
+  ].filter(Boolean).length;
 
   return (
     <div className="flex-1 bg-slate-50/50 flex flex-col items-center justify-center px-4 py-6 sm:py-20 overflow-y-auto">
@@ -86,105 +108,104 @@ export default function DashboardPage() {
           {t("selectDestination")}
         </p>
 
-        {/* Grid layout for 5 items - equal styling */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6 lg:gap-8 w-full max-w-[1300px]">
-
-          {/* Workspace commented out as requested
-          <Link
-            href="/workspace"
-            className="group hidden sm:flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <Paintbrush className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("workspace")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                {t("workspaceDesc")}
-              </p>
-            </div>
-          </Link>
-          */}
+        {/* Dynamic centered Grid layout based on number of visible items */}
+        <div className={`grid grid-cols-2 gap-3 sm:gap-6 lg:gap-8 w-full justify-center ${
+          visibleCount === 1 ? "md:grid-cols-1 max-w-[280px]" :
+          visibleCount === 2 ? "md:grid-cols-2 max-w-[600px]" :
+          visibleCount === 3 ? "md:grid-cols-3 max-w-[900px]" :
+          visibleCount === 4 ? "md:grid-cols-4 max-w-[1150px]" :
+          "md:grid-cols-3 xl:grid-cols-5 max-w-[1300px]"
+        }`}>
 
           {/* Collections */}
-          <Link
-            href="/projects"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <FolderOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("collections")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                {t("collectionsDesc")}
-              </p>
-            </div>
-          </Link>
+          {permissions.collections !== "none" && (
+            <Link
+              href="/projects"
+              className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            >
+              <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+                <FolderOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("collections")}</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
+                  {t("collectionsDesc")}
+                </p>
+              </div>
+            </Link>
+          )}
 
           {/* Warehouse */}
-          <Link
-            href="/warehouse"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <Warehouse className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("warehouse")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                {t("warehouseDesc")}
-              </p>
-            </div>
-          </Link>
+          {permissions.warehouse !== "none" && (
+            <Link
+              href="/warehouse"
+              className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            >
+              <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+                <Warehouse className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("warehouse")}</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
+                  {t("warehouseDesc")}
+                </p>
+              </div>
+            </Link>
+          )}
 
           {/* Clients */}
-          <Link
-            href="/clients"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <Users className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("clients")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                {t("clientsDesc")}
-              </p>
-            </div>
-          </Link>
+          {permissions.clients !== "none" && (
+            <Link
+              href="/clients"
+              className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            >
+              <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+                <Users className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("clients")}</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
+                  {t("clientsDesc")}
+                </p>
+              </div>
+            </Link>
+          )}
 
           {/* Quotation */}
-          <Link
-            href="/quotation"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <FileText className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("quotation")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
-                {t("quotationDesc")}
-              </p>
-            </div>
-          </Link>
+          {permissions.quotation !== "none" && (
+            <Link
+              href="/quotation"
+              className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            >
+              <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+                <FileText className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("quotation")}</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[170px] mx-auto">
+                  {t("quotationDesc")}
+                </p>
+              </div>
+            </Link>
+          )}
 
           {/* Stock Book */}
-          <Link
-            href="/stock-book"
-            className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
-          >
-            <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
-              <BookOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("stockBook")}</p>
-              <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[190px] mx-auto">
-                {t("stockBookDesc")}
-              </p>
-            </div>
-          </Link>
+          {permissions.stockBook !== "none" && (
+            <Link
+              href="/stock-book"
+              className="group flex flex-col items-center justify-center gap-2.5 sm:gap-5 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-6 aspect-square sm:aspect-auto sm:h-60 w-full text-center transition-all duration-300 hover:border-blue-500 hover:shadow-lg active:scale-[0.98] cursor-pointer shadow-sm"
+            >
+              <div className="flex h-10 w-10 sm:h-16 sm:w-16 items-center justify-center rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 transition group-hover:bg-blue-50 group-hover:text-blue-600 shadow-sm">
+                <BookOpen className="h-4 w-4 sm:h-7 sm:w-7 text-slate-500 group-hover:text-blue-600 transition" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-base font-extrabold text-slate-800 transition group-hover:text-blue-600">{t("stockBook")}</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-2 font-medium leading-relaxed max-w-[190px] mx-auto">
+                  {t("stockBookDesc")}
+                </p>
+              </div>
+            </Link>
+          )}
 
         </div>
 
