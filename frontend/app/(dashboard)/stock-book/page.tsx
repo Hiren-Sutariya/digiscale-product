@@ -20,7 +20,8 @@ import {
   FileSpreadsheet,
   ImageIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Shield
 } from "lucide-react";
 import PageTitle from "@/components/ui/pageTitle";
 
@@ -60,6 +61,18 @@ export default function StockBookPage() {
   const [lang, setLang] = useState("en");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [permission, setPermission] = useState("edit");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const role = localStorage.getItem("user_role") || "Admin";
+      if (role === "Admin") {
+        setPermission("edit");
+      } else {
+        setPermission(localStorage.getItem("perm_stockbook") || "edit");
+      }
+    }
+  }, []);
   
   // States
   const [products, setProducts] = useState<Product[]>([]);
@@ -461,6 +474,7 @@ export default function StockBookPage() {
   };
 
   const handleAdjustStock = async (product: Product, type: "add" | "remove") => {
+    if (permission !== "edit") return;
     const rawVal = adjustQty[product.id] || "";
     const qty = parseFloat(rawVal);
     if (isNaN(qty) || qty <= 0) return;
@@ -672,6 +686,20 @@ export default function StockBookPage() {
   const totalStockVal = products.reduce((sum, p) => sum + (p.stock * p.cartonQty * (parseFloat(p.rate) || 0)), 0);
   const lowStockCount = products.filter(p => p.stock >= 1 && p.stock <= 5).length;
   const outOfStockCount = products.filter(p => p.stock <= 0).length;
+
+  if (permission === "none") {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 h-[calc(100vh-140px)] text-center p-8 bg-slate-50/50">
+        <div className="bg-red-50 text-red-650 rounded-full p-4 mb-4">
+          <Shield className="h-10 w-10 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 font-sans">Access Denied</h2>
+        <p className="text-slate-500 max-w-sm mt-1 text-sm font-semibold">
+          You do not have permission to access the Stock Book section. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

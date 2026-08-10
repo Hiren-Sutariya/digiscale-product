@@ -7,6 +7,12 @@ class UserBase(BaseModel):
     plan: str
     credits_limit: int
     credits_used: int
+    role: str
+    perm_collections: str
+    perm_warehouse: str
+    perm_stockbook: str
+    perm_clients: str
+    perm_quotations: str
 
 class UserResponse(UserBase):
     id: int
@@ -19,3 +25,14 @@ class UserResponse(UserBase):
 class UserProfileUpdate(BaseModel):
     name: str
     email: str
+
+class UserCreateRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "Staff"
+    perm_collections: str = "edit"
+    perm_warehouse: str = "edit"
+    perm_stockbook: str = "edit"
+    perm_clients: str = "edit"
+    perm_quotations: str = "edit"

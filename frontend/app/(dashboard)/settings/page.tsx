@@ -28,10 +28,11 @@ import {
   Paintbrush,
   Languages,
   Keyboard,
+  Loader2,
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword, logout } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword, logout, listUsers, createUser, deleteUser } from "@/services/api";
 import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
@@ -47,7 +48,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     language: "Language",
     shortcuts: "Keyboard Shortcuts",
     storage: "Storage",
-    billing: "Billing",
+    users: "User Management",
     security: "Security",
     backup: "Data & Backup",
     signOut: "Sign Out",
@@ -137,7 +138,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     language: "ભાષા",
     shortcuts: "કીબોર્ડ શૉર્ટકટ્સ",
     storage: "સ્ટોરેજ",
-    billing: "બિલિંગ",
+    users: "વપરાશકર્તા સંચાલન",
     security: "સુરક્ષા",
     backup: "ડેટા અને બેકઅપ",
     signOut: "સાઇન આઉટ",
@@ -227,7 +228,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     language: "भाषा",
     shortcuts: "कीबोर्ड शॉर्टकट",
     storage: "स्टोरेज",
-    billing: "बिलिंग",
+    users: "उपयोगकर्ता प्रबंधन",
     security: "सुरक्षा",
     backup: "डेटा और बैकअप",
     signOut: "साइन आउट",
@@ -317,7 +318,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     language: "Idioma",
     shortcuts: "Atajos de Teclado",
     storage: "Almacenamiento",
-    billing: "Facturación",
+    users: "Gestión de Usuarios",
     security: "Seguridad",
     backup: "Datos y Respaldo",
     signOut: "Cerrar Sesión",
@@ -420,12 +421,14 @@ function SettingsPageContent() {
     if (tab) setActiveTab(tab);
   }, [searchParams]);
 
+  const userRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "Admin" : "Admin";
+
   const tabs = [
     { id: "profile", label: t("profile"), icon: User },
     { id: "company", label: t("company"), icon: Building },
     { id: "security", label: t("security"), icon: Shield },
     { id: "language", label: t("language"), icon: Languages },
-    { id: "billing", label: t("billing"), icon: CreditCard },
+    ...(userRole === "Admin" ? [{ id: "users", label: t("users"), icon: Users }] : []),
     { id: "storage", label: t("storage"), icon: HardDrive },
     { id: "backup", label: t("backup"), icon: HardDrive },
   ];
@@ -493,7 +496,7 @@ function SettingsPageContent() {
           {activeTab === "company" && <CompanySection />}
           {activeTab === "language" && <LanguageSection />}
           {activeTab === "storage" && <StorageSection />}
-          {activeTab === "billing" && <BillingSection />}
+          {activeTab === "users" && <UsersSection />}
           {activeTab === "security" && <SecuritySection />}
           {activeTab === "backup" && <BackupSection />}
         </div>
@@ -866,15 +869,15 @@ function ProfileSection() {
             <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
         </div>
-      </div>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 disabled:opacity-60"
-      >
-        {saving ? "Saving..." : "Save Changes"}
-      </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 active:scale-95 disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
 
       {/* Verification Modal Dialog */}
       {verificationType && (
@@ -938,7 +941,7 @@ function ProfileSection() {
               </div>
 
               {verificationError && (
-                <p className="text-xs font-bold text-red-650 text-center">
+                <p className="text-xs font-bold text-red-655 text-center">
                   {verificationError}
                 </p>
               )}
@@ -965,31 +968,108 @@ function ProfileSection() {
   );
 }
 
-/* ============ Billing Section ============ */
-function BillingSection() {
-  const [user, setUser] = useState<{ plan: string; credits_limit: number; credits_used: number; created_at?: string } | null>(null);
-  const [daysLeft, setDaysLeft] = useState<number | null>(null);
-  const [loading, setLoading] = useState(!getCache("profile"));
+/* ============ Users Section ============ */
+function UsersSection() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentEmail, setCurrentEmail] = useState("");
+  
+  // Add User Form States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState("Staff"); // Admin, Staff
+  
+  // Permissions (none, view, edit)
+  const [permCollections, setPermCollections] = useState("edit");
+  const [permWarehouse, setPermWarehouse] = useState("edit");
+  const [permStockbook, setPermStockbook] = useState("edit");
+  const [permClients, setPermClients] = useState("edit");
+  const [permQuotations, setPermQuotations] = useState("edit");
+
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Delete Confirmation States
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    getUserProfile()
-      .then((data) => {
-        if (data) {
-          setUser(data);
-          if (data.plan === "Starter" && data.created_at) {
-            const created = new Date(data.created_at);
-            const expiry = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000);
-            const diffMs = expiry.getTime() - Date.now();
-            const days = Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
-            setDaysLeft(days);
-          }
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
+    if (typeof window !== "undefined") {
+      setCurrentEmail(localStorage.getItem("user_email") || "");
+    }
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await listUsers();
+      setUsers(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
+      setErrorMsg("All fields are required.");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      setErrorMsg("");
+      setSuccessMsg("");
+      await createUser({
+        name: newName.trim(),
+        email: newEmail.trim().toLowerCase(),
+        password: newPassword,
+        role: newRole,
+        perm_collections: newRole === "Admin" ? "edit" : permCollections,
+        perm_warehouse: newRole === "Admin" ? "edit" : permWarehouse,
+        perm_stockbook: newRole === "Admin" ? "edit" : permStockbook,
+        perm_clients: newRole === "Admin" ? "edit" : permClients,
+        perm_quotations: newRole === "Admin" ? "edit" : permQuotations
+      });
+      setSuccessMsg("User created successfully!");
+      setNewName("");
+      setNewEmail("");
+      setNewPassword("");
+      setNewRole("Staff");
+      setPermCollections("edit");
+      setPermWarehouse("edit");
+      setPermStockbook("edit");
+      setPermClients("edit");
+      setPermQuotations("edit");
+      setShowAddModal(false);
+      loadUsers();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to create user.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      setDeleting(true);
+      await deleteUser(deleteConfirmId);
+      setDeleteConfirmId(null);
+      setDeleteConfirmName("");
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete user.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -999,75 +1079,315 @@ function BillingSection() {
     );
   }
 
-  const creditsUsed = user?.credits_used ?? 0;
-  const creditsLimit = user?.credits_limit ?? 30;
-  const progressPercent = Math.min(100, Math.round((creditsUsed / creditsLimit) * 100));
+  const renderPermissionsBadge = (val: string) => {
+    if (val === "edit") return <span className="text-[9px] bg-emerald-55/65 text-emerald-700 font-extrabold px-1.5 py-0.5 rounded border border-emerald-100/50 uppercase">Edit</span>;
+    if (val === "view") return <span className="text-[9px] bg-amber-55/60 text-amber-700 font-extrabold px-1.5 py-0.5 rounded border border-amber-100/50 uppercase">View</span>;
+    return <span className="text-[9px] bg-rose-50 text-rose-600 font-extrabold px-1.5 py-0.5 rounded border border-rose-100/50 uppercase">None</span>;
+  };
 
   return (
     <div className="space-y-4 sm:space-y-8">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Plan & Billing</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage your subscription and usage.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 font-sans">User & Staff Management</h2>
+          <p className="mt-1 text-sm text-slate-500 font-medium">
+            Create, view, and manage custom staff access privileges.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setErrorMsg("");
+            setSuccessMsg("");
+            setShowAddModal(true);
+          }}
+          className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
+        >
+          <Users className="h-4 w-4" /> Create New Account
+        </button>
       </div>
 
-      {/* Current Plan */}
-      <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Gem className="h-5 w-5 text-blue-600" />
-              <span className="text-lg font-bold text-slate-900">
-                {user?.plan === "Starter" ? "7-Day Free Trial" : `${user?.plan} Plan`}
-              </span>
-              <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
-                CURRENT
-              </span>
+      {/* Users Table */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+              <th className="py-3 px-4">Name</th>
+              <th className="py-3 px-4">Email</th>
+              <th className="py-3 px-4">Role</th>
+              <th className="py-3 px-4">Access Permissions</th>
+              <th className="py-3 px-4">Created Date</th>
+              <th className="py-3 px-4 text-center w-[80px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-xs text-slate-700 font-medium">
+            {users.map((u) => {
+              const isSelf = u.email?.toLowerCase() === currentEmail.toLowerCase();
+              const isAdmin = u.role === "Admin";
+              return (
+                <tr key={u.id} className="hover:bg-slate-50/30 transition">
+                  <td className="py-3.5 px-4 font-bold text-slate-800">{u.name}</td>
+                  <td className="py-3.5 px-4">{u.email}</td>
+                  <td className="py-3.5 px-4">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                      isAdmin 
+                        ? "bg-blue-55/65 text-blue-700 border-blue-100" 
+                        : "bg-purple-50 text-purple-700 border-purple-100"
+                    }`}>
+                      {u.role || "Staff"}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4">
+                    {isAdmin ? (
+                      <span className="text-[10px] text-slate-400 font-extrabold uppercase">Full Admin Access</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">Coll:</span>
+                          {renderPermissionsBadge(u.perm_collections || "edit")}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">WH:</span>
+                          {renderPermissionsBadge(u.perm_warehouse || "edit")}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">Stock:</span>
+                          {renderPermissionsBadge(u.perm_stockbook || "edit")}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">Clients:</span>
+                          {renderPermissionsBadge(u.perm_clients || "edit")}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400">Quotes:</span>
+                          {renderPermissionsBadge(u.perm_quotations || "edit")}
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-400 font-semibold">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-"}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    {isSelf ? (
+                      <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">YOU</span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setDeleteConfirmId(u.id);
+                          setDeleteConfirmName(u.name);
+                        }}
+                        className="p-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition cursor-pointer"
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* CREATE USER MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm overflow-y-auto p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Create System User</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <p className="mt-2 text-sm text-slate-600 font-medium">
-              {user?.plan === "Starter"
-                ? `Starter free trial. ${daysLeft !== null ? `${daysLeft} trial days remaining.` : "7 trial days remaining."}`
-                : `Active subscriber plan with ${creditsLimit} image credits.`}
+
+            <form onSubmit={handleAddUser} className="space-y-4 mt-4">
+              {errorMsg && (
+                <div className="text-xs font-bold text-red-650 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">
+                  {errorMsg}
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Keval Vaghani"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email / Username</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. user@gmail.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Account Role</label>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                  >
+                    <option value="Staff">Staff (Custom Permissions)</option>
+                    <option value="Admin">Admin (Full Control)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* PERMISSIONS CUSTOMIZATION FOR STAFF */}
+              {newRole === "Staff" && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Customize Access Permissions</h4>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-700">Collections (Projects)</span>
+                      <select
+                        value={permCollections}
+                        onChange={(e) => setPermCollections(e.target.value)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="edit">View & Edit</option>
+                        <option value="view">View Only</option>
+                        <option value="none">No Access</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-700">Warehouse Layout</span>
+                      <select
+                        value={permWarehouse}
+                        onChange={(e) => setPermWarehouse(e.target.value)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="edit">View & Edit</option>
+                        <option value="view">View Only</option>
+                        <option value="none">No Access</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-700">Stock Book Stats</span>
+                      <select
+                        value={permStockbook}
+                        onChange={(e) => setPermStockbook(e.target.value)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="edit">View & Edit</option>
+                        <option value="view">View Only</option>
+                        <option value="none">No Access</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-700">Clients Profile</span>
+                      <select
+                        value={permClients}
+                        onChange={(e) => setPermClients(e.target.value)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="edit">View & Edit</option>
+                        <option value="view">View Only</option>
+                        <option value="none">No Access</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <span className="font-bold text-slate-700">Quotations History</span>
+                      <select
+                        value={permQuotations}
+                        onChange={(e) => setPermQuotations(e.target.value)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="edit">View & Edit (Full Access)</option>
+                        <option value="view">View Only</option>
+                        <option value="none">No Access</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/10 cursor-pointer"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE USER CONFIRMATION MODAL */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <h3 className="text-sm font-bold text-slate-900">Delete User Account?</h3>
+            <p className="mt-2 text-xs text-slate-500 font-medium">
+              Are you sure you want to permanently delete <strong className="text-slate-800">{deleteConfirmName}</strong> and all their associated data (collections, products, quotations, warehouse layouts)? This action cannot be undone.
             </p>
-          </div>
-          {user?.plan === "Starter" && (
-            <Link
-              href="/pricing"
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-500/10 w-full sm:w-auto text-center shrink-0"
-            >
-              Upgrade to Pro
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Usage */}
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
-          <Image className="h-5 w-5 text-slate-400" />
-          <p className="mt-3 text-2xl font-bold text-slate-900">{creditsUsed} / {creditsLimit}</p>
-          <p className="mt-1 text-sm text-slate-550 font-bold">Credits Used</p>
-          <div className="mt-3 h-2 rounded-full bg-slate-250">
-            <div className="h-2 rounded-full bg-blue-600 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
-          <HardDrive className="h-5 w-5 text-slate-400" />
-          <p className="mt-3 text-2xl font-bold text-slate-900">{(creditsUsed * 1.8).toFixed(1)} MB</p>
-          <p className="mt-1 text-sm text-slate-550 font-bold">Storage Used</p>
-          <div className="mt-3 h-2 rounded-full bg-slate-250">
-            <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, progressPercent * 0.8)}%` }} />
+            <div className="flex gap-3 mt-5">
+              <button
+                disabled={deleting}
+                onClick={() => {
+                  setDeleteConfirmId(null);
+                  setDeleteConfirmName("");
+                }}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleting}
+                onClick={handleDeleteUser}
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-red-500/10 cursor-pointer"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Permanently"}
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
-          <Image className="h-5 w-5 text-slate-400" />
-          <p className="mt-3 text-2xl font-bold text-slate-900">{creditsUsed}</p>
-          <p className="mt-1 text-sm text-slate-550 font-bold">Total Exports</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

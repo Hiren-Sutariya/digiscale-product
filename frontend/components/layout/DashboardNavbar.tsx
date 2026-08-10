@@ -125,6 +125,34 @@ export default function DashboardNavbar() {
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
+  const hasPermission = (href: string) => {
+    if (typeof window === "undefined") return true;
+    const role = localStorage.getItem("user_role") || "Admin";
+    if (role === "Admin") return true;
+    
+    if (href === "/projects") {
+      const perm = localStorage.getItem("perm_collections") || "edit";
+      return perm !== "none";
+    }
+    if (href === "/warehouse") {
+      const perm = localStorage.getItem("perm_warehouse") || "edit";
+      return perm !== "none";
+    }
+    if (href === "/stock-book") {
+      const perm = localStorage.getItem("perm_stockbook") || "edit";
+      return perm !== "none";
+    }
+    if (href === "/clients") {
+      const perm = localStorage.getItem("perm_clients") || "edit";
+      return perm !== "none";
+    }
+    if (href === "/quotation") {
+      const perm = localStorage.getItem("perm_quotations") || "edit";
+      return perm !== "none";
+    }
+    return true;
+  };
+
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window !== "undefined") {
       return !!localStorage.getItem("token");
@@ -176,6 +204,12 @@ export default function DashboardNavbar() {
               localStorage.setItem("user_name", data.name || "");
               localStorage.setItem("user_email", data.email || "");
               localStorage.setItem("user_plan", data.plan || "Starter");
+              localStorage.setItem("user_role", data.role || "Staff");
+              localStorage.setItem("perm_collections", data.perm_collections || "edit");
+              localStorage.setItem("perm_warehouse", data.perm_warehouse || "edit");
+              localStorage.setItem("perm_stockbook", data.perm_stockbook || "edit");
+              localStorage.setItem("perm_clients", data.perm_clients || "edit");
+              localStorage.setItem("perm_quotations", data.perm_quotations || "edit");
               if (data.created_at) localStorage.setItem("user_created_at", data.created_at);
             }
             if (settingsData?.avatar_url) setAvatarUrl(settingsData.avatar_url);
@@ -225,7 +259,7 @@ export default function DashboardNavbar() {
         {/* Center — Navigation Links (Desktop Only) */}
         <nav className="hidden lg:flex flex-1 items-center justify-center gap-1">
           {navLinks
-            .filter((link) => isLoggedIn)
+            .filter((link) => isLoggedIn && hasPermission(link.href))
             .map((link) => {
               const isActive = pathname === link.href;
               const Icon = link.icon;
@@ -414,7 +448,7 @@ export default function DashboardNavbar() {
       {/* Mobile Bottom Navigation Bar */}
       {isLoggedIn && (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-2px_15px_rgba(0,0,0,0.06)] px-4 py-2 flex justify-around items-center select-none pb-[env(safe-area-inset-bottom,12px)]">
-          {navLinks.map((link) => {
+          {navLinks.filter((link) => hasPermission(link.href)).map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
             return (

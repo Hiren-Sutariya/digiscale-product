@@ -253,3 +253,35 @@ export function formatUserUuid(userId: any): string | null {
   const paddedId = idStr.padStart(12, "0");
   return `00000000-0000-0000-0000-${paddedId}`;
 }
+
+export async function listUsers(): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/users/list`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch user list.");
+  }
+  return response.json();
+}
+
+export async function createUser(data: any): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/users/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.detail || "Failed to create user.");
+  }
+  return response.json();
+}
+
+export async function deleteUser(userId: number): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/users/delete/${userId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.detail || "Failed to delete user.");
+  }
+  return response.json();
+}

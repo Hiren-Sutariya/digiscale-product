@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile, getUserSettings, updateUserSettings } from "@/services/api";
-import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Check, Star } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, MapPin, Building, Phone, FileText, Award, CheckCircle2, Check, Star, Shield } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -16,10 +16,17 @@ interface Client {
 
 export default function ClientsPage() {
   const [lang, setLang] = useState("en");
+  const [permission, setPermission] = useState("edit");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
+      const role = localStorage.getItem("user_role") || "Admin";
+      if (role === "Admin") {
+        setPermission("edit");
+      } else {
+        setPermission(localStorage.getItem("perm_clients") || "edit");
+      }
     }
   }, []);
 
@@ -374,6 +381,20 @@ export default function ClientsPage() {
     }
   };
 
+  if (permission === "none") {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 h-[calc(100vh-140px)] text-center p-8 bg-slate-50/50">
+        <div className="bg-red-50 text-red-650 rounded-full p-4 mb-4">
+          <Shield className="h-10 w-10 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 font-sans">Access Denied</h2>
+        <p className="text-slate-500 max-w-sm mt-1 text-sm font-semibold">
+          You do not have permission to access the Clients section. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="px-2.5 sm:px-8 pt-1.5 sm:pt-4 pb-6 flex-1 flex flex-col overflow-hidden bg-slate-50/50 min-h-0 w-full">
       {/* Static Toolbar Header */}
@@ -421,13 +442,15 @@ export default function ClientsPage() {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => openModal()}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 w-full lg:w-auto cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>{t("addNewClient")}</span>
-            </button>
+            {permission === "edit" && (
+              <button
+                onClick={() => openModal()}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 w-full lg:w-auto cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{t("addNewClient")}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -484,20 +507,22 @@ export default function ClientsPage() {
                       {client.company ? `${client.company} | ${client.name}` : client.name}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity absolute right-4 top-4 md:top-10 bg-slate-100/80 md:bg-white/80 backdrop-blur-sm rounded-lg p-0.5 border border-slate-200/50 md:border-transparent z-10">
-                    <button 
-                      onClick={() => openModal(client)}
-                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button 
-                      onClick={() => confirmDelete(client.id, client.name)}
-                      className="p-1.5 text-slate-500 hover:text-red-650 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {permission === "edit" && (
+                    <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity absolute right-4 top-4 md:top-10 bg-slate-100/80 md:bg-white/80 backdrop-blur-sm rounded-lg p-0.5 border border-slate-200/50 md:border-transparent z-10">
+                      <button 
+                        onClick={() => openModal(client)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => confirmDelete(client.id, client.name)}
+                        className="p-1.5 text-slate-500 hover:text-red-650 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 mt-4 pt-4 border-t border-slate-100">

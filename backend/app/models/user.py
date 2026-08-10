@@ -18,5 +18,12 @@ class User(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     deletion_scheduled_at = Column(DateTime, nullable=True)
+    
+    role = Column(String, default="Staff") # Admin, Staff
+    perm_collections = Column(String, default="edit") # none, view, edit
+    perm_warehouse = Column(String, default="edit")
+    perm_stockbook = Column(String, default="edit")
+    perm_clients = Column(String, default="edit")
+    perm_quotations = Column(String, default="edit")
 
     settings = relationship("app.models.user_settings.UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")

@@ -155,7 +155,7 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-export default function QuotationView() {
+export default function QuotationView({ permission = "edit" }: { permission?: string }) {
   const [lang, setLang] = useState("en");
 
   useEffect(() => {
@@ -1166,6 +1166,7 @@ export default function QuotationView() {
   }, [currentUserId]);
 
   const handleSaveQuotation = async () => {
+    if (permission !== "edit") return;
     if (selectedItems.length === 0) return;
     if (!currentUserId) {
       alert("User session not found. Please log in again.");
@@ -1415,6 +1416,7 @@ export default function QuotationView() {
   };
 
   const handleDeleteQuote = async (id: string) => {
+    if (permission !== "edit") return;
     setConfirmModal({
       isOpen: true,
       title: "Delete Quotation",
@@ -1901,7 +1903,7 @@ export default function QuotationView() {
 
         {/* Actions - hidden on mobile, visible on desktop */}
         <div className="hidden lg:flex items-center gap-3">
-          {activeSubView === "create" && (
+          {activeSubView === "create" && permission === "edit" && (
             <button
               onClick={handleSaveQuotation}
               disabled={selectedItems.length === 0 || isSaving}
@@ -4066,18 +4068,20 @@ export default function QuotationView() {
     {/* Sticky Bottom Actions Bar on Mobile */}
     {activeSubView === "create" && selectedItems.length > 0 && (
       <div className="lg:hidden fixed bottom-[65px] left-0 right-0 z-45 bg-white/90 backdrop-blur-md border-t border-slate-200/80 p-3 shadow-lg flex gap-3 px-4 no-print select-none">
-        <button
-          onClick={handleSaveQuotation}
-          disabled={isSaving}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
-        >
-          {isSaving ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-          ) : (
-            <Check className="h-4 w-4" />
-          )}
-          {isSaving ? t("savingQuotation") : t("saveQuotation")}
-        </button>
+        {permission === "edit" && (
+          <button
+            onClick={handleSaveQuotation}
+            disabled={isSaving}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
+          >
+            {isSaving ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {isSaving ? t("savingQuotation") : t("saveQuotation")}
+          </button>
+        )}
         
         <button
           onClick={handlePrint}

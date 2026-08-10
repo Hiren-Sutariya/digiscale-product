@@ -159,6 +159,7 @@ import {
   Copy,
   Columns,
   MoreVertical,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import PageTitle from "@/components/ui/pageTitle";
@@ -233,7 +234,19 @@ function CollectionsPageContent() {
   };
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [permission, setPermission] = useState("edit");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const role = localStorage.getItem("user_role") || "Admin";
+      if (role === "Admin") {
+        setPermission("edit");
+      } else {
+        setPermission(localStorage.getItem("perm_collections") || "edit");
+      }
+    }
+  }, []);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -759,6 +772,7 @@ function CollectionsPageContent() {
 
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (permission !== "edit") return;
     if (!newCollectionName.trim()) return;
 
     try {
@@ -802,6 +816,7 @@ function CollectionsPageContent() {
 
   const handleDeleteCollection = async (colId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (permission !== "edit") return;
 
     setConfirmModal({
       isOpen: true,
@@ -1817,11 +1832,13 @@ ${rows}
   };
 
   const handleEditProductClick = (product: Product) => {
+    if (permission !== "edit") return;
     setEditingProductRowId(product.id);
     setEditingProductState(product);
   };
 
   const handleDeleteProduct = (productId: string) => {
+    if (permission !== "edit") return;
     if (!selectedCol) return;
 
     setConfirmModal({
@@ -2698,6 +2715,20 @@ ${rows}
       </div>
     );
   };
+
+  if (permission === "none") {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 h-[calc(100vh-140px)] text-center p-8 bg-slate-50/50">
+        <div className="bg-red-50 text-red-650 rounded-full p-4 mb-4">
+          <Shield className="h-10 w-10 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 font-sans">Access Denied</h2>
+        <p className="text-slate-500 max-w-sm mt-1 text-sm font-semibold">
+          You do not have permission to access the Collections section. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

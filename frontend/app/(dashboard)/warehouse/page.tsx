@@ -27,6 +27,7 @@ import {
   PieChart,
   CheckCircle2,
   Loader2,
+  Shield,
 } from "lucide-react";
 import PageTitle from "@/components/ui/pageTitle";
 import { useRouter } from "next/navigation";
@@ -44,42 +45,79 @@ interface Product {
 }
 
 
-function WarehouseProductImage({ productId, productName, initialUrl }: { productId: string, productName: string, initialUrl?: string }) {
+function WarehouseProductImage({ 
+  productId, 
+  productName, 
+  initialUrl, 
+  className = "h-12 w-12 rounded-xl",
+  boxSizeClassName = "h-5 w-5",
+  cacheVersion = 0
+}: { 
+  productId: string; 
+  productName: string; 
+  initialUrl?: string; 
+  className?: string;
+  boxSizeClassName?: string;
+  cacheVersion?: number;
+}) {
   const [url, setUrl] = useState<string | null>(initialUrl || null);
   
   useEffect(() => {
-    if (url) return;
+    let mounted = true;
+    
+    // Check initialUrl or cache first
+    const cachedUrl = photoUrlCache.get(productId);
+    const resolvedUrl = initialUrl || cachedUrl || null;
+    setUrl(resolvedUrl);
+    
+    console.log(`WarehouseProductImage [${productName} / ${productId}]: initialUrl=${!!initialUrl}, cachedUrl=${!!cachedUrl}, resolvedUrl=${!!resolvedUrl}`);
+
+    // If we have a valid URL, do not fetch
+    if (resolvedUrl) return;
+    
+    // If we already attempted fetching and it returned null/failed, do not retry
     if (photoUrlCache.has(productId)) {
-      const cached = photoUrlCache.get(productId);
-      if (cached) setUrl(cached);
+      console.log(`WarehouseProductImage [${productName} / ${productId}]: Cache already contains key (null/failed), skipping fetch.`);
       return;
     }
-    let mounted = true;
+
     const fetchPhoto = async () => {
       try {
-        const { data } = await supabase.from('products').select('photoUrl').eq('id', productId).single();
-        photoUrlCache.set(productId, data?.photoUrl || null);
-        if (mounted && data?.photoUrl) setUrl(data.photoUrl);
+        console.log(`WarehouseProductImage [${productName} / ${productId}]: Fetching photoUrl from Supabase...`);
+        const { data, error } = await supabase.from('products').select('photoUrl').eq('id', productId).single();
+        if (error) {
+          console.error(`WarehouseProductImage [${productName} / ${productId}]: DB fetch error:`, error);
+          photoUrlCache.set(productId, null);
+          return;
+        }
+        const fetchedUrl = data?.photoUrl || null;
+        console.log(`WarehouseProductImage [${productName} / ${productId}]: Fetched photoUrl. Length: ${fetchedUrl ? fetchedUrl.length : 0}`);
+        photoUrlCache.set(productId, fetchedUrl);
+        if (mounted && fetchedUrl) {
+          setUrl(fetchedUrl);
+        }
       } catch (e) {
+        console.error(`WarehouseProductImage [${productName} / ${productId}]: Exception in fetchPhoto:`, e);
         photoUrlCache.set(productId, null);
       }
     };
     fetchPhoto();
     return () => { mounted = false; };
-  }, [productId, url]);
+  }, [productId, initialUrl, cacheVersion]);
+
 
   if (url) {
     return (
       <img
         src={url}
         alt={productName}
-        className="h-12 w-12 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
+        className={`${className} object-contain bg-slate-50 border border-slate-200 shrink-0`}
       />
     );
   }
   return (
-    <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-350">
-      <Box className="h-5 w-5" />
+    <div className={`${className} bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-350`}>
+      <Box className={boxSizeClassName} />
     </div>
   );
 }
@@ -104,10 +142,17 @@ export default function WarehousePage() {
 
   const router = useRouter();
   const [lang, setLang] = useState<string>("en");
+  const [permission, setPermission] = useState("edit");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
+      const role = localStorage.getItem("user_role") || "Admin";
+      if (role === "Admin") {
+        setPermission("edit");
+      } else {
+        setPermission(localStorage.getItem("perm_warehouse") || "edit");
+      }
     }
   }, []);
 
@@ -212,6 +257,8 @@ export default function WarehousePage() {
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  
+  const [cacheVersion, setCacheVersion] = useState(0);
   
   // Warehouse States
   const [warehouseRows, setWarehouseRows] = useState<string[]>([]);
@@ -375,6 +422,28 @@ export default function WarehousePage() {
       });
       setWarehouseAssignments(assignsMap);
 
+      // Batch pre-fetch all assigned product photos
+      const assignedProductIds = Array.from(new Set(allAssigns.map(a => a.product_id)));
+      if (assignedProductIds.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < assignedProductIds.length; i += batchSize) {
+          const batchIds = assignedProductIds.slice(i, i + batchSize);
+          const { data: photoData } = await supabase
+            .from('products')
+            .select('id, photoUrl')
+            .in('id', batchIds);
+          
+          if (photoData) {
+            photoData.forEach(p => {
+              if (p.photoUrl) {
+                photoUrlCache.set(p.id, p.photoUrl);
+              }
+            });
+          }
+        }
+        setCacheVersion(v => v + 1);
+      }
+
       return { warehouseRows: rowsData, warehouseSlots: slotsMap, warehouseAssignments: assignsMap };
     } catch (err) {
       console.error("Failed to fetch warehouse details:", err);
@@ -439,6 +508,50 @@ export default function WarehousePage() {
       });
   }, []);
 
+  // Pre-fetch photoUrls for search results in a single query to speed up rendering (debounced)
+  useEffect(() => {
+    const query = productSearchQuery.trim().toLowerCase();
+    if (query === "") return;
+
+    // Filter products matching search query
+    const matching = allProducts.filter((prod) => {
+      const col = collections.find(c => c.id === prod.collectionId);
+      const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
+      return isCode && (prod.name?.toLowerCase() || "").includes(query);
+    });
+
+    // Find uncached product IDs
+    const uncachedIds = matching
+      .map(p => p.id)
+      .filter(id => !photoUrlCache.has(id));
+
+    if (uncachedIds.length === 0) return;
+
+    let mounted = true;
+    const handler = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select('id, photoUrl')
+          .in('id', uncachedIds.slice(0, 50)); // Fetch up to 50 photos in parallel in 1 query
+        
+        if (data && mounted) {
+          data.forEach(p => {
+            photoUrlCache.set(p.id, p.photoUrl || null);
+          });
+          setCacheVersion(v => v + 1); // Trigger render update for image components
+        }
+      } catch (e) {
+        console.error("Prefetch failed:", e);
+      }
+    }, 250);
+
+    return () => {
+      mounted = false;
+      clearTimeout(handler);
+    };
+  }, [productSearchQuery, allProducts, collections]);
+
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -492,6 +605,7 @@ export default function WarehousePage() {
 
   // Add Row
   const handleAddRow = async () => {
+    if (permission !== "edit") return;
     const name = addRowName.trim().toUpperCase() || String.fromCharCode(65 + warehouseRows.length);
     if (warehouseRows.includes(name)) {
       alert("Row already exists");
@@ -514,6 +628,7 @@ export default function WarehousePage() {
 
   // Remove Row
   const handleRemoveRow = (row: string) => {
+    if (permission !== "edit") return;
     const hasProducts = Object.keys(warehouseAssignments).some(
       (k) => k.startsWith(`${row}-`) && warehouseAssignments[k].length > 0
     );
@@ -556,6 +671,7 @@ export default function WarehousePage() {
 
   // Add Slot
   const handleAddSlot = (row: string) => {
+    if (permission !== "edit") return;
     const current = getSlotsForRow(row);
     const nextNum = current.length > 0 ? Math.max(...current) + 1 : 1;
     const defaultName = `${row}-${nextNum}`;
@@ -564,6 +680,7 @@ export default function WarehousePage() {
   };
 
   const handleConfirmAddSlot = async () => {
+    if (permission !== "edit") return;
     const { row, defaultName } = addSlotModal;
     let name = addSlotName.trim() ? addSlotName.trim() : defaultName.split("-")[1];
 
@@ -608,6 +725,7 @@ export default function WarehousePage() {
 
   // Remove Slot
   const handleRemoveSlot = (row: string, slot: number) => {
+    if (permission !== "edit") return;
     const locationUpper = `${row}-${slot}-upper`;
     const locationLower = `${row}-${slot}-lower`;
     const hasProducts =
@@ -653,33 +771,107 @@ export default function WarehousePage() {
 
   // Assign Product to Location
   const handleAssignProductToLocation = async (locId: string, productId: string, collectionId: string) => {
+    if (permission !== "edit") return;
     const list = warehouseAssignments[locId] || [];
     if (list.some((item) => item.productId === productId)) return;
+
+    let targetUserId = currentUserId;
+    if (!targetUserId || targetUserId === "") {
+      if (typeof window !== "undefined") {
+        targetUserId = localStorage.getItem("digiscale_cached_user_id") || "";
+      }
+      if (!targetUserId) {
+        try {
+          const profile = await getUserProfile();
+          if (profile && profile.id) {
+            targetUserId = profile.id.toString();
+            setCurrentUserId(targetUserId);
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (!targetUserId) {
+      alert("User session not found. Please log in again.");
+      return;
+    }
+
+    let finalCollectionId = collectionId;
+    if (!finalCollectionId || finalCollectionId === "") {
+      // Fetch it directly from Supabase
+      try {
+        const { data: prodData } = await supabase
+          .from("products")
+          .select("collection_id")
+          .eq("id", productId)
+          .single();
+        if (prodData && prodData.collection_id) {
+          finalCollectionId = prodData.collection_id;
+        }
+      } catch (e) {
+        console.error("Failed to recover collection_id:", e);
+      }
+    }
+
+    if (!finalCollectionId) {
+      alert("This product is not associated with any collection. Please assign it to a collection first.");
+      return;
+    }
+
+    // Save previous state for rollback
+    const previousAssignments = { ...warehouseAssignments };
+
+    // Optimistically update UI state immediately (0ms delay)
+    const updated = [...list, { productId, collectionId: finalCollectionId }];
+    setWarehouseAssignments({
+      ...warehouseAssignments,
+      [locId]: updated,
+    });
 
     try {
       const { error } = await supabase.from("warehouse_assignments").insert([
         {
           location_key: locId,
           product_id: productId,
-          collection_id: collectionId,
-          user_id: currentUserId,
+          collection_id: finalCollectionId,
+          user_id: targetUserId,
         },
       ]);
       if (error) throw error;
-
-      const updated = [...list, { productId, collectionId }];
-      setWarehouseAssignments({
-        ...warehouseAssignments,
-        [locId]: updated,
-      });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Assignment insertion failed:", err);
-      alert("Failed to assign product.");
+      // Rollback to previous state on failure
+      setWarehouseAssignments(previousAssignments);
+      
+      let errorMsg = "";
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      } else if (typeof err === "object" && err !== null) {
+        errorMsg = err.message || err.details || JSON.stringify(err);
+      } else {
+        errorMsg = String(err);
+      }
+      alert(`Failed to assign product: ${errorMsg}`);
     }
   };
 
   // Remove Product from Location
   const handleRemoveProductFromLocation = async (locId: string, productId: string) => {
+    if (permission !== "edit") return;
+
+    // Save previous state for rollback
+    const previousAssignments = { ...warehouseAssignments };
+
+    // Optimistically update UI state immediately (0ms delay)
+    const list = warehouseAssignments[locId] || [];
+    const updated = list.filter((item) => item.productId !== productId);
+    const newAssignments = { ...warehouseAssignments, [locId]: updated };
+    
+    if (updated.length === 0) {
+      delete newAssignments[locId];
+    }
+    setWarehouseAssignments(newAssignments);
+
     try {
       const { error } = await supabase
         .from("warehouse_assignments")
@@ -688,18 +880,20 @@ export default function WarehousePage() {
         .eq("product_id", productId);
 
       if (error) throw error;
-
-      const list = warehouseAssignments[locId] || [];
-      const updated = list.filter((item) => item.productId !== productId);
-      const newAssignments = { ...warehouseAssignments, [locId]: updated };
-      
-      if (updated.length === 0) {
-        delete newAssignments[locId];
-      }
-      setWarehouseAssignments(newAssignments);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Assignment deletion failed:", err);
-      alert("Failed to remove product.");
+      // Rollback to previous state on failure
+      setWarehouseAssignments(previousAssignments);
+      
+      let errorMsg = "";
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      } else if (typeof err === "object" && err !== null) {
+        errorMsg = err.message || err.details || JSON.stringify(err);
+      } else {
+        errorMsg = String(err);
+      }
+      alert(`Failed to remove product: ${errorMsg}`);
     }
   };
 
@@ -760,6 +954,20 @@ export default function WarehousePage() {
              (warehouseAssignments[`${locId}-lower`] || []).length > 0;
     }).length;
   }, 0);
+
+  if (permission === "none") {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 h-[calc(100vh-140px)] text-center p-8 bg-slate-50/50">
+        <div className="bg-red-50 text-red-650 rounded-full p-4 mb-4">
+          <Shield className="h-10 w-10 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 font-sans">Access Denied</h2>
+        <p className="text-slate-500 max-w-sm mt-1 text-sm font-semibold">
+          You do not have permission to access the Warehouse layout section. Please contact your administrator.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -833,15 +1041,17 @@ export default function WarehousePage() {
         </div>
 
         {/* Action Button Row */}
-        <div className="flex items-center w-full lg:w-auto shrink-0">
-          <button
-            onClick={() => setAddRowModal(true)}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 w-full lg:w-auto px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer uppercase tracking-wider"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Shelf Row</span>
-          </button>
-        </div>
+        {permission === "edit" && (
+          <div className="flex items-center w-full lg:w-auto shrink-0">
+            <button
+              onClick={() => setAddRowModal(true)}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 w-full lg:w-auto px-5 py-2.5 text-xs font-bold text-white transition shadow-sm active:scale-95 shrink-0 cursor-pointer uppercase tracking-wider"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Shelf Row</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats Section (Visible on both desktop and mobile in 4-column layout) - Stationary at the top */}
@@ -949,8 +1159,8 @@ export default function WarehousePage() {
       )}
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 pt-1 sm:pt-6 pb-20 sm:pb-8">
-        <div className="space-y-6">
+      <div className={`flex-1 min-h-0 pt-1 sm:pt-6 pb-20 sm:pb-8 ${globalSearchQuery.trim() === "" ? "overflow-y-auto lg:overflow-hidden" : "overflow-y-auto"}`}>
+        <div className="space-y-6 lg:h-full lg:flex lg:flex-col lg:space-y-0 lg:overflow-hidden">
 
         {/* Global Finder / Shelf Map Grid */}
         {globalSearchQuery.trim() !== "" && (
@@ -974,7 +1184,7 @@ export default function WarehousePage() {
                   return (
                     <div key={product.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 last:border-b-0">
                       <div className="flex items-center gap-3">
-                        <WarehouseProductImage productId={product.id} productName={product.name} initialUrl={product.photoUrl} />
+                        <WarehouseProductImage productId={product.id} productName={product.name} initialUrl={product.photoUrl} cacheVersion={cacheVersion} />
                         <div>
                           <h4 className="text-xs font-extrabold text-slate-800">{product.name}</h4>
                           <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
@@ -1035,10 +1245,10 @@ export default function WarehousePage() {
 
         {/* Rows and Inspector Layout */}
         {globalSearchQuery.trim() === "" && (
-          <div className="flex flex-col lg:flex-row gap-6 items-start">
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:h-full lg:overflow-hidden w-full">
             
             {/* Shelf rows selection list */}
-            <div className="flex-1 w-full space-y-3">
+            <div className="flex-1 w-full space-y-3 lg:h-full lg:overflow-y-auto lg:pr-2 pb-10 sm:pb-4">
               {warehouseRows
                 .filter((row) => row.toLowerCase().includes(rowSearchQuery.toLowerCase()))
                 .map((row) => {
@@ -1109,15 +1319,17 @@ export default function WarehousePage() {
                         <ChevronRight className={`h-4 w-4 transition-transform duration-200 shrink-0 ${
                           isExpanded ? "rotate-90 text-blue-500" : "text-slate-355"
                         }`} />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveRow(row);
-                          }}
-                          className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition shrink-0 cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {permission === "edit" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveRow(row);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1134,7 +1346,7 @@ export default function WarehousePage() {
                             return (
                               <div
                                 key={slot}
-                                onClick={() => setSelectedLocation(locationId)}
+                                onClick={() => { setSelectedLocation(locationId); setSelectedShelfZone("upper"); }}
                                 className={`rounded-2xl border p-3.5 flex flex-col justify-between h-28 transition-all cursor-pointer select-none relative overflow-hidden group shadow-sm hover:shadow-md ${
                                   isSelected
                                     ? "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-600 text-white shadow-blue-500/30 scale-[1.02]"
@@ -1204,7 +1416,7 @@ export default function WarehousePage() {
 
             {/* Shelf Row Inspector Sidepanel */}
             {selectedLocation && (
-              <div className="w-full lg:w-96 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-24 shrink-0 animate-in slide-in-from-right-4 duration-250">
+              <div className="w-full lg:w-96 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden shrink-0 flex flex-col lg:h-full h-[calc(100vh-120px)] animate-in slide-in-from-right-4 duration-250">
                 {/* Header */}
                 <div className="bg-sky-50 border-b border-sky-100 px-5 py-4 flex items-center justify-between">
                   <div>
@@ -1250,132 +1462,138 @@ export default function WarehousePage() {
                   </button>
                 </div>
 
-                {/* Stock List */}
-                <div className="p-5 space-y-4">
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2.5">
-                      Assigned Products ({getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).length})
-                    </h4>
-
-                    {getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                        <Package className="mx-auto h-7 w-7 text-slate-300 mb-1.5" />
-                        <p className="text-[10px] font-semibold">Zone Empty</p>
-                        <p className="text-[9px] text-slate-400 leading-normal max-w-[180px] mx-auto mt-0.5 font-medium">
-                          Assign products to this shelf zone below.
-                        </p>
+                {/* Assign Product Search — top priority, always visible */}
+                <div className="px-5 pt-4 pb-3 border-b border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Assign Product to this Zone
+                  </h4>
+                  {allProducts.length === 0 ? (
+                    <p className="text-[10px] text-slate-400 font-semibold">No products in your catalog yet.</p>
+                  ) : (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search & assign products..."
+                          value={productSearchQuery}
+                          onChange={(e) => setProductSearchQuery(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                        />
                       </div>
-                    ) : (
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).map((p) => (
-                          <div
-                            key={p.id}
-                            onClick={() => setSelectedProductDetails(p)}
-                            className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-150 rounded-xl p-2.5 cursor-pointer hover:bg-slate-100 hover:border-slate-200 transition group"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {p.photoUrl ? (
-                                <img
-                                  src={p.photoUrl}
-                                  alt=""
-                                  className="h-9 w-9 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
-                                />
-                              ) : (
-                                <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center border border-slate-200 shrink-0 text-slate-350">
-                                  <Box className="h-4 w-4" />
+                      {productSearchQuery.trim() !== "" && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 space-y-1 z-50 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                          {allProducts
+                            .filter((prod) => {
+                              const col = collections.find(c => c.id === prod.collectionId);
+                              const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
+                              return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
+                            })
+                            .map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => {
+                                  handleAssignProductToLocation(
+                                    `${selectedLocation}-${selectedShelfZone}`,
+                                    p.id,
+                                    p.collectionId || ""
+                                  );
+                                  setProductSearchQuery("");
+                                }}
+                                className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-sm transition border border-transparent hover:border-slate-150 flex items-center justify-between gap-3 group"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <WarehouseProductImage
+                                    productId={p.id}
+                                    productName={p.name}
+                                    initialUrl={p.photoUrl}
+                                    className="h-8 w-8 rounded-md"
+                                    boxSizeClassName="h-3.5 w-3.5"
+                                    cacheVersion={cacheVersion}
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-slate-850 truncate leading-snug group-hover:text-blue-600 transition-colors">
+                                      {p.name}
+                                    </div>
+                                    <div className="text-[9px] text-slate-400 font-semibold truncate">
+                                      {p.color ? `Color: ${p.color}` : "No Color"}
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                              <div className="min-w-0">
-                                <h5 className="text-xs font-extrabold text-slate-800 truncate leading-snug">
-                                  {p.name}
-                                </h5>
-                                <p className="text-[9px] text-slate-400 font-semibold truncate">
-                                  {p.color ? `Color: ${p.color}` : "No Color"} | Code: {p.rate || p.id.substring(0, 8)}
-                                </p>
-                              </div>
+                                <span className="text-[9px] text-slate-500 font-black px-2 py-1 bg-slate-100 rounded uppercase tracking-wider shrink-0 transition group-hover:bg-blue-50 group-hover:text-blue-600">
+                                  {p.rate || p.id.substring(0, 8)}
+                                </span>
+                              </button>
+                            ))}
+                          {allProducts.filter(prod => {
+                            const col = collections.find(c => c.id === prod.collectionId);
+                            const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
+                            return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
+                          }).length === 0 && (
+                            <div className="text-center py-5 text-[10px] font-semibold text-slate-400">
+                              No matching products found
                             </div>
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveProductFromLocation(`${selectedLocation}-${selectedShelfZone}`, p.id);
-                              }}
-                              className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition cursor-pointer"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Assign Product Selector */}
-                  <div className="border-t border-slate-100 pt-4">
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2.5">
-                      Assign Product to this Zone
-                    </h4>
-
-                    {allProducts.length === 0 ? (
-                      <p className="text-[10px] text-slate-400 font-semibold">No products in your catalog yet.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                          <input
-                            type="text"
-                            placeholder="Search catalog products..."
-                            value={productSearchQuery}
-                            onChange={(e) => setProductSearchQuery(e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
-                          />
-                        </div>
-                        <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50 p-2 space-y-1 mt-2">
-                          {productSearchQuery.trim() === "" ? (
-                            <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
-                              Type to search products
-                            </div>
-                          ) : (
-                            <>
-                              {allProducts
-                                .filter((prod) => {
-                                  // Only include products from Code Collections
-                                  const col = collections.find(c => c.id === prod.collectionId);
-                                  const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
-                                  return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
-                                })
-                                .map((p) => (
-                                  <button
-                                    key={p.id}
-                                    onClick={() => {
-                                      handleAssignProductToLocation(
-                                        `${selectedLocation}-${selectedShelfZone}`,
-                                        p.id,
-                                        p.collectionId || ""
-                                      );
-                                      setProductSearchQuery("");
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:shadow-sm transition border border-transparent hover:border-slate-200 flex items-center justify-between"
-                                  >
-                                    <span>{p.name}</span>
-                                    <span className="text-[9px] text-slate-400 font-bold px-2 py-0.5 bg-slate-200/50 rounded uppercase tracking-wider">{p.color ? `${p.color} | ` : ""}{p.rate || p.id.substring(0, 8)}</span>
-                                  </button>
-                                ))}
-                              {allProducts.filter(prod => {
-                                const col = collections.find(c => c.id === prod.collectionId);
-                                const isCode = col ? isCodeCollection(col) : isCodeCollection(prod.collectionName || "");
-                                return isCode && (prod.name?.toLowerCase() || "").includes(productSearchQuery.toLowerCase());
-                              }).length === 0 && (
-                                <div className="text-center py-4 text-[10px] font-semibold text-slate-400">
-                                  No matching products found
-                                </div>
-                              )}
-                            </>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+ 
+                {/* Assigned Products List */}
+                <div className="p-5 flex-1 flex flex-col min-h-0">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2.5 shrink-0">
+                    Assigned Products ({getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).length})
+                  </h4>
+ 
+                  {getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-xl flex-1 flex flex-col justify-center items-center">
+                      <Package className="mx-auto h-7 w-7 text-slate-300 mb-1.5 shrink-0" />
+                      <p className="text-[10px] font-semibold text-slate-700">Zone Empty</p>
+                      <p className="text-[9px] text-slate-400 leading-normal max-w-[180px] mx-auto mt-0.5 font-medium">
+                        Search above to assign products to this zone.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0">
+                      {getLocationProducts(`${selectedLocation}-${selectedShelfZone}`).map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => setSelectedProductDetails(p)}
+                          className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-150 rounded-xl p-2.5 cursor-pointer hover:bg-slate-100 hover:border-slate-200 transition group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <WarehouseProductImage
+                              productId={p.id}
+                              productName={p.name}
+                              initialUrl={p.photoUrl}
+                              className="h-9 w-9 rounded-lg"
+                              boxSizeClassName="h-4 w-4"
+                              cacheVersion={cacheVersion}
+                            />
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-extrabold text-slate-800 truncate leading-snug">
+                                {p.name}
+                              </h5>
+                              <p className="text-[9px] text-slate-400 font-semibold truncate">
+                                {p.color ? `Color: ${p.color}` : "No Color"} | Code: {p.rate || p.id.substring(0, 8)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveProductFromLocation(`${selectedLocation}-${selectedShelfZone}`, p.id);
+                            }}
+                            className="p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition cursor-pointer"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1505,17 +1723,14 @@ export default function WarehousePage() {
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 space-y-5 shadow-xl animate-in zoom-in-95 duration-150">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                {selectedProductDetails.photoUrl ? (
-                  <img
-                    src={selectedProductDetails.photoUrl}
-                    alt=""
-                    className="h-16 w-16 rounded-xl object-contain bg-slate-50 border border-slate-200 shrink-0"
-                  />
-                ) : (
-                  <div className="h-16 w-16 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 shrink-0 text-slate-300">
-                    <Package className="h-6 w-6" />
-                  </div>
-                )}
+                <WarehouseProductImage
+                  productId={selectedProductDetails.id}
+                  productName={selectedProductDetails.name}
+                  initialUrl={selectedProductDetails.photoUrl}
+                  className="h-16 w-16 rounded-xl"
+                  boxSizeClassName="h-6 w-6"
+                  cacheVersion={cacheVersion}
+                />
                 <div>
                   <h3 className="text-lg font-black text-slate-800">{selectedProductDetails.name}</h3>
                   <p className="text-xs text-slate-500 font-semibold">{selectedProductDetails.id}</p>
