@@ -732,7 +732,12 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                 const size = Math.min(width, height) * 0.75;
                 return { width: size, height: size };
               },
-              videoConstraints: {
+              videoConstraints: typeof activeCamera === "string" ? {
+                deviceId: { exact: activeCamera },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+              } : {
+                facingMode: { ideal: "environment" },
                 width: { ideal: 1280 },
                 height: { ideal: 720 }
               },
