@@ -406,38 +406,58 @@ function CollectionsPageContent() {
 
   const refreshAllProducts = async (userId: string) => {
     try {
-      const [colsRes, prodsRes] = await Promise.all([
-        supabase.from('collections').select('*').eq('user_id', userId),
-        supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description, unit_type, created_at').eq('user_id', userId)
-      ]);
+      const colsRes = await supabase.from('collections').select('*').eq('user_id', userId);
+      const colsMap: Record<string, string> = {};
+      if (colsRes.data) {
+        colsRes.data.forEach((c: any) => colsMap[c.id] = c.name);
+      }
 
-      if (prodsRes.data) {
-        const colsMap: Record<string, string> = {};
-        if (colsRes.data) {
-          colsRes.data.forEach((c: any) => colsMap[c.id] = c.name);
-        }
+      // Fetch all products using paginated pages to bypass 1000 row API limit
+      let allLoadedProducts: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-        const mapped = prodsRes.data.map(p => ({
-          id: p.id,
-          name: p.name,
-          stock: p.stock,
-          cartonQty: p.cartonQty,
-          rate: p.rate,
-          length: p.length,
-          color: p.color,
-          unit_type: p.unit_type || "pcs",
-          description: p.description,
-          photoUrl: "",
-          collectionId: p.collection_id,
-          collectionName: colsMap[p.collection_id] || "Unknown Collection",
-          createdAt: p.created_at
-        }));
-        setAllProducts(mapped);
-        try {
-          localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
-        } catch (e) {
-          console.warn("Could not save to localStorage, quota exceeded.");
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, stock, cartonQty, rate, color, length, collection_id, description, unit_type, created_at')
+          .eq('user_id', userId)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        if (data) {
+          allLoadedProducts = [...allLoadedProducts, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
         }
+      }
+
+      const mapped = allLoadedProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        stock: p.stock,
+        cartonQty: p.cartonQty,
+        rate: p.rate,
+        length: p.length,
+        color: p.color,
+        unit_type: p.unit_type || "pcs",
+        description: p.description,
+        photoUrl: "",
+        collectionId: p.collection_id,
+        collectionName: colsMap[p.collection_id] || "Unknown Collection",
+        createdAt: p.created_at
+      }));
+      setAllProducts(mapped);
+      try {
+        localStorage.setItem("digiscale_cached_all_products", JSON.stringify(mapped));
+      } catch (e) {
+        console.warn("Could not save to localStorage, quota exceeded.");
       }
     } catch (err) {
       console.error("Failed to refresh products:", err);
@@ -446,10 +466,9 @@ function CollectionsPageContent() {
 
   const fetchWarehouseData = async (userId: string) => {
     try {
-      const [rowsRes, slotsRes, assignsRes] = await Promise.all([
+      const [rowsRes, slotsRes] = await Promise.all([
         supabase.from('warehouse_rows').select('*').eq('user_id', userId),
-        supabase.from('warehouse_slots').select('*').eq('user_id', userId),
-        supabase.from('warehouse_assignments').select('*').eq('user_id', userId)
+        supabase.from('warehouse_slots').select('*').eq('user_id', userId)
       ]);
 
       if (rowsRes.data) {
@@ -468,18 +487,41 @@ function CollectionsPageContent() {
         localStorage.setItem("digiscale_cached_warehouse_slots", JSON.stringify(slotsMap));
       }
 
-      if (assignsRes.data) {
-        const assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
-        assignsRes.data.forEach(a => {
-          if (!assignsMap[a.location_key]) assignsMap[a.location_key] = [];
-          assignsMap[a.location_key].push({
-            productId: a.product_id,
-            collectionId: a.collection_id
-          });
-        });
-        setWarehouseAssignments(assignsMap);
-        localStorage.setItem("digiscale_cached_warehouse_assignments", JSON.stringify(assignsMap));
+      // Fetch all warehouse assignments with pagination to bypass 1000 row limit
+      let allAssigns: any[] = [];
+      let pageAssigns = 0;
+      let hasMoreAssigns = true;
+
+      while (hasMoreAssigns) {
+        const { data, error } = await supabase
+          .from('warehouse_assignments')
+          .select('*')
+          .eq('user_id', userId)
+          .range(pageAssigns * 1000, (pageAssigns + 1) * 1000 - 1);
+
+        if (error) throw error;
+        if (data) {
+          allAssigns = [...allAssigns, ...data];
+          if (data.length < 1000) {
+            hasMoreAssigns = false;
+          } else {
+            pageAssigns++;
+          }
+        } else {
+          hasMoreAssigns = false;
+        }
       }
+
+      const assignsMap: Record<string, { productId: string; collectionId: string }[]> = {};
+      allAssigns.forEach(a => {
+        if (!assignsMap[a.location_key]) assignsMap[a.location_key] = [];
+        assignsMap[a.location_key].push({
+          productId: a.product_id,
+          collectionId: a.collection_id
+        });
+      });
+      setWarehouseAssignments(assignsMap);
+      localStorage.setItem("digiscale_cached_warehouse_assignments", JSON.stringify(assignsMap));
 
       await refreshAllProducts(userId);
     } catch (err) {
