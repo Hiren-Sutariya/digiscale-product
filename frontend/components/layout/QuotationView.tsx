@@ -689,7 +689,7 @@ export default function QuotationView() {
 
           // 3. Select camera based on current index
           let activeCamera: any = { facingMode: "environment" };
-          if (deviceList.length > 0) {
+          if (deviceList.length > 0 && currentCameraIndex > 0) {
             const index = Math.min(currentCameraIndex, deviceList.length - 1);
             activeCamera = deviceList[index].id;
           }
@@ -703,11 +703,6 @@ export default function QuotationView() {
               aspectRatio: 1.777778, // Restore HD 16:9 aspect ratio for accurate coordinate mapping and scan success
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: false // Disable to prevent silent failures on iOS Safari / iPhone devices
-              },
-              videoConstraints: {
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                facingMode: "environment"
               },
               formatsToSupport: [
                 Html5QrcodeSupportedFormats.CODE_128,
@@ -3941,7 +3936,6 @@ export default function QuotationView() {
               <div 
                 id="camera-scanner-reader" 
                 className="w-full"
-                style={{ minHeight: "220px", maxHeight: "280px" }}
               />
             </div>
           </div>
