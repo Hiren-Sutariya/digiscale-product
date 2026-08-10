@@ -3220,6 +3220,8 @@ ${rows}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] text-slate-400 font-medium">Carton size: {prod.cartonQty} pcs</span>
                             <div className="flex gap-2">
+                              {selectedCol && isCodeCollection(selectedCol) ? (
+                              <>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
                                 className="p-1.5 rounded-lg border border-slate-200 text-slate-655 hover:bg-slate-50 transition"
@@ -3232,6 +3234,10 @@ ${rows}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
+                              </>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-medium py-1">Read Only</span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3583,6 +3589,7 @@ ${rows}
                                 ₹{(prod.stock * prod.cartonQty * (parseFloat(prod.rate) || 0)).toLocaleString()}
                               </td>
                               <td className="py-4 px-4 text-center">
+                                {selectedCol && isCodeCollection(selectedCol) ? (
                                 <div className="flex items-center justify-center gap-2">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleEditProductClick(prod); }}
@@ -3599,6 +3606,9 @@ ${rows}
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 font-medium">Read Only</span>
+                                )}
                               </td>
                             </tr>
                           );
@@ -4640,6 +4650,7 @@ ${rows}
 
             {/* Footer Actions */}
             <div className="flex items-center gap-2.5 sm:gap-3 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4 bg-slate-50/30 shrink-0">
+              {selectedCol && isCodeCollection(selectedCol) ? (
               <button
                 onClick={() => {
                   handleEditProductClick(viewingProduct);
@@ -4649,6 +4660,11 @@ ${rows}
               >
                 <Edit className="h-3.5 w-3.5" /> Edit Product Info
               </button>
+              ) : (
+              <div className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-bold text-slate-400">
+                Read Only (Named Collection)
+              </div>
+              )}
               <button
                 onClick={() => setViewingProduct(null)}
                 className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95 cursor-pointer text-center"
