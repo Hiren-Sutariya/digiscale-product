@@ -661,20 +661,23 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             console.warn("Camera permission prompt failed:", e);
           }
 
-          // 2. Resolve camera list
+           // 2. Resolve camera list by identifying front cameras and pushing them to the end of the list
           let deviceList: any[] = [];
           try {
             const available = await Html5Qrcode.getCameras();
             if (available && available.length > 0) {
-              const backCameras = available.filter(c => 
-                c.label.toLowerCase().includes("back") || 
-                c.label.toLowerCase().includes("rear") || 
-                c.label.toLowerCase().includes("environment") ||
-                c.label.toLowerCase().includes("camera 0") ||
-                c.label.toLowerCase().includes("main")
-              );
+              const frontCameras = available.filter(c => {
+                const label = c.label.toLowerCase();
+                return label.includes("front") || 
+                       label.includes("user") || 
+                       label.includes("selfie") || 
+                       label.includes("facetime") ||
+                       label.includes("inner");
+              });
               
-              const mainBack = (backCameras.length > 0 ? backCameras : available).filter(c => {
+              const nonFrontCameras = available.filter(c => !frontCameras.some(f => f.id === c.id));
+              
+              const mainBack = nonFrontCameras.filter(c => {
                 const label = c.label.toLowerCase();
                 return !label.includes("tele") && 
                        !label.includes("zoom") && 
@@ -687,8 +690,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                        !label.includes("5x");
               });
               
-              const orderedList = [...mainBack];
-              available.forEach(c => {
+              // Ordered list: mainBack first, then remaining non-front, and front cameras at the very bottom
+              const orderedList: any[] = [];
+              mainBack.forEach(c => orderedList.push(c));
+              nonFrontCameras.forEach(c => {
+                if (!orderedList.some(item => item.id === c.id)) {
+                  orderedList.push(c);
+                }
+              });
+              frontCameras.forEach(c => {
                 if (!orderedList.some(item => item.id === c.id)) {
                   orderedList.push(c);
                 }
