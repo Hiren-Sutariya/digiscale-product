@@ -128,7 +128,15 @@ export default function StockBookPage() {
           const parsedProds = JSON.parse(cachedProds);
           const parsedCols = cachedCols ? JSON.parse(cachedCols) : [];
           const collectionsMap = new Map<string, string>();
-          parsedCols.forEach((c: any) => collectionsMap.set(c.id, c.name));
+          const codeCollectionIds = new Set<string>();
+          parsedCols.forEach((c: any) => {
+            collectionsMap.set(c.id, c.name);
+            // Determine if code collection: by collection_type field, or by name pattern
+            const isCode = c.collection_type === 'code' || /^[A-Z]{3}-\d+-\d+/.test(c.name) || c.name?.startsWith("PJD");
+            if (isCode) {
+              codeCollectionIds.add(c.id);
+            }
+          });
 
           const locationsMap = new Map<string, string>();
           if (cachedAssigns) {
@@ -154,7 +162,10 @@ export default function StockBookPage() {
             }
           }
 
-          const formatted: Product[] = parsedProds.map((p: any) => ({
+          // Only include products from code collections (not named collections)
+          const codeProds = parsedProds.filter((p: any) => codeCollectionIds.has(p.collectionId || p.collection_id));
+
+          const formatted: Product[] = codeProds.map((p: any) => ({
             id: p.id,
             name: p.name || "",
             photoUrl: p.photoUrl || undefined,
@@ -339,14 +350,22 @@ export default function StockBookPage() {
         }
       }
 
-      // 2. Fetch collections to resolve names
+      // 2. Fetch collections to resolve names and types
       const { data: colsData } = await supabase
         .from("collections")
-        .select("id, name")
+        .select("id, name, collection_type")
         .eq("user_id", userId);
 
       const collectionsMap = new Map<string, string>();
-      colsData?.forEach(c => collectionsMap.set(c.id, c.name));
+      const codeCollectionIds = new Set<string>();
+      colsData?.forEach(c => {
+        collectionsMap.set(c.id, c.name);
+        // Determine if code collection: by collection_type field, or by name pattern (PJD-XX-XX)
+        const isCode = c.collection_type === 'code' || /^[A-Z]{3}-\d+-\d+/.test(c.name) || c.name?.startsWith("PJD");
+        if (isCode) {
+          codeCollectionIds.add(c.id);
+        }
+      });
 
       // 3. Fetch warehouse assignments with range pagination
       let allAssigns: any[] = [];
@@ -381,7 +400,10 @@ export default function StockBookPage() {
         }
       });
 
-      const formattedProducts: Product[] = allLoadedProducts.map(p => ({
+      // Only include products from CODE collections (not named collections to avoid double-counting)
+      const codeProducts = allLoadedProducts.filter(p => codeCollectionIds.has(p.collection_id));
+
+      const formattedProducts: Product[] = codeProducts.map(p => ({
         id: p.id,
         name: p.name || "",
         photoUrl: undefined, // Lazy loaded separately
