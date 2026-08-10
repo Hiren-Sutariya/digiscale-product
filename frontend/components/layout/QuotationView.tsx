@@ -428,7 +428,7 @@ export default function QuotationView() {
   // Barcode Scanner states
   const [barcodeQuery, setBarcodeQuery] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
-  const [barcodeFeedback, setBarcodeFeedback] = useState<{ text: string; isError: boolean } | null>(null);
+  const [barcodeFeedback, setBarcodeFeedback] = useState<{ text: string; isError: boolean; photoUrl?: string } | null>(null);
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
   const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
@@ -436,6 +436,7 @@ export default function QuotationView() {
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
   const scannerRef = useRef<any>(null);
   const lastScannedRef = useRef<{ code: string; time: number } | null>(null);
+  const lastNoQrTimeRef = useRef<number | null>(null);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [mobileScale, setMobileScale] = useState(1);
   const [scaleMarginLeft, setScaleMarginLeft] = useState(0);
@@ -718,14 +719,24 @@ export default function QuotationView() {
             } as any,
             (decodedText: string) => {
               const now = Date.now();
-              if (lastScannedRef.current && lastScannedRef.current.code === decodedText && (now - lastScannedRef.current.time) < 1800) {
-                return; // Ignore duplicate scan within 1.8 seconds to avoid double trigger
+              lastNoQrTimeRef.current = null; // Reset error/no-QR timer on success
+              if (lastScannedRef.current && lastScannedRef.current.code === decodedText) {
+                return; // Ignore duplicate scans of the same code until it has left the frame
               }
               lastScannedRef.current = { code: decodedText, time: now };
               handleBarcodeSubmit(decodedText);
             },
             () => {
-              // Standard scanning noise, ignore
+              // This is called on every frame where no barcode/QR is detected
+              if (lastScannedRef.current) {
+                if (!lastNoQrTimeRef.current) {
+                  lastNoQrTimeRef.current = Date.now();
+                } else if (Date.now() - lastNoQrTimeRef.current > 1200) {
+                  // If no QR was found for 1.2 seconds, assume the user moved the camera away
+                  lastScannedRef.current = null;
+                  lastNoQrTimeRef.current = null;
+                }
+              }
             }
           );
 
@@ -1464,8 +1475,9 @@ export default function QuotationView() {
       playBeepSound(false);
       handleToggleProduct(matchedProduct);
       setBarcodeFeedback({ 
-        text: lang === "gu" ? `પ્રોડક્ટ ઉમેરાઈ: ${matchedProduct.name}` : `Product Added: ${matchedProduct.name}`, 
-        isError: false 
+        text: matchedProduct.name, 
+        isError: false,
+        photoUrl: matchedProduct.photoUrl
       });
     } else {
       playBeepSound(true);
@@ -3845,7 +3857,45 @@ export default function QuotationView() {
     {/* CAMERA BARCODE SCANNER MODAL */}
     {showCameraScanner && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden relative">
+          
+          {/* Top iOS-style Scan Notification Banner */}
+          {barcodeFeedback && (
+            <div className={`absolute top-3 left-3 right-3 z-50 px-4 py-3 rounded-2xl border shadow-xl flex items-center gap-3 transition-all duration-300 animate-in slide-in-from-top-5 ${
+              barcodeFeedback.isError 
+                ? "bg-rose-50 text-rose-800 border-rose-200" 
+                : "bg-white/95 backdrop-blur-md text-slate-800 border-slate-100"
+            }`}>
+              {/* Product Image or Icon */}
+              <div className="h-10 w-10 rounded-xl overflow-hidden border border-slate-150 bg-slate-50 shrink-0 flex items-center justify-center">
+                {barcodeFeedback.isError ? (
+                  <span className="text-lg">⚠️</span>
+                ) : barcodeFeedback.photoUrl ? (
+                  <img 
+                    src={barcodeFeedback.photoUrl} 
+                    alt={barcodeFeedback.text} 
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-lg">📦</span>
+                )}
+              </div>
+
+              {/* Text Details */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none">
+                  {barcodeFeedback.isError 
+                    ? (lang === "gu" ? "ભૂલ" : "Scan Error")
+                    : (lang === "gu" ? "પ્રોડક્ટ ઉમેરાઈ" : "Product Added")
+                  }
+                </p>
+                <p className="text-xs font-bold text-slate-800 truncate mt-0.5 leading-tight">
+                  {barcodeFeedback.text}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Header (Sticky at top) */}
           <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 shrink-0">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -3878,18 +3928,6 @@ export default function QuotationView() {
                 style={{ minHeight: "220px", maxHeight: "280px" }}
               />
             </div>
-
-            {/* Feedback notification banner inside camera scanner */}
-            {barcodeFeedback && (
-              <div className={`w-full max-w-[320px] mx-auto px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all border shrink-0 shadow-sm ${
-                barcodeFeedback.isError 
-                  ? "bg-red-50 text-red-700 border-red-200" 
-                  : "bg-green-50 text-green-700 border-green-200 animate-bounce"
-              }`}>
-                <span>{barcodeFeedback.isError ? "⚠️" : "✅"}</span>
-                <p>{barcodeFeedback.text}</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
