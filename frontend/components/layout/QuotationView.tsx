@@ -23,9 +23,11 @@ import {
   Loader2,
   AlertCircle,
   Phone,
-  AlignLeft
+  AlignLeft,
+  Download
 } from "lucide-react";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 import { QRCodeSVG } from 'qrcode.react';
 import { getUserProfile, getUserSettings } from "@/services/api";
 import { supabase } from "@/lib/supabase";
@@ -1582,6 +1584,106 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     await executePrint({ ...quote, items: itemsToLoad });
   };
 
+  const handleDownloadQuoteExcel = async (quote: any) => {
+    let itemsToLoad = quote.items;
+    if (!itemsToLoad) {
+      itemsToLoad = await fetchQuoteItems(quote.id);
+      quote.items = itemsToLoad;
+    }
+    
+    // Create Excel Workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Format quote details for display
+    const quoteNum = quote.quoteNumber || quote.quote_number || "Q-—";
+    const clientName = quote.clientName || quote.client_name || "—";
+    const clientComp = quote.clientCompany || quote.client_company || "—";
+    const clientAddr = quote.clientAddress || quote.client_address || "—";
+    const quoteDate = quote.quoteDate || quote.quote_date || "—";
+    
+    // Find client contact from clientsList
+    const matchedClient = clientsList.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+    const clientContact = matchedClient?.contact || "—";
+
+    // Setup sheet rows
+    const rows = [
+      ["QUOTATION DETAILS", ""],
+      ["Quotation No:", quoteNum],
+      ["Date:", quoteDate],
+      ["", ""],
+      ["CLIENT INFORMATION", ""],
+      ["Client Name:", clientName],
+      ["Company Name:", clientComp],
+      ["Contact No:", clientContact],
+      ["Address:", clientAddr],
+      ["", ""],
+      ["ITEMS", ""],
+      ["Sr No.", "Product Code/Name", "Quantity (Pcs)", "Rate (Price Code)", "Total Amount"]
+    ];
+
+    // Add item rows
+    (itemsToLoad || []).forEach((item: any, idx: number) => {
+      const rateVal = parseFloat(item.rate) || 0;
+      const totalVal = item.quantity * rateVal;
+      rows.push([
+        (idx + 1).toString(),
+        item.name || "—",
+        item.quantity.toString(),
+        item.rate || "0",
+        totalVal.toFixed(2)
+      ]);
+    });
+
+    // Add summary rows
+    const subtotal = (itemsToLoad || []).reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(item.rate) || 0)), 0);
+    
+    rows.push(["", ""]);
+    rows.push(["Subtotal:", "", "", "", subtotal.toFixed(2)]);
+    
+    // Calculate tax/GST if applicable
+    const rawTax = (quote.taxInput || "").trim();
+    let taxAmount = 0;
+    if (rawTax) {
+      if (rawTax.endsWith("%")) {
+        const pct = parseFloat(rawTax.slice(0, -1)) || 0;
+        taxAmount = (subtotal * pct) / 100;
+        rows.push([`GST (${rawTax}):`, "", "", "", taxAmount.toFixed(2)]);
+      } else {
+        taxAmount = parseFloat(rawTax) || 0;
+        rows.push([`GST Amount:`, "", "", "", taxAmount.toFixed(2)]);
+      }
+    }
+
+    // Markup
+    if (quote.applyEventMarkup) {
+      const markupPct = quote.eventMarkupPercent ?? 25;
+      const markupAmt = ((subtotal + taxAmount) * markupPct) / 100;
+      rows.push([`Markup (${markupPct}%):`, "", "", "", markupAmt.toFixed(2)]);
+    }
+
+    const grandTotal = quote.totalAmount || quote.total_amount || (subtotal + taxAmount);
+    rows.push(["Grand Total:", "", "", "", parseFloat(grandTotal).toFixed(2)]);
+
+    // Convert rows to worksheet
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Set layout columns width for readability
+    ws["!cols"] = [
+      { wch: 15 }, // Sr No / keys
+      { wch: 35 }, // Product Name
+      { wch: 18 }, // Qty
+      { wch: 18 }, // Rate
+      { wch: 18 }  // Total
+    ];
+
+    // Append sheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Quotation");
+
+    // Write file
+    const fileName = `${quoteNum}_${clientName.replace(/\s+/g, "_")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
+
   const playBeepSound = (isError = false) => {
     if (typeof window === "undefined") return;
     try {
@@ -2185,6 +2287,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               <Printer className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => handleDownloadQuoteExcel(quote)}
+                              className="p-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-lg border border-indigo-100 transition active:scale-95 cursor-pointer"
+                              title="Download Excel"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <button
                               onClick={() => handleDeleteQuote(quote.id)}
                               className="p-1.5 bg-red-50 hover:bg-red-650 hover:text-white text-red-655 rounded-lg border border-red-100 transition active:scale-95 cursor-pointer"
                               title="Delete"
@@ -2306,6 +2415,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             title="Print"
                           >
                             <Printer className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDownloadQuoteExcel(quote)}
+                            className="p-2 bg-white hover:bg-indigo-50 text-indigo-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
+                            title="Download Excel"
+                          >
+                            <Download className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteQuote(quote.id)}
