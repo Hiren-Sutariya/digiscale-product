@@ -275,6 +275,19 @@ export async function createUser(data: any): Promise<any> {
   return response.json();
 }
 
+export async function updateUser(userId: number, data: any): Promise<any> {
+  const response = await authFetch(`${API_BASE_URL}/users/update/${userId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.detail || "Failed to update user.");
+  }
+  return response.json();
+}
+
 export async function deleteUser(userId: number): Promise<any> {
   const response = await authFetch(`${API_BASE_URL}/users/delete/${userId}`, {
     method: "DELETE",

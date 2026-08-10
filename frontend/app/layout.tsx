@@ -4,6 +4,7 @@ import {
   Plus_Jakarta_Sans, Montserrat } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import Script from "next/script";
 
 const montserratHeading = Montserrat({subsets:['latin'],variable:'--font-heading'});
 
@@ -33,28 +34,27 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", inter.variable, jakarta.variable, montserratHeading.variable)}
     >
-      <head>
-        <script
+      <head />
+      <body className="min-h-full flex flex-col">
+        <Script
+          id="theme-initializer"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                try {
-                  const mode = localStorage.getItem('digiscale_theme_mode') || 'light';
-                  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                  if (isDark) {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
-                  const accent = localStorage.getItem('digiscale_theme_accent') || 'blue';
-                  document.documentElement.setAttribute('data-theme-accent', accent);
-                } catch (e) {}
-              })();
+              try {
+                const mode = localStorage.getItem('digiscale_theme_mode') || 'light';
+                const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+                const accent = localStorage.getItem('digiscale_theme_accent') || 'blue';
+                document.documentElement.setAttribute('data-theme-accent', accent);
+              } catch (e) {}
             `,
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col">
         {children}
       </body>
     </html>

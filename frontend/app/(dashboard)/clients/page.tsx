@@ -219,16 +219,18 @@ export default function ClientsPage() {
         setSavedThreshold(val.toString());
       }
 
+      const targetUserId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
+
       const [clientsRes, quotesRes] = await Promise.all([
         supabase
           .from('clients')
           .select('*')
-          .eq('user_id', profile.id.toString())
+          .eq('user_id', targetUserId)
           .order('name', { ascending: true }),
         supabase
           .from('quotations')
-          .select('id, client_name, quote_number, quote_date, total_amount, created_at, is_order_done')
-          .eq('user_id', profile.id.toString())
+          .select('id, client_name, quote_number, quote_date, total_amount, created_at, is_order_done, staff_name')
+          .eq('user_id', targetUserId)
           .order('created_at', { ascending: false })
       ]);
 
@@ -319,12 +321,14 @@ export default function ClientsPage() {
       const profile = await getUserProfile();
       if (!profile) throw new Error("Not authenticated");
 
+      const targetUserId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
+
       const clientData = {
         name: formData.name.trim(),
         company: formData.company.trim() || null,
         address: formData.address.trim() || null,
         contact: formData.contact.trim() || null,
-        user_id: profile.id.toString()
+        user_id: targetUserId
       };
 
       if (editingId) {
@@ -332,7 +336,7 @@ export default function ClientsPage() {
           .from('clients')
           .update(clientData)
           .eq('id', editingId)
-          .eq('user_id', profile.id.toString());
+          .eq('user_id', targetUserId);
         
         if (error) throw error;
       } else {
@@ -365,11 +369,13 @@ export default function ClientsPage() {
       const profile = await getUserProfile();
       if (!profile) return;
 
+      const targetUserId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
+
       const { error } = await supabase
         .from('clients')
         .delete()
         .eq('id', deleteConfirmId)
-        .eq('user_id', profile.id.toString());
+        .eq('user_id', targetUserId);
 
       if (error) throw error;
       setClients(prev => prev.filter(c => c.id !== deleteConfirmId));

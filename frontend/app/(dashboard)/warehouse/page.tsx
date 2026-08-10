@@ -484,7 +484,7 @@ export default function WarehousePage() {
     getUserProfile()
       .then((profile) => {
         if (profile && profile.id) {
-          const uId = profile.id.toString();
+          const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
           setCurrentUserId(uId);
 
           const cacheKey = `warehouse_data_${uId}`;
@@ -784,7 +784,7 @@ export default function WarehousePage() {
         try {
           const profile = await getUserProfile();
           if (profile && profile.id) {
-            targetUserId = profile.id.toString();
+            targetUserId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
             setCurrentUserId(targetUserId);
           }
         } catch (e) {}

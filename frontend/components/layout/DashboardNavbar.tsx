@@ -115,12 +115,47 @@ export default function DashboardNavbar() {
   const [scrolled, setScrolled] = useState(false);
   const [lang, setLang] = useState<string>("en");
   const [userRole, setUserRole] = useState<string>("Admin");
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
       setUserRole(localStorage.getItem("user_role") || "Admin");
+      setCompanyLogo(localStorage.getItem("digiscale_company_logo"));
+      setCompanyName(localStorage.getItem("digiscale_company_name"));
+      const email = localStorage.getItem("user_email");
+      if (email) {
+        setAvatarUrl(localStorage.getItem(`digiscale_avatar_${email}`));
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      if (typeof window !== "undefined") {
+        setCompanyLogo(localStorage.getItem("digiscale_company_logo"));
+        setCompanyName(localStorage.getItem("digiscale_company_name"));
+        
+        const name = localStorage.getItem("user_name");
+        const email = localStorage.getItem("user_email");
+        const plan = localStorage.getItem("user_plan");
+        const created_at = localStorage.getItem("user_created_at");
+        if (name) {
+          setUser({ name, email: email || "", plan: plan || "Starter", created_at: created_at || undefined });
+        }
+
+        if (email) {
+          setAvatarUrl(localStorage.getItem(`digiscale_avatar_${email}`));
+        }
+      }
+    };
+    window.addEventListener("digiscale-settings-updated", handleSettingsUpdate);
+    window.addEventListener("profileUpdated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("digiscale-settings-updated", handleSettingsUpdate);
+      window.removeEventListener("profileUpdated", handleSettingsUpdate);
+    };
   }, []);
 
 
@@ -128,7 +163,7 @@ export default function DashboardNavbar() {
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
   const hasPermission = (href: string) => {
-    if (typeof window === "undefined") return true;
+    if (!mounted) return true;
     const role = localStorage.getItem("user_role") || "Admin";
     if (role === "Admin") return true;
     
@@ -204,6 +239,8 @@ export default function DashboardNavbar() {
             setUser(data);
             setUserRole(data.role || "Staff");
             if (typeof window !== "undefined") {
+              const uId = (data.role === "Staff" && data.admin_id) ? data.admin_id.toString() : data.id.toString();
+              localStorage.setItem("digiscale_cached_user_id", uId);
               localStorage.setItem("user_name", data.name || "");
               localStorage.setItem("user_email", data.email || "");
               localStorage.setItem("user_plan", data.plan || "Starter");
@@ -215,7 +252,30 @@ export default function DashboardNavbar() {
               localStorage.setItem("perm_quotations", data.perm_quotations || "edit");
               if (data.created_at) localStorage.setItem("user_created_at", data.created_at);
             }
-            if (settingsData?.avatar_url) setAvatarUrl(settingsData.avatar_url);
+            
+            if (settingsData) {
+              setCompanyLogo(settingsData.company_logo || null);
+              setCompanyName(settingsData.company_name || null);
+              const resolvedAvatar = settingsData.avatar_url || data?.avatar_url;
+              if (resolvedAvatar) setAvatarUrl(resolvedAvatar);
+
+              if (typeof window !== "undefined") {
+                if (settingsData.company_logo) {
+                  localStorage.setItem("digiscale_company_logo", settingsData.company_logo);
+                } else {
+                  localStorage.removeItem("digiscale_company_logo");
+                }
+                if (settingsData.company_name) {
+                  localStorage.setItem("digiscale_company_name", settingsData.company_name);
+                } else {
+                  localStorage.removeItem("digiscale_company_name");
+                }
+                const email = data.email || localStorage.getItem("user_email");
+                if (email && resolvedAvatar) {
+                  localStorage.setItem(`digiscale_avatar_${email}`, resolvedAvatar);
+                }
+              }
+            }
 
             if (data.plan === "Starter" && data.created_at) {
               const created = new Date(data.created_at);

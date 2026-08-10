@@ -52,12 +52,14 @@ export default function ClientDetailsPage() {
       const profile = await getUserProfile();
       if (!profile) throw new Error("Not authenticated");
 
+      const targetUserId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
+
       // Fetch client
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('id', clientId)
-        .eq('user_id', profile.id.toString())
+        .eq('user_id', targetUserId)
         .single();
 
       if (clientError) throw clientError;
@@ -69,8 +71,8 @@ export default function ClientDetailsPage() {
       // Since quotations are saved with client_name, we match by name
       const { data: quotesData, error: quotesError } = await supabase
         .from('quotations')
-        .select('id, quote_number, quote_date, total_amount, created_at, is_order_done')
-        .eq('user_id', profile.id.toString())
+        .select('id, quote_number, quote_date, total_amount, created_at, is_order_done, staff_name')
+        .eq('user_id', targetUserId)
         .ilike('client_name', clientData.name)
         .order('created_at', { ascending: false });
 
@@ -218,13 +220,18 @@ export default function ClientDetailsPage() {
                 className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow hover:border-blue-200 transition-all group"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-black rounded-md group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
                       {quote.quote_number}
                     </span>
                     {quote.is_order_done && (
                       <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-wider rounded-md">
                         Done
+                      </span>
+                    )}
+                    {quote.staff_name && (
+                      <span className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[8px] font-bold text-blue-600 ring-1 ring-inset ring-blue-500/20 uppercase tracking-wide">
+                        👤 {quote.staff_name}
                       </span>
                     )}
                   </div>

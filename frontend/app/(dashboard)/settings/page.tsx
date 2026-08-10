@@ -29,10 +29,16 @@ import {
   Languages,
   Keyboard,
   Loader2,
+  FolderOpen,
+  Warehouse,
+  TrendingUp,
+  UserCheck,
+  X,
+  Pencil
 } from "lucide-react";
 
 import PageTitle from "@/components/ui/pageTitle";
-import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword, logout, listUsers, createUser, deleteUser } from "@/services/api";
+import { getUserProfile, updateUserProfile, deleteAccount, getUserSettings, updateUserSettings, changePassword, logout, listUsers, createUser, updateUser, deleteUser } from "@/services/api";
 import { getCache } from "@/lib/cache";
 import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
@@ -416,7 +422,13 @@ function SettingsPageContent() {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
   };
 
-  const userRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "Admin" : "Admin";
+  const [userRole, setUserRole] = useState<string>("Admin");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUserRole(localStorage.getItem("user_role") || "Admin");
+    }
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -1000,6 +1012,21 @@ function UsersSection() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Edit User States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editRole, setEditRole] = useState("Staff");
+  const [editPermCollections, setEditPermCollections] = useState("edit");
+  const [editPermWarehouse, setEditPermWarehouse] = useState("edit");
+  const [editPermStockbook, setEditPermStockbook] = useState("edit");
+  const [editPermClients, setEditPermClients] = useState("edit");
+  const [editPermQuotations, setEditPermQuotations] = useState("edit");
+  const [editErrorMsg, setEditErrorMsg] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   // Delete Confirmation States
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -1064,6 +1091,51 @@ function UsersSection() {
     }
   };
 
+  const openEditModal = (u: any) => {
+    setEditingUser(u);
+    setEditName(u.name || "");
+    setEditEmail(u.email || "");
+    setEditPassword("");
+    setEditRole(u.role || "Staff");
+    setEditPermCollections(u.perm_collections || "edit");
+    setEditPermWarehouse(u.perm_warehouse || "edit");
+    setEditPermStockbook(u.perm_stockbook || "edit");
+    setEditPermClients(u.perm_clients || "edit");
+    setEditPermQuotations(u.perm_quotations || "edit");
+    setEditErrorMsg("");
+    setShowEditModal(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !editEmail.trim()) {
+      setEditErrorMsg("Name and email are required.");
+      return;
+    }
+    try {
+      setEditSubmitting(true);
+      setEditErrorMsg("");
+      await updateUser(editingUser.id, {
+        name: editName.trim(),
+        email: editEmail.trim().toLowerCase(),
+        password: editPassword || "",
+        role: editRole,
+        perm_collections: editRole === "Admin" ? "edit" : editPermCollections,
+        perm_warehouse: editRole === "Admin" ? "edit" : editPermWarehouse,
+        perm_stockbook: editRole === "Admin" ? "edit" : editPermStockbook,
+        perm_clients: editRole === "Admin" ? "edit" : editPermClients,
+        perm_quotations: editRole === "Admin" ? "edit" : editPermQuotations,
+      });
+      setShowEditModal(false);
+      setEditingUser(null);
+      loadUsers();
+    } catch (err: any) {
+      setEditErrorMsg(err.message || "Failed to update user.");
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const handleDeleteUser = async () => {
     if (!deleteConfirmId) return;
     try {
@@ -1087,10 +1159,57 @@ function UsersSection() {
     );
   }
 
-  const renderPermissionsBadge = (val: string) => {
-    if (val === "edit") return <span className="text-[9px] bg-emerald-55/65 text-emerald-700 font-extrabold px-1.5 py-0.5 rounded border border-emerald-100/50 uppercase">Edit</span>;
-    if (val === "view") return <span className="text-[9px] bg-amber-55/60 text-amber-700 font-extrabold px-1.5 py-0.5 rounded border border-amber-100/50 uppercase">View</span>;
-    return <span className="text-[9px] bg-rose-50 text-rose-600 font-extrabold px-1.5 py-0.5 rounded border border-rose-100/50 uppercase">None</span>;
+  const renderModulePermission = (moduleName: string, permission: string, IconComponent: any) => {
+    let colorClass = "";
+    let label = "";
+    if (permission === "edit") {
+      colorClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
+      label = "Edit";
+    } else if (permission === "view") {
+      colorClass = "bg-amber-50 text-amber-700 border-amber-100";
+      label = "View";
+    } else {
+      colorClass = "bg-slate-50 text-slate-400 border-slate-150";
+      label = "None";
+    }
+
+    return (
+      <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider shadow-sm ${colorClass}`}>
+        <IconComponent className="h-3.5 w-3.5 shrink-0" />
+        <span>{moduleName}</span>
+        <span className="opacity-40">:</span>
+        <span className="font-extrabold">{label}</span>
+      </div>
+    );
+  };
+
+  const renderPermissionToggle = (label: string, value: string, onChange: (val: string) => void) => {
+    return (
+      <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-150 shadow-sm">
+        <span className="text-xs font-bold text-slate-700">{label}</span>
+        <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200/60 select-none">
+          {["none", "view", "edit"].map((opt) => {
+            const isActive = value === opt;
+            const activeColor = 
+              opt === "edit" ? "bg-emerald-500 text-white shadow-sm font-black" :
+              opt === "view" ? "bg-amber-500 text-white shadow-sm font-black" :
+              "bg-slate-400 text-white shadow-sm font-black";
+            return (
+              <button
+                type="button"
+                key={opt}
+                onClick={() => onChange(opt)}
+                className={`px-3 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all duration-100 cursor-pointer ${
+                  isActive ? activeColor : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -1114,95 +1233,100 @@ function UsersSection() {
         </button>
       </div>
 
-      {/* Users Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-              <th className="py-3 px-4">Name</th>
-              <th className="py-3 px-4">Email</th>
-              <th className="py-3 px-4">Role</th>
-              <th className="py-3 px-4">Access Permissions</th>
-              <th className="py-3 px-4">Created Date</th>
-              <th className="py-3 px-4 text-center w-[80px]">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-xs text-slate-700 font-medium">
-            {users.map((u) => {
-              const isSelf = u.email?.toLowerCase() === currentEmail.toLowerCase();
-              const isAdmin = u.role === "Admin";
-              return (
-                <tr key={u.id} className="hover:bg-slate-50/30 transition">
-                  <td className="py-3.5 px-4 font-bold text-slate-800">{u.name}</td>
-                  <td className="py-3.5 px-4">{u.email}</td>
-                  <td className="py-3.5 px-4">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                      isAdmin 
-                        ? "bg-blue-55/65 text-blue-700 border-blue-100" 
-                        : "bg-purple-50 text-purple-700 border-purple-100"
-                    }`}>
-                      {u.role || "Staff"}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    {isAdmin ? (
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase">Full Admin Access</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">Coll:</span>
-                          {renderPermissionsBadge(u.perm_collections || "edit")}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">WH:</span>
-                          {renderPermissionsBadge(u.perm_warehouse || "edit")}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">Stock:</span>
-                          {renderPermissionsBadge(u.perm_stockbook || "edit")}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">Clients:</span>
-                          {renderPermissionsBadge(u.perm_clients || "edit")}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">Quotes:</span>
-                          {renderPermissionsBadge(u.perm_quotations || "edit")}
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-400 font-semibold">
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-"}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    {isSelf ? (
-                      <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">YOU</span>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setDeleteConfirmId(u.id);
-                          setDeleteConfirmName(u.name);
-                        }}
-                        className="p-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition cursor-pointer"
-                        title="Delete User"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Users List — mobile-friendly card layout, no horizontal scroll */}
+      <div className="space-y-3">
+        {users.map((u) => {
+          const isSelf = u.email?.toLowerCase() === currentEmail.toLowerCase();
+          const isAdmin = u.role === "Admin";
+          return (
+            <div
+              key={u.id}
+              className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+            >
+              {/* Avatar + Name/Email */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/10 overflow-hidden">
+                  {u.avatar_url ? (
+                    <img src={u.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    u.name ? u.name.charAt(0).toUpperCase() : "U"
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-800 text-sm leading-tight truncate">{u.name}</p>
+                  <p className="text-[11px] text-slate-400 font-semibold mt-0.5 truncate">{u.email}</p>
+                  <p className="text-[10px] text-slate-300 font-medium mt-0.5">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Role Badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border shadow-sm ${
+                  isAdmin
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-purple-50 text-purple-700 border-purple-200"
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isAdmin ? "bg-blue-600" : "bg-purple-600"}`} />
+                  {u.role || "Staff"}
+                </span>
+              </div>
+
+              {/* Access Permissions */}
+              <div className="flex-1">
+                {isAdmin ? (
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                    <Shield className="h-3.5 w-3.5" /> Full Control
+                  </span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {renderModulePermission("Collections", u.perm_collections || "edit", FolderOpen)}
+                    {renderModulePermission("Warehouse", u.perm_warehouse || "edit", Warehouse)}
+                    {renderModulePermission("Stock", u.perm_stockbook || "edit", TrendingUp)}
+                    {renderModulePermission("Clients", u.perm_clients || "edit", UserCheck)}
+                    {renderModulePermission("Quotations", u.perm_quotations || "edit", FileText)}
+                  </div>
+                )}
+              </div>
+
+              {/* Action */}
+              <div className="shrink-0 flex items-center gap-2">
+                {isSelf ? (
+                  <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">YOU</span>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => openEditModal(u)}
+                      className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition cursor-pointer"
+                      title="Edit User"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeleteConfirmId(u.id);
+                        setDeleteConfirmName(u.name);
+                      }}
+                      className="p-2 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition cursor-pointer"
+                      title="Delete User"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* CREATE USER MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm overflow-y-auto p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 my-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 shrink-0">
               <h3 className="text-base font-bold text-slate-900">Create System User</h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -1212,140 +1336,120 @@ function UsersSection() {
               </button>
             </div>
 
-            <form onSubmit={handleAddUser} className="space-y-4 mt-4">
-              {errorMsg && (
-                <div className="text-xs font-bold text-red-650 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">
-                  {errorMsg}
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Keval Vaghani"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
-                  />
-                </div>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleAddUser} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {errorMsg && (
+                  <div className="text-xs font-bold text-red-655 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">
+                    {errorMsg}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. Keval Vaghani"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email / Username</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. user@gmail.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
-                  />
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email / Username</label>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. user@gmail.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Account Role</label>
-                  <select
-                    value={newRole}
-                    onChange={(e) => setNewRole(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
-                  >
-                    <option value="Staff">Staff (Custom Permissions)</option>
-                    <option value="Admin">Admin (Full Control)</option>
-                  </select>
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                    />
+                  </div>
 
-              {/* PERMISSIONS CUSTOMIZATION FOR STAFF */}
-              {newRole === "Staff" && (
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Customize Access Permissions</h4>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-700">Collections (Projects)</span>
-                      <select
-                        value={permCollections}
-                        onChange={(e) => setPermCollections(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Account Role</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewRole("Staff")}
+                        className={`flex items-start gap-2.5 rounded-xl border-2 p-3 text-left transition cursor-pointer ${
+                          newRole === "Staff"
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
                       >
-                        <option value="edit">View & Edit</option>
-                        <option value="view">View Only</option>
-                        <option value="none">No Access</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-700">Warehouse Layout</span>
-                      <select
-                        value={permWarehouse}
-                        onChange={(e) => setPermWarehouse(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
+                        <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                          newRole === "Staff" ? "border-purple-500" : "border-slate-300"
+                        }`}>
+                          {newRole === "Staff" && <span className="h-2 w-2 rounded-full bg-purple-500" />}
+                        </span>
+                        <div>
+                          <p className={`text-xs font-bold ${newRole === "Staff" ? "text-purple-700" : "text-slate-700"}`}>Staff</p>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">Custom permissions</p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewRole("Admin")}
+                        className={`flex items-start gap-2.5 rounded-xl border-2 p-3 text-left transition cursor-pointer ${
+                          newRole === "Admin"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
                       >
-                        <option value="edit">View & Edit</option>
-                        <option value="view">View Only</option>
-                        <option value="none">No Access</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-700">Stock Book Stats</span>
-                      <select
-                        value={permStockbook}
-                        onChange={(e) => setPermStockbook(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-                      >
-                        <option value="edit">View & Edit</option>
-                        <option value="view">View Only</option>
-                        <option value="none">No Access</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-700">Clients Profile</span>
-                      <select
-                        value={permClients}
-                        onChange={(e) => setPermClients(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-                      >
-                        <option value="edit">View & Edit</option>
-                        <option value="view">View Only</option>
-                        <option value="none">No Access</option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1 sm:col-span-2">
-                      <span className="font-bold text-slate-700">Quotations History</span>
-                      <select
-                        value={permQuotations}
-                        onChange={(e) => setPermQuotations(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none"
-                      >
-                        <option value="edit">View & Edit (Full Access)</option>
-                        <option value="view">View Only</option>
-                        <option value="none">No Access</option>
-                      </select>
+                        <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                          newRole === "Admin" ? "border-blue-500" : "border-slate-300"
+                        }`}>
+                          {newRole === "Admin" && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                        </span>
+                        <div>
+                          <p className={`text-xs font-bold ${newRole === "Admin" ? "text-blue-700" : "text-slate-700"}`}>Admin</p>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">Full control</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 </div>
-              )}
 
-              <div className="flex gap-3 pt-2">
+                {/* PERMISSIONS CUSTOMIZATION FOR STAFF */}
+                {newRole === "Staff" && (
+                  <div className="rounded-2xl border border-slate-150 bg-slate-50/50 p-4 space-y-3.5">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Customize Access Permissions</h4>
+                    
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {renderPermissionToggle("Collections (Projects)", permCollections, setPermCollections)}
+                      {renderPermissionToggle("Warehouse Layout", permWarehouse, setPermWarehouse)}
+                      {renderPermissionToggle("Stock Book Stats", permStockbook, setPermStockbook)}
+                      {renderPermissionToggle("Clients Profile", permClients, setPermClients)}
+                      {renderPermissionToggle("Quotations History", permQuotations, setPermQuotations)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="border-t border-slate-100 px-5 py-4 shrink-0 bg-slate-50/50 rounded-b-2xl flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -1359,6 +1463,147 @@ function UsersSection() {
                   className="flex-1 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/10 cursor-pointer"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER MODAL */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 shrink-0">
+              <h3 className="text-base font-bold text-slate-900">Edit User</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleEditUser} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {editErrorMsg && (
+                  <div className="text-xs font-bold text-red-600 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">{editErrorMsg}</div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. Keval Vaghani"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email / Username</label>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="off"
+                      placeholder="e.g. user@gmail.com"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">New Password <span className="text-slate-300 normal-case font-medium">(leave blank to keep current)</span></label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-blue-500 shadow-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Account Role</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditRole("Staff")}
+                      className={`flex items-start gap-2.5 rounded-xl border-2 p-3 text-left transition cursor-pointer ${
+                        editRole === "Staff"
+                          ? "border-purple-500 bg-purple-50"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                        editRole === "Staff" ? "border-purple-500" : "border-slate-300"
+                      }`}>
+                        {editRole === "Staff" && <span className="h-2 w-2 rounded-full bg-purple-500" />}
+                      </span>
+                      <div>
+                        <p className={`text-xs font-bold ${editRole === "Staff" ? "text-purple-700" : "text-slate-700"}`}>Staff</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Custom permissions</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditRole("Admin")}
+                      className={`flex items-start gap-2.5 rounded-xl border-2 p-3 text-left transition cursor-pointer ${
+                        editRole === "Admin"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                        editRole === "Admin" ? "border-blue-500" : "border-slate-300"
+                      }`}>
+                        {editRole === "Admin" && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                      </span>
+                      <div>
+                        <p className={`text-xs font-bold ${editRole === "Admin" ? "text-blue-700" : "text-slate-700"}`}>Admin</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Full control</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {editRole === "Staff" && (
+                  <div className="rounded-2xl border border-slate-150 bg-slate-50/50 p-4 space-y-3.5">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Customize Access Permissions</h4>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {renderPermissionToggle("Collections (Projects)", editPermCollections, setEditPermCollections)}
+                      {renderPermissionToggle("Warehouse Layout", editPermWarehouse, setEditPermWarehouse)}
+                      {renderPermissionToggle("Stock Book Stats", editPermStockbook, setEditPermStockbook)}
+                      {renderPermissionToggle("Clients Profile", editPermClients, setEditPermClients)}
+                      {renderPermissionToggle("Quotations History", editPermQuotations, setEditPermQuotations)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="border-t border-slate-100 px-5 py-4 shrink-0 bg-slate-50/50 rounded-b-2xl flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="flex-1 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/10 cursor-pointer"
+                >
+                  {editSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -1841,6 +2086,20 @@ function CompanySection() {
         company_qr_code: qrCode,
       });
 
+      if (typeof window !== "undefined") {
+        if (logo) {
+          localStorage.setItem("digiscale_company_logo", logo);
+        } else {
+          localStorage.removeItem("digiscale_company_logo");
+        }
+        if (name) {
+          localStorage.setItem("digiscale_company_name", name);
+        } else {
+          localStorage.removeItem("digiscale_company_name");
+        }
+        window.dispatchEvent(new Event("digiscale-settings-updated"));
+      }
+
       setStatusMsg({ type: "success", text: "Company profile updated successfully!" });
       setSaving(false);
     } catch (err: any) {
@@ -2193,7 +2452,6 @@ import {
   CheckCircle,
   AlertTriangle,
   AlertCircle,
-  X,
   Database
 } from "lucide-react";
 

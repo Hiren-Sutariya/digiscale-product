@@ -13,6 +13,8 @@ class UserBase(BaseModel):
     perm_stockbook: str
     perm_clients: str
     perm_quotations: str
+    admin_id: int | None = None
+    avatar_url: str | None = None
 
 class UserResponse(UserBase):
     id: int

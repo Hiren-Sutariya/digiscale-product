@@ -852,7 +852,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -944,7 +944,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               eventMarkupPercent: q.event_markup_percent,
               createdAt: q.created_at,
               isOrderDone: q.is_order_done || false,
-              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
+              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined,
+              staffName: q.staff_name || ""
             };
           });
           setSavedQuotes(parsedQuotes);
@@ -1040,7 +1041,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     Promise.all([getUserProfile(), getUserSettings()])
         .then(([profile, settingsData]) => {
           if (profile && profile.id) {
-            const uId = profile.id.toString();
+            const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
             setCurrentUserId(uId);
             loadData(uId);
 
@@ -1102,7 +1103,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -1156,7 +1157,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               taxInput: q.tax_input || "", cashAmount: q.cash_amount?.toString() || "", bankAmount: q.bank_amount?.toString() || "",
               total: q.total_amount, applyEventMarkup: q.apply_event_markup, eventMarkupPercent: q.event_markup_percent,
               createdAt: q.created_at, isOrderDone: q.is_order_done || false,
-              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined
+              items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined,
+              staffName: q.staff_name || ""
             };
           });
           setSavedQuotes(parsedQuotes);
@@ -1254,7 +1256,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         event_markup_percent: eventMarkupPercent,
         items: selectedItems,
         user_id: parseInt(currentUserId),
-        created_at: existingIndex > -1 ? savedQuotes[existingIndex].createdAt : new Date().toISOString()
+        created_at: existingIndex > -1 ? savedQuotes[existingIndex].createdAt : new Date().toISOString(),
+        staff_name: existingIndex > -1
+          ? (savedQuotes[existingIndex].staffName || localStorage.getItem("user_name") || "Admin")
+          : (localStorage.getItem("user_name") || "Admin")
       }, { onConflict: 'id' });
 
       
@@ -1947,7 +1952,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       bankAmount,
       applyEventMarkup,
       eventMarkupPercent,
-      total: total
+      total: total,
+      staffName: localStorage.getItem("user_name") || "Admin"
     };
     await executePrint(currentQuote);
   };
@@ -2222,11 +2228,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                       <tr key={quote.id} className="hover:bg-slate-50/40">
                         <td className="py-4 px-4">
                           <div className="font-black text-slate-900">{quote.quoteNumber}</div>
-                          <div className="mt-1">
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                             {quote.applyEventMarkup ? (
                               <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
                             ) : (
                               <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
+                            )}
+                            {quote.staffName && (
+                              <span className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[8px] font-bold text-blue-600 ring-1 ring-inset ring-blue-500/20 uppercase tracking-wide">
+                                👤 {quote.staffName}
+                              </span>
                             )}
                           </div>
                         </td>
@@ -2301,10 +2312,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             >
                               <Printer className="h-4 w-4" />
                             </button>
-                            <button
-                              onClick={() => handleDownloadQuoteExcel(quote)}
+                             <button
+                              onClick={() => handlePrintQuoteDirect(quote)}
                               className="p-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-lg border border-indigo-100 transition active:scale-95 cursor-pointer"
-                              title="Download Excel"
+                              title="Download PDF"
                             >
                               <Download className="h-4 w-4" />
                             </button>
@@ -2342,12 +2353,17 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                       {/* Card Header Info */}
                       <div className="flex justify-between items-start gap-2">
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-extrabold text-slate-900 text-sm">{quote.quoteNumber}</span>
                             {quote.applyEventMarkup ? (
                               <span className="inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 ring-1 ring-inset ring-purple-500/20">EVENT</span>
                             ) : (
                               <span className="inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-[8px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/20">B2B</span>
+                            )}
+                            {quote.staffName && (
+                              <span className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[8px] font-bold text-blue-600 ring-1 ring-inset ring-blue-500/20 uppercase tracking-wide">
+                                👤 {quote.staffName}
+                              </span>
                             )}
                           </div>
                           <p className="text-[10px] text-slate-400 font-semibold mt-1">
@@ -2431,10 +2447,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                           >
                             <Printer className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDownloadQuoteExcel(quote)}
+                           <button
+                            onClick={() => handlePrintQuoteDirect(quote)}
                             className="p-2 bg-white hover:bg-indigo-50 text-indigo-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
-                            title="Download Excel"
+                            title="Download PDF"
                           >
                             <Download className="h-4 w-4" />
                           </button>
@@ -3882,6 +3898,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               {printQuoteData.quoteNumber && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Quote Ref: <span className="text-slate-900 font-black">{printQuoteData.quoteNumber}</span></p>}
               {printQuoteData.quoteDate && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Date: <span className="text-slate-900 font-black">{formatDate(printQuoteData.quoteDate)}</span></p>}
               {printQuoteData.validUntil && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Valid Till: <span className="text-slate-900 font-black">{formatDate(printQuoteData.validUntil)}</span></p>}
+              {printQuoteData.staffName && <p className="text-[10px] text-slate-505 font-extrabold uppercase">Salesperson: <span className="text-slate-900 font-black">{printQuoteData.staffName}</span></p>}
             </div>
           )}
         </div>

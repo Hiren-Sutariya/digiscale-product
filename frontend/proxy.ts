@@ -7,7 +7,7 @@ const protectedRoutes = ['/dashboard', '/projects', '/warehouse', '/clients', '/
 // Add auth routes (redirect to dashboard if already logged in)
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password'];
 
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FolderOpen, FileText, Warehouse, Users, Paintbrush, BookOpen } from "lucide-react";
+import { getUserProfile } from "@/services/api";
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
@@ -69,25 +70,55 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
 
 export default function DashboardPage() {
   const [lang, setLang] = useState<string>("en");
+  
+  // Initialize all permissions to "none" on both server and client to prevent hydration mismatch.
+  // We populate the actual values from localStorage inside useEffect on mount.
   const [permissions, setPermissions] = useState({
-    collections: "edit",
-    warehouse: "edit",
-    stockBook: "edit",
-    clients: "edit",
-    quotation: "edit",
+    collections: "none",
+    warehouse: "none",
+    stockBook: "none",
+    clients: "none",
+    quotation: "none",
   });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
       setPermissions({
-        collections: localStorage.getItem("perm_collections") || "edit",
-        warehouse: localStorage.getItem("perm_warehouse") || "edit",
-        stockBook: localStorage.getItem("perm_stockbook") || "edit",
-        clients: localStorage.getItem("perm_clients") || "edit",
-        quotation: localStorage.getItem("perm_quotations") || "edit",
+        collections: localStorage.getItem("perm_collections") ?? "edit",
+        warehouse: localStorage.getItem("perm_warehouse") ?? "edit",
+        stockBook: localStorage.getItem("perm_stockbook") ?? "edit",
+        clients: localStorage.getItem("perm_clients") ?? "edit",
+        quotation: localStorage.getItem("perm_quotations") ?? "edit",
       });
     }
+
+    // Silently fetch from server in the background to confirm truth (no loading state)
+    getUserProfile()
+      .then((profile) => {
+        if (profile) {
+          const perms = {
+            collections: profile.perm_collections || "edit",
+            warehouse: profile.perm_warehouse || "edit",
+            stockBook: profile.perm_stockbook || "edit",
+            clients: profile.perm_clients || "edit",
+            quotation: profile.perm_quotations || "edit",
+          };
+          setPermissions(perms);
+          // Keep localStorage in sync
+          if (typeof window !== "undefined") {
+            localStorage.setItem("perm_collections", perms.collections);
+            localStorage.setItem("perm_warehouse", perms.warehouse);
+            localStorage.setItem("perm_stockbook", perms.stockBook);
+            localStorage.setItem("perm_clients", perms.clients);
+            localStorage.setItem("perm_quotations", perms.quotation);
+            localStorage.setItem("user_role", profile.role || "Admin");
+            const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
+            localStorage.setItem("digiscale_cached_user_id", uId);
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;

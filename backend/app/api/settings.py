@@ -12,11 +12,12 @@ def get_user_settings(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+    target_user_id = current_user.admin_id if (current_user.role == "Staff" and current_user.admin_id) else current_user.id
+    settings = db.query(UserSettings).filter(UserSettings.user_id == target_user_id).first()
     
     if not settings:
         # Create default settings record if it doesn't exist
-        settings = UserSettings(user_id=current_user.id)
+        settings = UserSettings(user_id=target_user_id)
         db.add(settings)
         db.commit()
         db.refresh(settings)
@@ -29,10 +30,11 @@ def update_user_settings(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+    target_user_id = current_user.admin_id if (current_user.role == "Staff" and current_user.admin_id) else current_user.id
+    settings = db.query(UserSettings).filter(UserSettings.user_id == target_user_id).first()
     
     if not settings:
-        settings = UserSettings(user_id=current_user.id)
+        settings = UserSettings(user_id=target_user_id)
         db.add(settings)
         
     update_data = settings_update.model_dump(exclude_unset=True)

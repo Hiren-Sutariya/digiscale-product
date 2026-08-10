@@ -78,6 +78,7 @@ export default function StockBookPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all");
   
@@ -196,7 +197,8 @@ export default function StockBookPage() {
 
           if (formatted.length > 0) {
             setProducts(formatted);
-            setLoading(false); // Disable spinner instantly!
+            setTableLoading(false); // Display cached table instantly!
+            setLoading(false); // Disable fullscreen spinner instantly!
           }
         } catch (e) {
           console.error("Failed to parse stock book cache:", e);
@@ -208,14 +210,18 @@ export default function StockBookPage() {
       try {
         const profile = await getUserProfile();
         if (profile?.id) {
-          const uIdStr = String(profile.id);
+          const uIdStr = (profile.role === "Staff" && profile.admin_id) ? String(profile.admin_id) : String(profile.id);
           setCurrentUserId(uIdStr);
+          setLoading(false); // Render page layout instantly as we now know the user ID!
           await fetchData(uIdStr);
+        } else {
+          setLoading(false);
         }
       } catch (err) {
         console.error("Initialization failed:", err);
-      } finally {
         setLoading(false);
+      } finally {
+        setTableLoading(false);
       }
     };
     init();
@@ -914,7 +920,33 @@ export default function StockBookPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                      {paginatedProducts.map(p => {
+                      {tableLoading ? (
+                        Array.from({ length: 5 }).map((_, idx) => (
+                          <tr key={idx} className="animate-pulse">
+                            <td className="py-4 px-6">
+                              <div className="h-11 w-11 bg-slate-100 border border-slate-150 rounded-lg mx-auto" />
+                            </td>
+                            <td className="py-4 px-6 space-y-2">
+                              <div className="h-4 bg-slate-200 rounded w-48" />
+                              <div className="h-3 bg-slate-100 rounded w-24" />
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="h-5 bg-slate-100 rounded w-16 mx-auto" />
+                            </td>
+                            <td className="py-4 px-6 space-y-1">
+                              <div className="h-4 bg-slate-200 rounded w-24 mx-auto" />
+                              <div className="h-3 bg-slate-100 rounded w-16 mx-auto" />
+                            </td>
+                            <td className="py-4 px-6 space-y-1">
+                              <div className="h-4 bg-slate-200 rounded w-20 mx-auto" />
+                              <div className="h-3 bg-slate-100 rounded w-16 mx-auto" />
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="h-8 bg-slate-100 rounded w-32 mx-auto" />
+                            </td>
+                          </tr>
+                        ))
+                      ) : paginatedProducts.map(p => {
                         const isAdjustLoading = actionLoading[p.id] || false;
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/40 transition">
@@ -1040,7 +1072,20 @@ export default function StockBookPage() {
 
                   {/* Mobile Cards List */}
                   <div className="block sm:hidden divide-y divide-slate-100">
-                    {paginatedProducts.map(p => {
+                    {tableLoading ? (
+                      Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={idx} className="p-4 flex flex-col gap-3 animate-pulse">
+                          <div className="flex gap-3">
+                            <div className="h-16 w-16 rounded-xl bg-slate-200 shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-slate-200 rounded w-3/4" />
+                              <div className="h-3 bg-slate-100 rounded w-1/2" />
+                            </div>
+                          </div>
+                          <div className="h-12 bg-slate-100 rounded-xl" />
+                        </div>
+                      ))
+                    ) : paginatedProducts.map(p => {
                       const isAdjustLoading = actionLoading[p.id] || false;
                       return (
                         <div key={p.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/40 transition">

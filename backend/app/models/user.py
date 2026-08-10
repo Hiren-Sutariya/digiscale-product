@@ -20,6 +20,7 @@ class User(Base):
     deletion_scheduled_at = Column(DateTime, nullable=True)
     
     role = Column(String, default="Staff") # Admin, Staff
+    admin_id = Column(Integer, nullable=True)
     perm_collections = Column(String, default="edit") # none, view, edit
     perm_warehouse = Column(String, default="edit")
     perm_stockbook = Column(String, default="edit")
@@ -27,3 +28,8 @@ class User(Base):
     perm_quotations = Column(String, default="edit")
 
     settings = relationship("app.models.user_settings.UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+    @property
+    def avatar_url(self):
+        return self.settings.avatar_url if self.settings else None
+

@@ -579,7 +579,7 @@ function CollectionsPageContent() {
       .then(([profile, settingsData]) => {
         if (profile && profile.id) {
           setUserProfile(profile);
-          const uId = profile.id.toString();
+          const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
           setCurrentUserId(uId);
           localStorage.setItem("digiscale_cached_user_id", uId);
 
