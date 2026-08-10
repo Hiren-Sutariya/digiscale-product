@@ -1342,8 +1342,17 @@ ${rows}
       dataRows: string[][],
       imageByRow: Record<number, string> = {}
     ): { count: number; errors: number; importedProducts: Product[] } => {
-      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const colIdx = (keys: string[]) => headerRow.findIndex(h => keys.some(k => normalize(h).includes(normalize(k))));
+      const normalize = (s: string) => s ? s.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+      const colIdx = (keys: string[]) => headerRow.findIndex(h => {
+        const normH = normalize(h);
+        return keys.some(k => {
+          const normK = normalize(k);
+          if (normK.length <= 4) {
+            return normH === normK || h.toLowerCase().split(/[^a-z0-9]/).includes(k.toLowerCase());
+          }
+          return normH.includes(normK);
+        });
+      });
 
       const nameIdx = colIdx(["name", "product code", "product", "item code", "model"]);
       const cartonIdx = colIdx(["carton", "pack", "ctn", "qty/ctn", "pcs/ctn", "per carton", "packing"]);
