@@ -704,6 +704,14 @@ export default function QuotationView() {
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: false // Disable to prevent silent failures on iOS Safari / iPhone devices
               },
+              qrbox: (width: number, height: number) => {
+                const size = Math.min(width, height) * 0.75;
+                return { width: size, height: size };
+              },
+              videoConstraints: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+              },
               formatsToSupport: [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
@@ -1675,6 +1683,9 @@ export default function QuotationView() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* CSS @media print overrides: Removes URL, date/time header, page numbers, Safari bg colors, and extra blank pages */}
       <style jsx global>{`
+        #qr-shaded-region {
+          display: none !important;
+        }
         @media print {
           @page {
             size: auto;
