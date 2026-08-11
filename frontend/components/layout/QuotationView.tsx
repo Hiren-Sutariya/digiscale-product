@@ -1747,6 +1747,25 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       if (!itemsToLoad) {
         itemsToLoad = await fetchQuoteItems(quote.id);
       }
+      
+      const productIds = (itemsToLoad || []).map((it: any) => it.id).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: prodsData } = await supabase
+          .from("products")
+          .select("id, photoUrl")
+          .in("id", productIds);
+        
+        if (prodsData) {
+          itemsToLoad = itemsToLoad.map((it: any) => {
+            const match = prodsData.find((p: any) => p.id === it.id);
+            return {
+              ...it,
+              photoUrl: match?.photoUrl || it.photoUrl
+            };
+          });
+        }
+      }
+
       return {
         id: quote.id,
         quoteNumber: quote.quoteNumber || quote.quote_number,
@@ -1837,15 +1856,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(compAddress, logoXOffset, currentY + 38, { maxWidth: pageWidth - logoXOffset - margin - 150 });
+    doc.text(compAddress, logoXOffset, currentY + 38, { maxWidth: 250 });
     
     doc.setFont("helvetica", "bold");
-    doc.text(`Mobile: ${compPhone}`, pageWidth - margin - 15, currentY + 24, { align: "right" });
+    doc.text(`Mobile: ${compPhone}`, 380, currentY + 24);
     doc.setFont("helvetica", "normal");
-    doc.text(`Email: ${compEmail}`, pageWidth - margin - 15, currentY + 38, { align: "right" });
+    doc.text(`Email: ${compEmail}`, 380, currentY + 38);
     if (compGst) {
       doc.setFont("helvetica", "bold");
-      doc.text(compGst, pageWidth - margin - 15, currentY + 52, { align: "right" });
+      doc.text(compGst, 380, currentY + 52);
     }
 
     currentY += 90;
@@ -1981,10 +2000,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       doc.setFontSize(8.5);
       doc.setTextColor(15, 23, 42);
 
-      const ctns = item.ctns || 0;
-      const qty = item.qty || 0;
-      const rate = parseFloat(item.rate || "0");
-      const rowTotal = item.total ? parseFloat(item.total) : (qty * rate);
+      const ctns = item.cartons || 0;
+      const qty = item.quantity || 0;
+      const rate = parseFloat(getSavedItemRate(item.rate || "0", quote.applyEventMarkup, quote.eventMarkupPercent)) || 0;
+      const rowTotal = qty * rate;
 
       doc.text(ctns.toString(), margin + 310, currentY + 25, { align: "center" });
       doc.text(qty.toString(), margin + 360, currentY + 25, { align: "center" });
@@ -2001,7 +2020,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     currentY += 15;
 
-    const subTotal = itemsListToDraw.reduce((sum: number, item: any) => sum + (item.total ? parseFloat(item.total) : (item.qty * parseFloat(item.rate || "0"))), 0);
+    const subTotal = itemsListToDraw.reduce((sum: number, item: any) => {
+      const itemRate = parseFloat(getSavedItemRate(item.rate || "0", quote.applyEventMarkup, quote.eventMarkupPercent)) || 0;
+      const itemQty = item.quantity || 0;
+      return sum + (itemQty * itemRate);
+    }, 0);
     const taxPercent = parseFloat(quote.taxInput || "0");
     const taxAmount = (subTotal * taxPercent) / 100;
     const grandTotal = quote.total || (subTotal + taxAmount);
