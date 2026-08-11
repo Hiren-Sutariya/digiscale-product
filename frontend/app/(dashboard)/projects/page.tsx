@@ -232,6 +232,24 @@ function CollectionsPageContent() {
     if (!nameOrCol) return false;
     return /^[A-Z]{3}-\d+-\d+/.test(nameOrCol) || nameOrCol.startsWith("PJD");
   };
+  const formatStockDisplay = (stock: number, cartonQty: number) => {
+    const totalPcs = Math.round(stock * (cartonQty || 1));
+    const ctn = Math.floor(totalPcs / (cartonQty || 1));
+    const pcs = totalPcs % (cartonQty || 1);
+
+    if (totalPcs <= 0) {
+      return `0 Cartons`;
+    }
+
+    if (ctn > 0 && pcs > 0) {
+      return `${ctn} Cartons & ${pcs} Loose Pcs`;
+    } else if (ctn > 0) {
+      return `${ctn} Cartons`;
+    } else {
+      return `${pcs} Loose Pcs`;
+    }
+  };
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [permission, setPermission] = useState("edit");
@@ -1183,7 +1201,7 @@ function CollectionsPageContent() {
           p.color || "",
           p.length ? `${p.length} cm` : "",
           p.warehouse || "",
-          p.stock ? `${p.stock} Cartons` : "0 Cartons",
+          formatStockDisplay(p.stock || 0, p.cartonQty || 1),
           String(value),
         ];
       });
@@ -3237,7 +3255,7 @@ ${rows}
                           <div className="grid grid-cols-2 gap-2 border-t border-b border-slate-100 py-2.5 text-[10px] text-slate-600">
                             <div>
                               <span className="text-slate-400 font-medium block">Stock Status</span>
-                              <strong className="text-slate-800 font-extrabold">{prod.stock} Cartons ({prod.stock * prod.cartonQty} pcs)</strong>
+                              <strong className="text-slate-800 font-extrabold">{formatStockDisplay(prod.stock, prod.cartonQty)} ({Math.round(prod.stock * prod.cartonQty)} pcs)</strong>
                             </div>
                             <div>
                               <span className="text-slate-400 font-medium block">Price Code / Color</span>
@@ -3614,8 +3632,8 @@ ${rows}
                                 {prod.warehouse ? prod.warehouse.replace(/-upper/g, "(U)").replace(/-lower/g, "(L)") : "-"}
                               </td>
                               <td className="py-4 px-4 text-center">
-                                <p className="font-extrabold text-slate-800">{prod.stock} Cartons</p>
-                                <p className="text-[10px] text-slate-400 font-medium">{(prod.stock * prod.cartonQty).toLocaleString()} pcs total</p>
+                                <p className="font-extrabold text-slate-800">{formatStockDisplay(prod.stock, prod.cartonQty)}</p>
+                               <p className="text-[10px] text-slate-400 font-medium">{Math.round(prod.stock * prod.cartonQty).toLocaleString()} pcs total</p>
                               </td>
                               <td className="py-4 px-4  font-black text-slate-900 text-center">
                                 ₹{(prod.stock * prod.cartonQty * (parseFloat(prod.rate) || 0)).toLocaleString()}
@@ -4035,7 +4053,7 @@ ${rows}
                                               <h5 className="font-bold text-slate-900 text-xs leading-tight truncate">{prod.name}</h5>
                                               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                                 <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full">
-                                                  {prod.stock} Cartons
+                                                  {formatStockDisplay(prod.stock, prod.cartonQty)}
                                                 </span>
                                                 {prod.rate && (
                                                   <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">

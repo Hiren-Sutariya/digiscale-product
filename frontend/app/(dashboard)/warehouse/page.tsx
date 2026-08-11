@@ -42,6 +42,7 @@ interface Product {
   unit_type?: "pcs" | "dzn";
   collectionName?: string;
   collectionId?: string;
+  cartonQty?: number;
 }
 
 
@@ -253,6 +254,28 @@ export default function WarehousePage() {
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
+  const formatStockDisplay = (stock: number, cartonQty: number) => {
+    const totalPcs = Math.round(stock * (cartonQty || 1));
+    const ctn = Math.floor(totalPcs / (cartonQty || 1));
+    const pcs = totalPcs % (cartonQty || 1);
+
+    const ctnText = lang === "gu" ? "કાર્ટન" : lang === "hi" ? "कार्टन" : "Cartons";
+    const connector = lang === "gu" ? " અને " : lang === "hi" ? " और " : " & ";
+    const pcsText = lang === "gu" ? "છૂટક નંગ" : lang === "hi" ? "खुले पीस" : "Loose Pcs";
+
+    if (totalPcs <= 0) {
+      return `0 ${ctnText}`;
+    }
+
+    if (ctn > 0 && pcs > 0) {
+      return `${ctn} ${ctnText}${connector}${pcs} ${pcsText}`;
+    } else if (ctn > 0) {
+      return `${ctn} ${ctnText}`;
+    } else {
+      return `${pcs} ${pcsText}`;
+    }
+  };
+
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -321,7 +344,7 @@ export default function WarehousePage() {
       while (hasMore) {
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, stock, rate, color, unit_type, collection_id')
+          .select('id, name, stock, rate, color, unit_type, collection_id, cartonQty')
           .eq('user_id', userId)
           .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -346,6 +369,7 @@ export default function WarehousePage() {
         name: p.name,
         photoUrl: p.photoUrl,
         stock: p.stock || 0,
+        cartonQty: p.cartonQty || 1,
         rate: p.rate || "",
         color: p.color || "",
         unit_type: p.unit_type || "pcs",
@@ -1188,7 +1212,7 @@ export default function WarehousePage() {
                         <div>
                           <h4 className="text-xs font-extrabold text-slate-800">{product.name}</h4>
                           <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                            Code: {product.rate} {product.unit_type || "pcs"} {product.color ? `| Color: ${product.color}` : ""} | Stock: {product.stock}
+                            Code: {product.rate} {product.unit_type || "pcs"} {product.color ? `| Color: ${product.color}` : ""} | Stock: {formatStockDisplay(product.stock, product.cartonQty || 1)}
                           </p>
                         </div>
                       </div>

@@ -343,6 +343,28 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
 
+  const formatStockDisplay = (stock: number, cartonQty: number) => {
+    const totalPcs = Math.round(stock * (cartonQty || 1));
+    const ctn = Math.floor(totalPcs / (cartonQty || 1));
+    const pcs = totalPcs % (cartonQty || 1);
+
+    const ctnText = lang === "gu" ? "કાર્ટન" : lang === "hi" ? "कार्टन" : "Cartons";
+    const connector = lang === "gu" ? " અને " : lang === "hi" ? " और " : " & ";
+    const pcsText = lang === "gu" ? "છૂટક નંગ" : lang === "hi" ? "खुले पीस" : "Loose Pcs";
+
+    if (totalPcs <= 0) {
+      return `0 ${ctnText}`;
+    }
+
+    if (ctn > 0 && pcs > 0) {
+      return `${ctn} ${ctnText}${connector}${pcs} ${pcsText}`;
+    } else if (ctn > 0) {
+      return `${ctn} ${ctnText}`;
+    } else {
+      return `${pcs} ${pcsText}`;
+    }
+  };
+
   const isCodeCollection = (nameOrCol: string | Collection) => {
     if (typeof nameOrCol === 'object') {
       if (nameOrCol.collection_type) return nameOrCol.collection_type === 'code';
@@ -890,7 +912,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           fetchAllProducts(userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name, items').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -1188,7 +1210,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           supabase.from('collections').select('*').eq('user_id', userId),
           fetchAllProducts(userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name, items').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
@@ -1562,10 +1584,23 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           if (error) throw error;
 
           // Adjust stocks if we transitioned across the deduction boundary
-          if (wasDeducted !== shouldBeDeducted && quote.items && quote.items.length > 0) {
+          let itemsForDeduction = quote.items;
+          if (!itemsForDeduction || itemsForDeduction.length === 0) {
+            // Items may not be loaded in local state — fetch from DB
+            const { data: qData } = await supabase
+              .from('quotations')
+              .select('items')
+              .eq('id', id)
+              .single();
+            if (qData?.items) {
+              itemsForDeduction = typeof qData.items === 'string' ? JSON.parse(qData.items) : qData.items;
+            }
+          }
+
+          if (wasDeducted !== shouldBeDeducted && itemsForDeduction && itemsForDeduction.length > 0) {
             const isRevert = wasDeducted && !shouldBeDeducted; // transitioning back to follow_up (revert stock)
             
-            await Promise.all(quote.items.map(async (item: any) => {
+            await Promise.all(itemsForDeduction.map(async (item: any) => {
               // 1. Fetch current stock from Supabase
               const { data: prodData } = await supabase
                 .from('products')
@@ -1603,7 +1638,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
             // 4. Update local products state
             setProducts(prev => prev.map(p => {
-              const item = quote.items.find((i: any) => i.id === p.id);
+              const item = itemsForDeduction.find((i: any) => i.id === p.id);
               if (item) {
                 const change = isRevert ? item.cartons : -item.cartons;
                 return { ...p, stock: p.stock + change };
@@ -1643,47 +1678,61 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           if (error) throw error;
 
           // If the deleted quotation was active/done, restore its stock
-          if (quote && quote.isOrderDone && quote.items && quote.items.length > 0) {
-            await Promise.all(quote.items.map(async (item: any) => {
-              // 1. Fetch current stock
-              const { data: prodData } = await supabase
-                .from('products')
-                .select('stock, name')
-                .eq('id', item.id)
+          if (quote && quote.isOrderDone) {
+            let itemsToRevert = quote.items;
+            if (!itemsToRevert || itemsToRevert.length === 0) {
+              const { data: qData } = await supabase
+                .from('quotations')
+                .select('items')
+                .eq('id', id)
                 .single();
-              
-              const currentStock = prodData ? prodData.stock : 0;
-              const productName = prodData ? prodData.name : item.name;
-              const change = item.cartons; // Revert (+) stock
-              const newStock = currentStock + change;
-
-              // 2. Update stock in DB
-              await supabase
-                .from('products')
-                .update({ stock: newStock })
-                .eq('id', item.id);
-
-              // 3. Log stock entry
-              await supabase.from('stock_entries').insert([{
-                user_id: parseInt(currentUserId || "0") || 0,
-                product_id: item.id,
-                product_name: productName,
-                quantity_changed: change,
-                transaction_type: 'return',
-                reference_id: id,
-                reference_type: 'quotation',
-                description: `Returned/Reverted due to deletion of Bill #${quote.quoteNumber}`
-              }]);
-            }));
-
-            // 4. Update local products state
-            setProducts(prev => prev.map(p => {
-              const item = quote.items.find((i: any) => i.id === p.id);
-              if (item) {
-                return { ...p, stock: p.stock + item.cartons };
+              if (qData?.items) {
+                itemsToRevert = typeof qData.items === 'string' ? JSON.parse(qData.items) : qData.items;
               }
-              return p;
-            }));
+            }
+
+            if (itemsToRevert && itemsToRevert.length > 0) {
+              await Promise.all(itemsToRevert.map(async (item: any) => {
+                // 1. Fetch current stock
+                const { data: prodData } = await supabase
+                  .from('products')
+                  .select('stock, name')
+                  .eq('id', item.id)
+                  .single();
+                
+                const currentStock = prodData ? prodData.stock : 0;
+                const productName = prodData ? prodData.name : item.name;
+                const change = item.cartons; // Revert (+) stock
+                const newStock = currentStock + change;
+
+                // 2. Update stock in DB
+                await supabase
+                  .from('products')
+                  .update({ stock: newStock })
+                  .eq('id', item.id);
+
+                // 3. Log stock entry
+                await supabase.from('stock_entries').insert([{
+                  user_id: parseInt(currentUserId || "0") || 0,
+                  product_id: item.id,
+                  product_name: productName,
+                  quantity_changed: change,
+                  transaction_type: 'return',
+                  reference_id: id,
+                  reference_type: 'quotation',
+                  description: `Returned/Reverted due to deletion of Bill #${quote.quoteNumber}`
+                }]);
+              }));
+
+              // 4. Update local products state
+              setProducts(prev => prev.map(p => {
+                const item = itemsToRevert.find((i: any) => i.id === p.id);
+                if (item) {
+                  return { ...p, stock: p.stock + item.cartons };
+                }
+                return p;
+              }));
+            }
           }
 
           const updated = savedQuotes.filter(q => q.id !== id);
@@ -2082,30 +2131,103 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   const handleDownloadPdfDirect = async (quote: any) => {
     try {
-      setIsGeneratingPdf(true);
-      setPdfFeedback(lang === "gu" ? "પીડીએફ ડાઉનલોડ થઈ રહી છે..." : "Downloading PDF file...");
-      
       const quoteData = await getQuoteDataForAction(quote);
-      if (quoteData.items.length === 0) {
-        alert(lang === "gu" ? "કૃપા કરીને પહેલા પ્રોડક્ટ્સ ઉમેરો." : "Please add products first.");
-        return;
-      }
-
-      const doc = await generateInvoicePdfDoc(quoteData);
-      doc.save(`Quotation_${quoteData.quoteNumber}.pdf`);
+      await executePrint(quoteData);
     } catch (e) {
-      console.error("PDF download failed:", e);
-      alert("Failed to generate and download PDF.");
-    } finally {
-      setIsGeneratingPdf(false);
-      setPdfFeedback(null);
+      console.error("PDF print failed:", e);
+      alert("Failed to open print dialog.");
     }
+  };
+
+  // ── Generates a PDF blob from the rendered HTML print template (no popup) ──
+  const generatePdfBlobFromTemplate = async (quoteData: any): Promise<Blob> => {
+    // 1. Populate the same print template
+    const items = [...(quoteData.items || [])];
+    await Promise.all(items.map(async (item) => {
+      if (!item.photoUrl) {
+        try {
+          const { data } = await supabase.from("products").select("photoUrl").eq("id", item.id).single();
+          if (data?.photoUrl) item.photoUrl = data.photoUrl;
+        } catch (_) {}
+      }
+    }));
+    setPrintQuoteData({ ...quoteData, items });
+
+    // 2. Wait for React to paint the template into #print-area
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    const printArea = document.getElementById("print-area");
+    if (!printArea) throw new Error("Print area not found");
+
+    // Remove Tailwind's 'hidden' class and force visibility for capture
+    printArea.classList.remove("hidden");
+    printArea.style.setProperty("display", "block", "important");
+    printArea.style.setProperty("position", "fixed", "important");
+    printArea.style.setProperty("top", "-9999px", "important");
+    printArea.style.setProperty("left", "0px", "important");
+    printArea.style.setProperty("z-index", "-1", "important");
+    printArea.style.setProperty("width", "794px", "important");
+    printArea.style.setProperty("background", "white", "important");
+    printArea.style.setProperty("visibility", "visible", "important");
+    printArea.style.setProperty("opacity", "1", "important");
+
+    // Extra wait for images to load
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const html2canvas = (await import("html2canvas-pro")).default;
+    const { jsPDF } = await import("jspdf");
+
+    const canvas = await html2canvas(printArea, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      width: 794,
+      windowWidth: 794,
+      logging: false,
+    });
+
+    // Restore — add hidden class back and clear inline styles
+    printArea.classList.add("hidden");
+    printArea.removeAttribute("style");
+
+    // Clear print data
+    setTimeout(() => setPrintQuoteData(null), 200);
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
+    const pdfW = 210; // A4 width in mm
+    const pdfH = 297; // A4 height in mm
+    const imgW = pdfW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    let heightLeft = imgH;
+    let position = 0;
+
+    // Add first page
+    doc.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+    heightLeft -= pdfH;
+
+    // Add remaining pages if the content spans beyond A4 height
+    while (heightLeft > 0) {
+      position = heightLeft - imgH;
+      doc.addPage();
+      doc.addImage(imgData, "JPEG", 0, position, imgW, imgH);
+      heightLeft -= pdfH;
+    }
+
+    return doc.output("blob");
   };
 
   const handleShareWhatsApp = async (quote: any) => {
     try {
       setIsGeneratingPdf(true);
-      setPdfFeedback(lang === "gu" ? "પીડીએફ અપલોડ થઈ રહી છે..." : "Uploading PDF to share...");
+      setPdfFeedback(lang === "gu" ? "પીડીએફ ફાઇલ બની રહી છે..." : "Generating PDF file...");
 
       const quoteData = await getQuoteDataForAction(quote);
       if (quoteData.items.length === 0) {
@@ -2113,59 +2235,53 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         return;
       }
 
-      const cName = quoteData.clientName || "";
-      const matchedClient = clientsList.find(c => c.name.toLowerCase() === cName.toLowerCase());
-      let phone = quoteData.clientContact || matchedClient?.contact || "";
-      
-      let cleanPhone = phone.replace(/\D/g, "");
-      
-      if (!cleanPhone) {
-        const inputPhone = prompt(
-          lang === "gu" ? "ગ્રાહકનો વોટ્સએપ નંબર દાખલ કરો (મોબાઈલ નંબર):" : 
-          lang === "hi" ? "ग्राहक का व्हाट्सएप नंबर दर्ज करें (मोबाइल नंबर):" : 
-          "Enter Client's WhatsApp Number (with country code, e.g., 919999999999):", 
-          ""
-        );
-        if (inputPhone === null) return;
-        cleanPhone = inputPhone.replace(/\D/g, "");
-      }
-      
-      if (cleanPhone.length === 10) {
-        cleanPhone = "91" + cleanPhone;
-      }
+      // 1. Generate A4 PDF matching the HTML template design
+      const pdfBlob = await generatePdfBlobFromTemplate(quoteData);
+      const filename = `Quotation_${quoteData.quoteNumber || "bill"}.pdf`;
 
-      const doc = await generateInvoicePdfDoc(quoteData);
-      const pdfBlob = doc.output("blob");
+      // 2. Automatically download the PDF to the user's local device
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
 
+      // 3. Upload to tmpfiles to get a direct download link for WhatsApp sharing
       const formData = new FormData();
-      formData.append("file", pdfBlob, `Quotation_${quoteData.quoteNumber}.pdf`);
+      formData.append("file", pdfBlob, filename);
 
       const uploadRes = await fetch("https://tmpfiles.org/api/v1/upload", {
         method: "POST",
         body: formData
       });
-      
       const resData = await uploadRes.json();
-      if (resData.status !== "success") {
-        throw new Error("PDF upload failed");
-      }
+      if (resData.status !== "success") throw new Error("PDF upload failed");
 
       const directPdfUrl = resData.data.url.replace("https://tmpfiles.org/", "https://tmpfiles.org/dl/");
 
+      const cName = quoteData.clientName || "";
       const quoteNum = quoteData.quoteNumber || "—";
       const quoteDateStr = quoteData.quoteDate || "—";
       const totalAmount = quoteData.total.toLocaleString("en-IN");
       const compName = companyInfo?.name || "Our Store";
-      
-      const message = `Hello ${cName},\n\nHere is your *Quotation Ref: ${quoteNum}* from *${compName}*\n*Date:* ${quoteDateStr}\n*Total Amount:* ₹${totalAmount}\n\n*Download PDF Link:* ${directPdfUrl}\n\nThank you!`;
-      
+
+      const message = `*QUOTATION BILL*\n------------------------------\n*Store:* ${compName}\n*Quote Ref:* ${quoteNum}\n*Date:* ${quoteDateStr}\n*Client:* ${cName}\n*Total Amount:* ₹${totalAmount}\n------------------------------\n*Download PDF Link:* ${directPdfUrl}\n\nThank you for business with us!`;
+
+      // 4. Open WhatsApp Web/App pre-filled with the message link so they can choose the chat and click send
       const encodedText = encodeURIComponent(message);
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      window.open(whatsappUrl, "_blank");
+      if (isMobile) {
+        window.open(`whatsapp://send?text=${encodedText}`, "_blank");
+      } else {
+        window.open(`https://api.whatsapp.com/send?text=${encodedText}`, "_blank");
+      }
     } catch (e) {
       console.error("WhatsApp share failed:", e);
-      alert("Failed to share PDF via WhatsApp.");
+      alert("Failed to share PDF.");
     } finally {
       setIsGeneratingPdf(false);
       setPdfFeedback(null);
@@ -2705,18 +2821,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             <Printer className="h-4 w-4" />
             {t("printExportPdf")}
           </button>
-
-          <button
-            onClick={() => handleShareWhatsApp({})}
-            disabled={selectedItems.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0 cursor-pointer"
-            title="Share on WhatsApp"
-          >
-            <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
-            </svg>
-            WhatsApp
-          </button>
         </div>
       </div>
 
@@ -2924,13 +3028,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               <Printer className="h-4 w-4" />
                             </button>
                              <button
-                              onClick={() => handleDownloadPdfDirect(quote)}
-                              className="p-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-lg border border-indigo-100 transition active:scale-95 cursor-pointer"
-                              title="Download PDF"
-                            >
-                              <Download className="h-4 w-4" />
-                            </button>
-                            <button
                               onClick={() => handleShareWhatsApp(quote)}
                               className="p-1.5 bg-green-50 hover:bg-green-600 hover:text-white text-green-600 rounded-lg border border-green-100 transition active:scale-95 cursor-pointer flex items-center justify-center"
                               title="Share on WhatsApp"
@@ -3068,13 +3165,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             <Printer className="h-4 w-4" />
                           </button>
                            <button
-                            onClick={() => handleDownloadPdfDirect(quote)}
-                            className="p-2 bg-white hover:bg-indigo-50 text-indigo-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
-                            title="Download PDF"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button
                             onClick={() => handleShareWhatsApp(quote)}
                             className="p-2 bg-white hover:bg-green-50 text-green-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm flex items-center justify-center"
                             title="Share on WhatsApp"
@@ -3587,8 +3677,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             Price Code: {p.rate || "—"} · Carton Qty: {p.cartonQty || 1}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-slate-500">
-                              Stock: <strong className="text-slate-800 font-extrabold">{p.stock ?? 0} Cartons</strong>
+                            <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                              Stock: <strong className="text-slate-800 font-extrabold">{formatStockDisplay(p.stock ?? 0, p.cartonQty ?? 1)}</strong>
                             </span>
                             {(p.stock ?? 0) <= 0 ? (
                               <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
@@ -3841,7 +3931,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               </p>
                             )}
                             <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-150 px-1.5 py-0.5 rounded select-none shrink-0">
-                              Stock: <strong className="text-slate-800 font-extrabold">{item.stock ?? 0} Ctns</strong>
+                              Stock: <strong className="text-slate-800 font-extrabold">{formatStockDisplay(item.stock ?? 0, item.cartonQty ?? 1)}</strong>
                             </span>
                             {(item.stock ?? 0) <= 0 ? (
                               <span className="px-1 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200 shrink-0">
@@ -4484,10 +4574,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     {/* ── HIDDEN DIRECT PRINT QUOTE ── */}
     {printQuoteData && typeof document !== "undefined" && createPortal(
-      <div id="print-area" className="print-portal hidden print:block w-full bg-white text-black p-0">
-        <div className="flex flex-col sm:flex-row gap-4 border-2 border-slate-900 overflow-hidden">
+      <div id="print-area" className="print-portal hidden print:block w-[794px] bg-white text-black p-6">
+        <div className="flex flex-row gap-4 border-2 border-slate-900 overflow-hidden w-full">
           {/* Left Side: Logo Block (Snug zero margins, fixed width logo fit) */}
-          <div className="sm:w-28 bg-white text-slate-900 flex items-center justify-center text-center border-b-2 sm:border-b-0 sm:border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
+          <div className="w-28 bg-white text-slate-900 flex items-center justify-center text-center border-r-2 border-slate-900 min-h-[100px] shrink-0 overflow-hidden relative">
             {companyInfo?.logo ? (
               <img src={companyInfo.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
@@ -4499,21 +4589,21 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
           {/* Right Side: Contact Info dynamically called from company profile settings */}
           <div className="flex-1 p-4 flex flex-col justify-center text-slate-800 text-xs font-semibold space-y-1">
-            <h2 className="text-sm font-black text-slate-950 uppercase">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
-            <p className="text-[10px] leading-relaxed text-slate-655 uppercase">
-              <span className="font-extrabold text-slate-955">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
+            <h2 className="text-sm font-black text-slate-955 uppercase leading-tight">{companyInfo?.name || "DIGISCALE PRODUCT STUDIO"}</h2>
+            <p className="text-[10px] leading-relaxed text-slate-600 uppercase">
+              <span className="font-extrabold text-slate-800">ADDRESS:</span> {companyInfo?.address || "No company address set. Add in Settings."}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-655 uppercase pt-0.5">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-slate-600 uppercase pt-0.5">
               <p>
-                <span className="font-extrabold text-slate-955">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
+                <span className="font-extrabold text-slate-800">MOBILE:</span> {companyInfo?.primaryPhone || "-"} {companyInfo?.secondaryPhone ? `| ${companyInfo.secondaryPhone}` : ""}
               </p>
               <p>
-                <span className="font-extrabold text-slate-955">EMAIL:</span> {companyInfo?.email || "-"}
+                <span className="font-extrabold text-slate-800">EMAIL:</span> {companyInfo?.email || "-"}
               </p>
             </div>
             {companyInfo?.gst && (
-              <p className="text-[10px] text-slate-655 uppercase font-bold">
-                <span className="font-extrabold text-slate-955">GSTIN:</span> {companyInfo.gst}
+              <p className="text-[10px] text-slate-600 uppercase font-bold">
+                <span className="font-extrabold text-slate-800">GSTIN:</span> {companyInfo.gst}
               </p>
             )}
           </div>
@@ -4531,9 +4621,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         )}
 
         {/* Billing Details & Quotation Info Metadata Block */}
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700">
+        <div className="flex flex-row justify-between gap-4 mt-2 mb-5 text-xs font-semibold text-slate-700 w-full">
           {/* Left Side: Customer Billing Details */}
-          <div className="sm:w-1/2">
+          <div className="w-1/2">
             <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Billing Details:</p>
             <p className="text-slate-900 font-extrabold">{printQuoteData.clientCompany || "-"}</p>
             <p className="text-slate-500 text-[11px] mt-0.5 leading-relaxed">{printQuoteData.clientAddress || "-"}</p>
@@ -4542,7 +4632,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
           {/* Right Side: Quotation Info Metadata */}
           {(printQuoteData.quoteNumber || printQuoteData.quoteDate || printQuoteData.validUntil) && (
-            <div className="text-left sm:text-right space-y-1 min-w-[220px] ml-auto">
+            <div className="text-right space-y-1 min-w-[220px] ml-auto">
               <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Quotation Info:</p>
               <div className="mb-1.5">
                 <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-slate-600 print:border-slate-300 print:text-slate-800">
@@ -4696,16 +4786,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               </div>
               {printQuoteData.taxInput && (
                 <div className="flex justify-between font-bold text-slate-500 px-1 items-center">
-                  <span className="flex items-center gap-1 text-[11px]">
-                    <span>GST</span>
-                    <span className="flex items-center gap-0.5">
-                      (
-                      <div className="min-w-[60px] text-center font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded py-0.5 px-1.5">
-                        {printQuoteData.taxInput}
-                      </div>
-                      )
-                    </span>
-                  </span>
+                  <span className="text-[11px]">GST ({printQuoteData.taxInput})</span>
                   <span className="text-sm">
                     ₹{(() => {
                       const sTotal = printQuoteData.items?.reduce((sum: number, item: any) => sum + (item.quantity * (parseFloat(getSavedItemRate(item.rate, printQuoteData.applyEventMarkup, printQuoteData.eventMarkupPercent)) || 0)), 0);
@@ -4733,27 +4814,21 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             </div>
             
             {(printQuoteData.cashAmount || printQuoteData.bankAmount) && (
-              <div className="pt-2 space-y-2 font-bold text-slate-600 px-1">
+              <div className="pt-2 space-y-2 font-bold text-slate-650 px-1">
                 {printQuoteData.cashAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Cash</span>
-                    <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
-                      <span className="text-slate-800">₹</span>
-                      <span className="font-bold text-slate-800">
-                        {parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}
-                      </span>
-                    </div>
+                    <span className="font-extrabold text-slate-900 text-sm">
+                      ₹{parseFloat(String(printQuoteData.cashAmount)).toLocaleString("en-IN")}
+                    </span>
                   </div>
                 )}
                 {printQuoteData.bankAmount && (
                   <div className="flex justify-between items-center">
                     <span className="text-[11px]">Paid via Bank</span>
-                    <div className="flex items-center justify-end w-28 bg-white border border-slate-300 rounded py-0.5 px-2 text-xs">
-                      <span className="text-slate-800">₹</span>
-                      <span className="font-bold text-slate-800">
-                        {parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}
-                      </span>
-                    </div>
+                    <span className="font-extrabold text-slate-900 text-sm">
+                      ₹{parseFloat(String(printQuoteData.bankAmount)).toLocaleString("en-IN")}
+                    </span>
                   </div>
                 )}
               </div>
@@ -5010,16 +5085,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         >
           <Printer className="h-4 w-4" />
           {t("printExportPdf")}
-        </button>
-
-        <button
-          onClick={() => handleShareWhatsApp({})}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
-        >
-          <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
-          </svg>
-          WhatsApp
         </button>
       </div>
     )}

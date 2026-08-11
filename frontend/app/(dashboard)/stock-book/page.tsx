@@ -686,9 +686,31 @@ export default function StockBookPage() {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS["en"]?.[key] || key;
   };
 
+  const formatStockDisplay = (stock: number, cartonQty: number) => {
+    const totalPcs = Math.round(stock * (cartonQty || 1));
+    const ctn = Math.floor(totalPcs / (cartonQty || 1));
+    const pcs = totalPcs % (cartonQty || 1);
+
+    const ctnText = lang === "gu" ? "કાર્ટન" : lang === "hi" ? "कार्टन" : "Cartons";
+    const connector = lang === "gu" ? " અને " : lang === "hi" ? " और " : " & ";
+    const pcsText = lang === "gu" ? "છૂટક નંગ" : lang === "hi" ? "खुले पीस" : "Loose Pcs";
+
+    if (totalPcs <= 0) {
+      return `0 ${ctnText}`;
+    }
+
+    if (ctn > 0 && pcs > 0) {
+      return `${ctn} ${ctnText}${connector}${pcs} ${pcsText}`;
+    } else if (ctn > 0) {
+      return `${ctn} ${ctnText}`;
+    } else {
+      return `${pcs} ${pcsText}`;
+    }
+  };
+
   // Stats Calculations
   const totalProducts = products.length;
-  const totalStockCartons = products.reduce((sum, p) => sum + p.stock, 0);
+  const totalStockCartons = Math.round(products.reduce((sum, p) => sum + p.stock, 0));
   const totalStockVal = products.reduce((sum, p) => sum + (p.stock * p.cartonQty * (parseFloat(p.rate) || 0)), 0);
   const lowStockCount = products.filter(p => p.stock >= 1 && p.stock <= 5).length;
   const outOfStockCount = products.filter(p => p.stock <= 0).length;
@@ -1005,7 +1027,7 @@ export default function StockBookPage() {
 
                             {/* Current Stock */}
                             <td className="py-4 px-6 text-center">
-                              <p className="font-black text-slate-800 text-sm">{p.stock} Cartons</p>
+                              <p className="font-black text-slate-800 text-sm whitespace-nowrap">{formatStockDisplay(p.stock, p.cartonQty)}</p>
                               <div className="mt-1 flex justify-center">
                                 {p.stock <= 0 ? (
                                   <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-red-50 text-red-700 border border-red-200">
@@ -1017,7 +1039,7 @@ export default function StockBookPage() {
                                   </span>
                                 ) : null}
                               </div>
-                              <p className="text-[9px] text-slate-400 font-bold mt-1">{(p.stock * p.cartonQty).toLocaleString()} {p.unit_type || "pcs"} total</p>
+                              <p className="text-[9px] text-slate-400 font-bold mt-1">{Math.round(p.stock * p.cartonQty).toLocaleString()} {p.unit_type || "pcs"} total</p>
                             </td>
 
                             {/* Packing / Rate */}
@@ -1130,8 +1152,8 @@ export default function StockBookPage() {
                           <div className="grid grid-cols-2 gap-3.5 bg-slate-50/50 rounded-xl p-3 border border-slate-100">
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Current Stock</p>
-                              <p className="font-black text-slate-800 text-xs mt-0.5">{p.stock} Cartons</p>
-                              <p className="text-[9px] text-slate-400 font-bold">{(p.stock * p.cartonQty).toLocaleString()} {p.unit_type || "pcs"} total</p>
+                              <p className="font-black text-slate-800 text-xs mt-0.5">{formatStockDisplay(p.stock, p.cartonQty)}</p>
+                              <p className="text-[9px] text-slate-400 font-bold">{Math.round(p.stock * p.cartonQty).toLocaleString()} {p.unit_type || "pcs"} total</p>
                               
                               <div className="mt-1">
                                 {p.stock <= 0 ? (
