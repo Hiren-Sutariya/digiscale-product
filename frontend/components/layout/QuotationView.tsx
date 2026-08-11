@@ -354,6 +354,34 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     return /^[A-Z]{3}-\d+-\d+/.test(nameOrCol) || nameOrCol.startsWith("PJD");
   };
 
+  const fetchAllProducts = async (userId: string) => {
+    let allLoadedProducts: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, stock, cartonQty, rate, color, length, collection_id, description')
+        .eq('user_id', userId)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) throw error;
+      if (data) {
+        allLoadedProducts = [...allLoadedProducts, ...data];
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    return allLoadedProducts;
+  };
+
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -844,20 +872,19 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         // Fetch all data from Supabase concurrently for faster loading
         const [
           { data: colsData, error: colsErr },
-          { data: prodsData, error: prodsErr },
+          prodsData,
           { data: assignsData, error: assignsErr },
           { data: quotesData, error: quotesErr },
           { data: clientsData, error: clientsErr }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
+          fetchAllProducts(userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
         if (colsErr) throw colsErr;
-        if (prodsErr) throw prodsErr;
         if (assignsErr) throw assignsErr;
         if (quotesErr) throw quotesErr;
         if (clientsErr) throw clientsErr;
@@ -1086,6 +1113,57 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     }
   }, []);
 
+  // Warning prompt before leaving or reloading the page with unsaved items
+  useEffect(() => {
+    // 1. Handle browser tab close or reload
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (selectedItems.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    // 2. Handle routing inside SPA by intercepting clicks on nav links
+    const handleAnchorClick = (e: MouseEvent) => {
+      if (selectedItems.length === 0) return;
+
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a");
+
+      if (anchor && anchor.href) {
+        try {
+          const targetUrl = new URL(anchor.href, window.location.href);
+          // Check if navigating to a different path inside our app
+          if (
+            targetUrl.origin === window.location.origin && 
+            targetUrl.pathname !== window.location.pathname
+          ) {
+            const confirmLeave = confirm(
+              lang === "gu" ? "તમે કોટેશન બનાવી રહ્યા છો. શું તમે ખરેખર બહાર જવા માંગો છો? તમારી વિગતો ભૂંસાઈ જશે." :
+              lang === "hi" ? "आप कोटेशन बना रहे हैं। क्या आप वास्तव में बाहर जाना चाहते हैं? आपका विवरण मिट जाएगा।" :
+              "You are creating a quotation. Are you sure you want to leave this page? Your unsaved draft will be lost."
+            );
+            if (!confirmLeave) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }
+        } catch (err) {
+          console.warn("Error parsing anchor URL:", err);
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleAnchorClick, true); // Intercept during capture phase
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleAnchorClick, true);
+    };
+  }, [selectedItems, lang]);
+
   // Realtime sync: auto-refresh quotation data when changes happen from another device/user
   useEffect(() => {
     if (!currentUserId) return;
@@ -1095,13 +1173,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         const userId = currentUserId;
         const [
           { data: colsData },
-          { data: prodsData },
+          prodsData,
           { data: assignsData },
           { data: quotesData },
           { data: clientsData }
         ] = await Promise.all([
           supabase.from('collections').select('*').eq('user_id', userId),
-          supabase.from('products').select('id, name, stock, cartonQty, rate, color, length, collection_id, description').eq('user_id', userId),
+          fetchAllProducts(userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
           supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
@@ -1369,6 +1447,14 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   };
 
   const handleCreateNew = () => {
+    if (selectedItems.length > 0) {
+      const confirmReset = confirm(
+        lang === "gu" ? "તમે નવું કોટેશન બનાવવા માંગો છો? ચાલુ કોટેશનની વિગતો ભૂંસાઈ જશે." :
+        lang === "hi" ? "क्या आप नया कोटेशन बनाना चाहते हैं? वर्तमान कोटेशन का विवरण मिट जाएगा।" :
+        "Are you sure you want to create a new quotation? The current unsaved quotation details will be lost."
+      );
+      if (!confirmReset) return;
+    }
     setQuoteNumber(getNextQuoteNumber(savedQuotes));
     setClientName("");
     setClientCompany("");
