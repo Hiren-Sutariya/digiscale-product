@@ -389,6 +389,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
+  const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfFeedback, setPdfFeedback] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -1291,8 +1292,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     const defaultQuoteNum = getNextQuoteNumber(savedQuotes);
     const finalQuoteNumber = quoteNumber.trim() || defaultQuoteNum;
 
+    let idToUpdate = currentQuoteId;
+    if (!idToUpdate) {
+      const existing = savedQuotes.find(q => q.quoteNumber === finalQuoteNumber);
+      idToUpdate = existing ? existing.id : Date.now().toString();
+      setCurrentQuoteId(idToUpdate);
+    }
+
     const newQuote = {
-      id: Date.now().toString(),
+      id: idToUpdate,
       quoteNumber: finalQuoteNumber,
       clientName,
       clientCompany,
@@ -1311,14 +1319,12 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     };
 
     let updatedQuotes = [];
-    const existingIndex = savedQuotes.findIndex(q => q.quoteNumber === newQuote.quoteNumber);
-    let idToUpdate = newQuote.id;
+    const existingIndex = savedQuotes.findIndex(q => q.id === idToUpdate);
 
     if (existingIndex > -1) {
       updatedQuotes = [...savedQuotes];
-      idToUpdate = savedQuotes[existingIndex].id;
       newQuote.isOrderDone = savedQuotes[existingIndex].isOrderDone;
-      updatedQuotes[existingIndex] = { ...savedQuotes[existingIndex], ...newQuote, id: idToUpdate };
+      updatedQuotes[existingIndex] = { ...savedQuotes[existingIndex], ...newQuote };
     } else {
       updatedQuotes = [newQuote, ...savedQuotes];
     }
@@ -1420,8 +1426,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         setSaveSuccessMessage("Quotation updated successfully in database!");
       } else {
         setSaveSuccessMessage("Quotation saved successfully to database!");
-        const nextNum = getNextQuoteNumber(updatedQuotes);
-        setQuoteNumber(nextNum);
       }
       setShowSavePopup(true);
     } catch (err) {
@@ -1458,6 +1462,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setBankAmount(quote.bankAmount || "");
     setApplyEventMarkup(quote.applyEventMarkup || false);
     setEventMarkupPercent(quote.eventMarkupPercent ?? 25);
+    setCurrentQuoteId(quote.id);
     
     // Auto lookup and sync client contact details from database
     const matchedClient = clientsList.find(c => c.name.toLowerCase() === (quote.clientName || "").toLowerCase());
@@ -1483,6 +1488,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setBankAmount("");
     setApplyEventMarkup(false);
     setEventMarkupPercent(25);
+    setCurrentQuoteId(null);
     setActiveSubView("create");
   };
 
