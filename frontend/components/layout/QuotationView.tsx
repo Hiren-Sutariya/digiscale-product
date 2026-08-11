@@ -2477,6 +2477,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   // Print
   const handlePrint = async () => {
+    if (selectedItems.length === 0) return;
     const currentQuote = {
       id: "preview",
       quoteNumber,
@@ -2494,6 +2495,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       staffName: localStorage.getItem("user_name") || "Admin"
     };
     await executePrint(currentQuote);
+    
+    // Automatically trigger save quotation after printing
+    setTimeout(() => {
+      handleSaveQuotation();
+    }, 150);
   };
 
   if (loadingProfile) {
