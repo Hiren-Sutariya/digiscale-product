@@ -383,6 +383,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   };
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1139,15 +1142,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             targetUrl.origin === window.location.origin && 
             targetUrl.pathname !== window.location.pathname
           ) {
-            const confirmLeave = confirm(
-              lang === "gu" ? "તમે કોટેશન બનાવી રહ્યા છો. શું તમે ખરેખર બહાર જવા માંગો છો? તમારી વિગતો ભૂંસાઈ જશે." :
-              lang === "hi" ? "आप कोटेशन बना रहे हैं। क्या आप वास्तव में बाहर जाना चाहते हैं? आपका विवरण मिट जाएगा।" :
-              "You are creating a quotation. Are you sure you want to leave this page? Your unsaved draft will be lost."
-            );
-            if (!confirmLeave) {
-              e.preventDefault();
-              e.stopPropagation();
-            }
+            e.preventDefault();
+            e.stopPropagation();
+            setPendingNavigationUrl(anchor.href);
+            setPendingAction("navigate");
+            setShowLeaveModal(true);
           }
         } catch (err) {
           console.warn("Error parsing anchor URL:", err);
@@ -1446,15 +1445,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setActiveSubView("create");
   };
 
-  const handleCreateNew = () => {
-    if (selectedItems.length > 0) {
-      const confirmReset = confirm(
-        lang === "gu" ? "તમે નવું કોટેશન બનાવવા માંગો છો? ચાલુ કોટેશનની વિગતો ભૂંસાઈ જશે." :
-        lang === "hi" ? "क्या आप नया कोटेशन बनाना चाहते हैं? वर्तमान कोटेशन का विवरण मिट जाएगा।" :
-        "Are you sure you want to create a new quotation? The current unsaved quotation details will be lost."
-      );
-      if (!confirmReset) return;
-    }
+  const executeCreateNew = () => {
     setQuoteNumber(getNextQuoteNumber(savedQuotes));
     setClientName("");
     setClientCompany("");
@@ -1468,6 +1459,27 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setApplyEventMarkup(false);
     setEventMarkupPercent(25);
     setActiveSubView("create");
+  };
+
+  const handleConfirmLeave = () => {
+    setShowLeaveModal(false);
+    if (pendingAction === "navigate" && pendingNavigationUrl) {
+      setSelectedItems([]);
+      window.location.href = pendingNavigationUrl;
+    } else if (pendingAction === "reset") {
+      executeCreateNew();
+    }
+    setPendingAction(null);
+    setPendingNavigationUrl(null);
+  };
+
+  const handleCreateNew = () => {
+    if (selectedItems.length > 0) {
+      setPendingAction("reset");
+      setShowLeaveModal(true);
+    } else {
+      executeCreateNew();
+    }
   };
 
   const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
@@ -4373,6 +4385,52 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition active:scale-95"
             >
               Keep Editing
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* GORGEOUS CUSTOM CONFIRMATION DIALOG */}
+    {showLeaveModal && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print select-none animate-in fade-in duration-200">
+        <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col items-center text-center">
+          {/* Warning Icon Banner */}
+          <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 border border-amber-100 shadow-inner shrink-0">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-base font-black text-slate-900 uppercase tracking-wider mb-2">
+            {lang === "gu" ? "અસંગ્રહિત ફેરફારો!" : lang === "hi" ? "असहेजे गए बदलाव!" : "Unsaved Changes!"}
+          </h3>
+
+          {/* Message Body */}
+          <p className="text-xs text-slate-500 font-bold leading-relaxed mb-6 px-2">
+            {lang === "gu" ? "તમે કોટેશન બનાવી રહ્યા છો. શું તમે ખરેખર બહાર જવા માંગો છો? તમારી બધી વિગતો ભૂંસાઈ જશે." :
+             lang === "hi" ? "आप कोटेशन बना रहे हैं। क्या आप वास्तव में बाहर जाना चाहते हैं? आपका विवरण मिट जाएगा।" :
+             "You have unsaved quotation items. Are you sure you want to leave this page? Your draft will be lost forever."}
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex w-full gap-3">
+            <button
+              onClick={() => {
+                setShowLeaveModal(false);
+                setPendingAction(null);
+                setPendingNavigationUrl(null);
+              }}
+              className="flex-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-3 text-xs font-black text-slate-655 transition active:scale-95 shadow-sm cursor-pointer uppercase tracking-wider"
+            >
+              {lang === "gu" ? "અહીં રહો" : lang === "hi" ? "यहीं रहें" : "Stay & Edit"}
+            </button>
+            <button
+              onClick={handleConfirmLeave}
+              className="flex-1 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 py-3 text-xs font-black text-white transition active:scale-95 shadow-md hover:shadow-red-500/10 cursor-pointer uppercase tracking-wider"
+            >
+              {lang === "gu" ? "ભૂંસી નાખો" : lang === "hi" ? "हटाएँ" : "Discard & Leave"}
             </button>
           </div>
         </div>
