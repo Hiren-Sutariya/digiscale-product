@@ -3191,6 +3191,20 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                         {/* PRODUCT NAME */}
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
                           <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+
+                          <div className="no-print mt-2">
+                            <input
+                              type="text"
+                              placeholder={lang === "gu" ? "કસ્ટમ વર્ણન લખો..." : lang === "hi" ? "कस्टम विवरण लिखें..." : "Add custom description..."}
+                              value={item.description || ""}
+                              onChange={(e) => {
+                                const newDesc = e.target.value;
+                                setSelectedItems(prev => prev.map(si => si.id === item.id ? { ...si, description: newDesc } : si));
+                              }}
+                              className="w-full px-2.5 py-1 text-[11px] font-semibold border border-slate-205 rounded-lg focus:outline-none focus:border-blue-500 bg-white shadow-inner"
+                            />
+                          </div>
+
                           <div className="no-print mt-1.5 flex items-center gap-1.5 flex-wrap">
                             {item.location && (
                               <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 select-none shrink-0">
@@ -3214,9 +3228,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               </span>
                             )}
                           </div>
+
                           <div className="hidden print:block">
+                            {item.description && (
+                              <p className="text-[10px] text-slate-550 font-bold mt-1 whitespace-pre-wrap">
+                                {item.description}
+                              </p>
+                            )}
                             {item.location && (
-                              <p className="text-[9px] font-bold text-slate-500 mt-0.5">
+                              <p className="text-[9px] font-bold text-slate-400 mt-1 border-t border-dashed border-slate-200 pt-0.5">
                                 {item.location}
                               </p>
                             )}
@@ -3664,6 +3684,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                         </td>
                         <td className="py-3 px-3 border-r border-slate-300 align-middle">
                           <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+                          {item.description && (
+                            <p className="text-[11px] text-slate-500 font-semibold mt-1 bg-slate-50 border border-slate-200/50 rounded px-1.5 py-1 whitespace-pre-wrap">
+                              {item.description}
+                            </p>
+                          )}
                           {item.location && (
                             <p className="text-[9px] font-bold text-blue-650 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block no-print select-none">
                               Loc: {item.location}
@@ -3935,8 +3960,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                     {/* PRODUCT NAME */}
                     <td className="py-3 px-3 border-r border-slate-300 align-middle">
                       <p className="font-extrabold text-slate-955 leading-tight">{item.name}</p>
+                      {item.description && (
+                        <p className="text-[11px] text-slate-500 font-semibold mt-1 bg-slate-50 border border-slate-200/50 rounded px-1.5 py-1 whitespace-pre-wrap">
+                          {item.description}
+                        </p>
+                      )}
                       {item.location && (
-                        <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1 inline-block select-none">
+                        <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1.5 inline-block select-none">
                           {item.location}
                         </p>
                       )}
