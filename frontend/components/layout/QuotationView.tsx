@@ -383,6 +383,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   };
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const showLeaveModalRef = useRef(false); // Can be used or keep state
+  const isLeavingRef = useRef(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
@@ -1120,6 +1122,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   useEffect(() => {
     // 1. Handle browser tab close or reload
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLeavingRef.current) return;
       if (selectedItems.length > 0) {
         e.preventDefault();
         e.returnValue = "";
@@ -1464,6 +1467,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const handleConfirmLeave = () => {
     setShowLeaveModal(false);
     if (pendingAction === "navigate" && pendingNavigationUrl) {
+      isLeavingRef.current = true;
       setSelectedItems([]);
       window.location.href = pendingNavigationUrl;
     } else if (pendingAction === "reset") {
@@ -4362,7 +4366,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             <button
               onClick={() => {
                 setShowSavePopup(false);
-                setActiveSubView("history");
+                isLeavingRef.current = true;
                 
                 // Clear the form fields for next use
                 setClientName("");
@@ -4375,6 +4379,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                 setCashAmount("");
                 setBankAmount("");
                 
+                // Redirect/Exit back to Collections
+                window.location.href = "/projects";
               }}
               className="w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition active:scale-95"
             >
