@@ -385,6 +385,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const showLeaveModalRef = useRef(false); // Can be used or keep state
   const isLeavingRef = useRef(false);
+  const redirectAfterSaveRef = useRef<string | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
@@ -1123,7 +1124,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     // 1. Handle browser tab close or reload
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isLeavingRef.current) return;
-      if (selectedItems.length > 0) {
+      if (activeSubView === "create" && selectedItems.length > 0) {
         e.preventDefault();
         e.returnValue = "";
         return "";
@@ -1132,7 +1133,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     // 2. Handle routing inside SPA by intercepting clicks on nav links
     const handleAnchorClick = (e: MouseEvent) => {
-      if (selectedItems.length === 0) return;
+      if (activeSubView !== "create" || selectedItems.length === 0) return;
 
       const target = e.target as HTMLElement;
       const anchor = target.closest("a");
@@ -1164,7 +1165,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("click", handleAnchorClick, true);
     };
-  }, [selectedItems, lang]);
+  }, [selectedItems, lang, activeSubView]);
 
   // Realtime sync: auto-refresh quotation data when changes happen from another device/user
   useEffect(() => {
@@ -1394,6 +1395,25 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
       setSavedQuotes(updatedQuotes);
       
+      if (redirectAfterSaveRef.current) {
+        isLeavingRef.current = true;
+        
+        // Clear the form fields for next use
+        setClientName("");
+        setClientCompany("");
+        setClientAddress("");
+        setClientContact("");
+        setSelectedItems([]);
+        setTaxInput("");
+        setAdditionalNotes("");
+        setCashAmount("");
+        setBankAmount("");
+        
+        window.location.href = redirectAfterSaveRef.current;
+        redirectAfterSaveRef.current = null;
+        return;
+      }
+
       if (existingIndex > -1) {
         setSaveSuccessMessage("Quotation updated successfully in database!");
       } else {
@@ -1477,8 +1497,14 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setPendingNavigationUrl(null);
   };
 
+  const handleSaveAndExit = () => {
+    setShowLeaveModal(false);
+    redirectAfterSaveRef.current = pendingNavigationUrl || "/projects";
+    handleSaveQuotation();
+  };
+
   const handleCreateNew = () => {
-    if (selectedItems.length > 0) {
+    if (activeSubView === "create" && selectedItems.length > 0) {
       setPendingAction("reset");
       setShowLeaveModal(true);
     } else {
@@ -4401,6 +4427,19 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     {showLeaveModal && (
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print select-none animate-in fade-in duration-200">
         <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col items-center text-center">
+          
+          {/* Close button at top-right */}
+          <button
+            onClick={() => {
+              setShowLeaveModal(false);
+              setPendingAction(null);
+              setPendingNavigationUrl(null);
+            }}
+            className="absolute right-4 top-4 p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
           {/* Warning Icon Banner */}
           <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 border border-amber-100 shadow-inner shrink-0">
             <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -4423,20 +4462,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           {/* Action Buttons */}
           <div className="flex w-full gap-3">
             <button
-              onClick={() => {
-                setShowLeaveModal(false);
-                setPendingAction(null);
-                setPendingNavigationUrl(null);
-              }}
-              className="flex-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-3 text-xs font-black text-slate-655 transition active:scale-95 shadow-sm cursor-pointer uppercase tracking-wider"
-            >
-              {lang === "gu" ? "અહીં રહો" : lang === "hi" ? "यहीं रहें" : "Stay & Edit"}
-            </button>
-            <button
               onClick={handleConfirmLeave}
               className="flex-1 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 py-3 text-xs font-black text-white transition active:scale-95 shadow-md hover:shadow-red-500/10 cursor-pointer uppercase tracking-wider"
             >
               {lang === "gu" ? "ભૂંસી નાખો" : lang === "hi" ? "हटाएँ" : "Discard & Leave"}
+            </button>
+            <button
+              onClick={handleSaveAndExit}
+              className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 py-3 text-xs font-black text-white transition active:scale-95 shadow-md hover:shadow-blue-500/10 cursor-pointer uppercase tracking-wider"
+            >
+              {lang === "gu" ? "સેવ કરો અને બહાર નીકળો" : lang === "hi" ? "सहेजें और बाहर निकलें" : "Save & Exit"}
             </button>
           </div>
         </div>
