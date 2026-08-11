@@ -390,6 +390,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
+  const [showPrintSaveModal, setShowPrintSaveModal] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfFeedback, setPdfFeedback] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -2484,6 +2485,36 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   // Print
   const handlePrint = async () => {
     if (selectedItems.length === 0) return;
+    setShowPrintSaveModal(true);
+  };
+
+  const handleSaveAndPrint = async () => {
+    setShowPrintSaveModal(false);
+    const currentQuote = {
+      id: currentQuoteId || "preview",
+      quoteNumber,
+      clientName,
+      clientCompany,
+      clientAddress,
+      date: quoteDate,
+      items: selectedItems,
+      taxInput,
+      cashAmount,
+      bankAmount,
+      applyEventMarkup,
+      eventMarkupPercent,
+      total: total,
+      staffName: localStorage.getItem("user_name") || "Admin"
+    };
+    await executePrint(currentQuote);
+    
+    setTimeout(() => {
+      handleSaveQuotation();
+    }, 150);
+  };
+
+  const handleOnlyPrint = async () => {
+    setShowPrintSaveModal(false);
     const currentQuote = {
       id: "preview",
       quoteNumber,
@@ -2501,11 +2532,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       staffName: localStorage.getItem("user_name") || "Admin"
     };
     await executePrint(currentQuote);
-    
-    // Automatically trigger save quotation after printing
-    setTimeout(() => {
-      handleSaveQuotation();
-    }, 150);
   };
 
   if (loadingProfile) {
@@ -4986,6 +5012,53 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           <p className="text-[11px] text-slate-500 font-bold leading-relaxed">
             {pdfFeedback || (lang === "gu" ? "પીડીએફ પર પ્રક્રિયા થઈ રહી છે..." : "Processing PDF file...")}
           </p>
+        </div>
+      </div>
+    )}
+
+    {/* PRINT SAVE CONFIRMATION MODAL */}
+    {showPrintSaveModal && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print select-none">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 w-full max-w-sm text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="mx-auto w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
+            <Printer className="h-6 w-6" />
+          </div>
+          
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2">
+            {lang === "gu" ? "સેવ અને પ્રિન્ટ?" : lang === "hi" ? "सेव और प्रिंट?" : "Save & Print?"}
+          </h3>
+          <p className="text-[11px] text-slate-500 font-bold leading-relaxed mb-6">
+            {lang === "gu" 
+              ? "શું તમે પ્રિન્ટ કરતા પહેલા આ કોટેશન બિલને સેવ કરવા માંગો છો?" 
+              : lang === "hi" 
+              ? "क्या आप प्रिंट करने से पहले इस कोटेशन बिल को सहेजना चाहते हैं?" 
+              : "Would you like to save this quotation to history database before printing?"}
+          </p>
+
+          <div className="space-y-2">
+            <button
+              onClick={handleSaveAndPrint}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase py-3 transition active:scale-95 cursor-pointer shadow-sm tracking-wider"
+            >
+              <Check className="h-4 w-4" />
+              {lang === "gu" ? "સેવ અને પ્રિન્ટ કરો" : lang === "hi" ? "सेव और प्रिंट करें" : "Save & Print"}
+            </button>
+            
+            <button
+              onClick={handleOnlyPrint}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase py-3 transition active:scale-95 cursor-pointer shadow-sm tracking-wider"
+            >
+              <Printer className="h-4 w-4" />
+              {lang === "gu" ? "માત્ર પ્રિન્ટ કરો" : lang === "hi" ? "केवल प्रिंट करें" : "Only Print (No Save)"}
+            </button>
+
+            <button
+              onClick={() => setShowPrintSaveModal(false)}
+              className="w-full flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase py-2.5 transition active:scale-95 cursor-pointer"
+            >
+              {lang === "gu" ? "રદ કરો" : lang === "hi" ? "रद्द करें" : "Cancel"}
+            </button>
+          </div>
         </div>
       </div>
     )}
