@@ -389,6 +389,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfFeedback, setPdfFeedback] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1732,45 +1734,412 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     await executePrint({ ...quote, items: itemsToLoad });
   };
 
-  const handleShareWhatsApp = async (quote: any) => {
-    // 1. Get client name and contact details
-    const cName = quote.clientName || quote.client_name || clientName || "";
-    const matchedClient = clientsList.find(c => c.name.toLowerCase() === cName.toLowerCase());
-    let phone = matchedClient?.contact || clientContact || "";
-    
-    // 2. Clean phone number (digits only)
-    let cleanPhone = phone.replace(/\D/g, "");
-    
-    // 3. Prompt for number if empty
-    if (!cleanPhone) {
-      const inputPhone = prompt(
-        lang === "gu" ? "ગ્રાહકનો વોટ્સએપ નંબર દાખલ કરો (મોબાઈલ નંબર):" : 
-        lang === "hi" ? "ग्राहक का व्हाट्सएप नंबर दर्ज करें (मोबाइल नंबर):" : 
-        "Enter Client's WhatsApp Number (with country code, e.g., 919999999999):", 
-        ""
-      );
-      if (inputPhone !== null) {
-        cleanPhone = inputPhone.replace(/\D/g, "");
+  const getQuoteDataForAction = async (quote: any) => {
+    if (quote && (quote.id || quote.quote_number || quote.quoteNumber)) {
+      let itemsToLoad = quote.items;
+      if (!itemsToLoad) {
+        itemsToLoad = await fetchQuoteItems(quote.id);
+      }
+      return {
+        id: quote.id,
+        quoteNumber: quote.quoteNumber || quote.quote_number,
+        clientName: quote.clientName || quote.client_name,
+        clientCompany: quote.clientCompany || quote.client_company,
+        clientAddress: quote.clientAddress || quote.client_address,
+        clientContact: quote.clientContact || quote.client_contact,
+        quoteDate: quote.quoteDate || quote.quote_date,
+        validUntil: quote.validUntil || "",
+        items: itemsToLoad,
+        taxInput: quote.taxInput || quote.tax_input || "",
+        cashAmount: quote.cashAmount?.toString() || quote.cash_amount?.toString() || "",
+        bankAmount: quote.bankAmount?.toString() || quote.bank_amount?.toString() || "",
+        total: quote.total || quote.total_amount || 0,
+        applyEventMarkup: quote.applyEventMarkup || quote.apply_event_markup || false,
+        eventMarkupPercent: quote.eventMarkupPercent ?? quote.event_markup_percent ?? 25,
+        staffName: quote.staffName || quote.staff_name || "Admin"
+      };
+    } else {
+      return {
+        id: Date.now().toString(),
+        quoteNumber: quoteNumber || getNextQuoteNumber(savedQuotes),
+        clientName,
+        clientCompany,
+        clientAddress,
+        clientContact,
+        quoteDate,
+        validUntil,
+        items: selectedItems,
+        taxInput,
+        cashAmount,
+        bankAmount,
+        total,
+        applyEventMarkup,
+        eventMarkupPercent,
+        staffName: localStorage.getItem("user_name") || "Admin"
+      };
+    }
+  };
+
+  const generateInvoicePdfDoc = async (quote: any) => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4"
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 30;
+
+    let currentY = 45;
+
+    // 1. Draw Top Color Stripe (Premium aesthetics)
+    doc.setFillColor(37, 99, 235);
+    doc.rect(margin, currentY, pageWidth - 2 * margin, 6, "F");
+    currentY += 6;
+
+    // 2. Company Details box
+    doc.setFillColor(250, 250, 250);
+    doc.rect(margin, currentY, pageWidth - 2 * margin, 74, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(1);
+    doc.rect(margin, currentY, pageWidth - 2 * margin, 74, "S");
+
+    const compName = companyInfo?.name || "LIFO | ARTIFICIAL FLOWERS";
+    const compAddress = companyInfo?.address || "SURAT, GUJARAT";
+    const compPhone = companyInfo?.primaryPhone ? `${companyInfo.primaryPhone} ${companyInfo.secondaryPhone ? '/ ' + companyInfo.secondaryPhone : ''}` : "+91 90998 86609";
+    const compEmail = companyInfo?.email || "hello.lifo@gmail.com";
+    const compGst = companyInfo?.gst ? `GSTIN: ${companyInfo.gst}` : "";
+
+    let logoXOffset = margin + 15;
+    if (companyInfo?.logo) {
+      try {
+        doc.addImage(companyInfo.logo, "PNG", margin + 15, currentY + 10, 54, 54);
+        logoXOffset = margin + 85;
+      } catch (e) {
+        console.warn("Failed company logo print in PDF:", e);
       }
     }
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text(compName, logoXOffset, currentY + 24);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(compAddress, logoXOffset, currentY + 38, { maxWidth: pageWidth - logoXOffset - margin - 150 });
     
-    // 4. Prepend India country code (91) if 10 digits
-    if (cleanPhone.length === 10) {
-      cleanPhone = "91" + cleanPhone;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Mobile: ${compPhone}`, pageWidth - margin - 15, currentY + 24, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.text(`Email: ${compEmail}`, pageWidth - margin - 15, currentY + 38, { align: "right" });
+    if (compGst) {
+      doc.setFont("helvetica", "bold");
+      doc.text(compGst, pageWidth - margin - 15, currentY + 52, { align: "right" });
     }
+
+    currentY += 90;
+
+    // 3. Billing & Quotation Info Blocks
+    const colWidth = (pageWidth - 2 * margin - 16) / 2;
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, currentY, colWidth, 90, "S");
+
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, currentY, colWidth, 20, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text(lang === "gu" ? "ગ્રાહક વિગતો" : lang === "hi" ? "ग्राहक विवरण" : "BILLING DETAILS", margin + 10, currentY + 14);
+
+    const cName = quote.clientName || "—";
+    const cCompany = quote.clientCompany || "—";
+    const cAddress = quote.clientAddress || "—";
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(cName, margin + 10, currentY + 36);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(cCompany, margin + 10, currentY + 50);
+    doc.text(cAddress, margin + 10, currentY + 64, { maxWidth: colWidth - 20 });
+
+    const rightColX = margin + colWidth + 16;
+    doc.rect(rightColX, currentY, colWidth, 90, "S");
+
+    doc.setFillColor(241, 245, 249);
+    doc.rect(rightColX, currentY, colWidth, 20, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text(lang === "gu" ? "કોટેશન માહિતી" : lang === "hi" ? "कोटेशन जानकारी" : "QUOTATION INFO", rightColX + 10, currentY + 14);
+
+    const qNum = quote.quoteNumber || "—";
+    const qDate = quote.quoteDate || "—";
+    const qValid = quote.validUntil || "—";
+    const qStaff = quote.staffName || "Admin";
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Quote Ref: ${qNum}`, rightColX + 10, currentY + 36);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${qDate}`, rightColX + 10, currentY + 50);
+    doc.text(`Valid Until: ${qValid}`, rightColX + 10, currentY + 64);
+    doc.text(`Created By: ${qStaff}`, rightColX + 10, currentY + 78);
+
+    currentY += 105;
+
+    // 4. Table of Items
+    const drawTableHeader = (y: number) => {
+      doc.setFillColor(15, 23, 42);
+      doc.rect(margin, y, pageWidth - 2 * margin, 22, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+
+      doc.text("SR.", margin + 10, y + 14, { align: "center" });
+      doc.text("PRODUCT DETAILS", margin + 35, y + 14);
+      doc.text("CTNS", margin + 310, y + 14, { align: "center" });
+      doc.text("QTY", margin + 360, y + 14, { align: "center" });
+      doc.text("PRICE", margin + 430, y + 14, { align: "right" });
+      doc.text("TOTAL", margin + 520, y + 14, { align: "right" });
+    };
+
+    drawTableHeader(currentY);
+    currentY += 22;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+
+    const itemsListToDraw = quote.items || [];
+    for (let i = 0; i < itemsListToDraw.length; i++) {
+      const item = itemsListToDraw[i];
+      const rowHeight = 44;
+
+      if (currentY + rowHeight > pageHeight - 110) {
+        doc.addPage();
+        currentY = 40;
+        drawTableHeader(currentY);
+        currentY += 22;
+      }
+
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, currentY, pageWidth - 2 * margin, rowHeight, "F");
+      }
+
+      doc.setDrawColor(241, 245, 249);
+      doc.line(margin, currentY + rowHeight, pageWidth - margin, currentY + rowHeight);
+
+      doc.setFont("helvetica", "bold");
+      doc.text((i + 1).toString(), margin + 10, currentY + 25, { align: "center" });
+
+      let textXOffset = margin + 35;
+      
+      let photoSrc = item.photoUrl;
+      if (!photoSrc) {
+        const localProd = products.find(p => p.id === item.id || p.name === item.name);
+        if (localProd?.photoUrl) photoSrc = localProd.photoUrl;
+      }
+
+      if (photoSrc) {
+        try {
+          doc.addImage(photoSrc, "JPEG", margin + 25, currentY + 5, 34, 34);
+          textXOffset = margin + 68;
+        } catch (e) {
+          console.warn("Failed drawing Row Product Image:", e);
+        }
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(item.name || "—", textXOffset, currentY + 16);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(item.description || "—", textXOffset, currentY + 28, { maxWidth: 220 });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+
+      const ctns = item.ctns || 0;
+      const qty = item.qty || 0;
+      const rate = parseFloat(item.rate || "0");
+      const rowTotal = item.total ? parseFloat(item.total) : (qty * rate);
+
+      doc.text(ctns.toString(), margin + 310, currentY + 25, { align: "center" });
+      doc.text(qty.toString(), margin + 360, currentY + 25, { align: "center" });
+      doc.text(`Rs. ${rate.toFixed(2)}`, margin + 430, currentY + 25, { align: "right" });
+      doc.text(`Rs. ${rowTotal.toLocaleString("en-IN")}`, margin + 520, currentY + 25, { align: "right" });
+
+      currentY += rowHeight;
+    }
+
+    if (currentY + 130 > pageHeight - 50) {
+      doc.addPage();
+      currentY = 40;
+    }
+
+    currentY += 15;
+
+    const subTotal = itemsListToDraw.reduce((sum: number, item: any) => sum + (item.total ? parseFloat(item.total) : (item.qty * parseFloat(item.rate || "0"))), 0);
+    const taxPercent = parseFloat(quote.taxInput || "0");
+    const taxAmount = (subTotal * taxPercent) / 100;
+    const grandTotal = quote.total || (subTotal + taxAmount);
+
+    const totalBoxWidth = 200;
+    const totalBoxX = pageWidth - margin - totalBoxWidth;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
     
-    // 5. Format message details
-    const quoteNum = quote.quoteNumber || quote.quote_number || quoteNumber || "—";
-    const quoteDateStr = quote.quoteDate || quote.quote_date || quoteDate || "—";
-    const totalAmount = (quote.total || quote.total_amount || total || 0).toLocaleString("en-IN");
-    const compName = companyInfo?.name || "Our Store";
-    
-    const message = `Hello ${cName},\n\nHere is your *Quotation Ref: ${quoteNum}* from *${compName}*\n*Date:* ${quoteDateStr}\n*Total Amount:* ₹${totalAmount}\n\nPlease find the detailed quotation PDF attached.\n\nThank you!`;
-    
-    const encodedText = encodeURIComponent(message);
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
-    
-    window.open(whatsappUrl, "_blank");
+    doc.text("Sub Total:", totalBoxX, currentY);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Rs. ${subTotal.toLocaleString("en-IN")}`, pageWidth - margin, currentY, { align: "right" });
+
+    currentY += 15;
+    doc.setFont("helvetica", "normal");
+    doc.text(`GST (${taxPercent}%):`, totalBoxX, currentY);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Rs. ${taxAmount.toLocaleString("en-IN")}`, pageWidth - margin, currentY, { align: "right" });
+
+    currentY += 20;
+    doc.setFillColor(30, 41, 59);
+    doc.rect(totalBoxX - 10, currentY - 12, totalBoxWidth + 10, 20, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Grand Total:", totalBoxX, currentY + 2);
+    doc.text(`Rs. ${grandTotal.toLocaleString("en-IN")}`, pageWidth - margin, currentY + 2, { align: "right" });
+
+    let leftInfoY = currentY - 30;
+    doc.setTextColor(71, 85, 105);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    if (companyInfo?.bankName && showBankDetails) {
+      doc.text("BANK DETAILS:", margin, leftInfoY);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Bank: ${companyInfo.bankName}`, margin, leftInfoY + 11);
+      doc.text(`Account No: ${companyInfo.accountNumber}`, margin, leftInfoY + 21);
+      doc.text(`IFSC: ${companyInfo.ifsc}`, margin, leftInfoY + 31);
+      leftInfoY += 45;
+    }
+
+    if (termsList && termsList.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.text("TERMS & CONDITIONS:", margin, leftInfoY);
+      doc.setFont("helvetica", "normal");
+      termsList.forEach((term, idx) => {
+        doc.text(`${idx + 1}. ${term}`, margin, leftInfoY + 11 + idx * 10, { maxWidth: 220 });
+      });
+    }
+
+    return doc;
+  };
+
+  const handleDownloadPdfDirect = async (quote: any) => {
+    try {
+      setIsGeneratingPdf(true);
+      setPdfFeedback(lang === "gu" ? "પીડીએફ ડાઉનલોડ થઈ રહી છે..." : "Downloading PDF file...");
+      
+      const quoteData = await getQuoteDataForAction(quote);
+      if (quoteData.items.length === 0) {
+        alert(lang === "gu" ? "કૃપા કરીને પહેલા પ્રોડક્ટ્સ ઉમેરો." : "Please add products first.");
+        return;
+      }
+
+      const doc = await generateInvoicePdfDoc(quoteData);
+      doc.save(`Quotation_${quoteData.quoteNumber}.pdf`);
+    } catch (e) {
+      console.error("PDF download failed:", e);
+      alert("Failed to generate and download PDF.");
+    } finally {
+      setIsGeneratingPdf(false);
+      setPdfFeedback(null);
+    }
+  };
+
+  const handleShareWhatsApp = async (quote: any) => {
+    try {
+      setIsGeneratingPdf(true);
+      setPdfFeedback(lang === "gu" ? "પીડીએફ અપલોડ થઈ રહી છે..." : "Uploading PDF to share...");
+
+      const quoteData = await getQuoteDataForAction(quote);
+      if (quoteData.items.length === 0) {
+        alert(lang === "gu" ? "કૃપા કરીને પહેલા પ્રોડક્ટ્સ ઉમેરો." : "Please add products first.");
+        return;
+      }
+
+      const cName = quoteData.clientName || "";
+      const matchedClient = clientsList.find(c => c.name.toLowerCase() === cName.toLowerCase());
+      let phone = quoteData.clientContact || matchedClient?.contact || "";
+      
+      let cleanPhone = phone.replace(/\D/g, "");
+      
+      if (!cleanPhone) {
+        const inputPhone = prompt(
+          lang === "gu" ? "ગ્રાહકનો વોટ્સએપ નંબર દાખલ કરો (મોબાઈલ નંબર):" : 
+          lang === "hi" ? "ग्राहक का व्हाट्सएप नंबर दर्ज करें (मोबाइल नंबर):" : 
+          "Enter Client's WhatsApp Number (with country code, e.g., 919999999999):", 
+          ""
+        );
+        if (inputPhone === null) return;
+        cleanPhone = inputPhone.replace(/\D/g, "");
+      }
+      
+      if (cleanPhone.length === 10) {
+        cleanPhone = "91" + cleanPhone;
+      }
+
+      const doc = await generateInvoicePdfDoc(quoteData);
+      const pdfBlob = doc.output("blob");
+
+      const formData = new FormData();
+      formData.append("file", pdfBlob, `Quotation_${quoteData.quoteNumber}.pdf`);
+
+      const uploadRes = await fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+      
+      const resData = await uploadRes.json();
+      if (resData.status !== "success") {
+        throw new Error("PDF upload failed");
+      }
+
+      const directPdfUrl = resData.data.url.replace("https://tmpfiles.org/", "https://tmpfiles.org/dl/");
+
+      const quoteNum = quoteData.quoteNumber || "—";
+      const quoteDateStr = quoteData.quoteDate || "—";
+      const totalAmount = quoteData.total.toLocaleString("en-IN");
+      const compName = companyInfo?.name || "Our Store";
+      
+      const message = `Hello ${cName},\n\nHere is your *Quotation Ref: ${quoteNum}* from *${compName}*\n*Date:* ${quoteDateStr}\n*Total Amount:* ₹${totalAmount}\n\n*Download PDF Link:* ${directPdfUrl}\n\nThank you!`;
+      
+      const encodedText = encodeURIComponent(message);
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+      
+      window.open(whatsappUrl, "_blank");
+    } catch (e) {
+      console.error("WhatsApp share failed:", e);
+      alert("Failed to share PDF via WhatsApp.");
+    } finally {
+      setIsGeneratingPdf(false);
+      setPdfFeedback(null);
+    }
   };
 
   const handleDownloadQuoteExcel = async (quote: any) => {
@@ -2494,7 +2863,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               <Printer className="h-4 w-4" />
                             </button>
                              <button
-                              onClick={() => handlePrintQuoteDirect(quote)}
+                              onClick={() => handleDownloadPdfDirect(quote)}
                               className="p-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded-lg border border-indigo-100 transition active:scale-95 cursor-pointer"
                               title="Download PDF"
                             >
@@ -2638,7 +3007,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             <Printer className="h-4 w-4" />
                           </button>
                            <button
-                            onClick={() => handlePrintQuoteDirect(quote)}
+                            onClick={() => handleDownloadPdfDirect(quote)}
                             className="p-2 bg-white hover:bg-indigo-50 text-indigo-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm"
                             title="Download PDF"
                           >
@@ -4591,6 +4960,21 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           </svg>
           WhatsApp
         </button>
+      </div>
+    )}
+
+    {/* PDF GENERATION AND UPLOAD OVERLAY SPINNER */}
+    {isGeneratingPdf && (
+      <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print select-none">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 flex flex-col items-center text-center max-w-xs animate-in fade-in zoom-in-95 duration-200">
+          <Loader2 className="h-10 w-10 text-blue-600 animate-spin mb-4" />
+          <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
+            {lang === "gu" ? "કૃપા કરીને રાહ જુઓ..." : "Please Wait..."}
+          </h3>
+          <p className="text-[11px] text-slate-500 font-bold leading-relaxed">
+            {pdfFeedback || (lang === "gu" ? "પીડીએફ પર પ્રક્રિયા થઈ રહી છે..." : "Processing PDF file...")}
+          </p>
+        </div>
       </div>
     )}
 
