@@ -1604,6 +1604,47 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     await executePrint({ ...quote, items: itemsToLoad });
   };
 
+  const handleShareWhatsApp = async (quote: any) => {
+    // 1. Get client name and contact details
+    const cName = quote.clientName || quote.client_name || clientName || "";
+    const matchedClient = clientsList.find(c => c.name.toLowerCase() === cName.toLowerCase());
+    let phone = matchedClient?.contact || clientContact || "";
+    
+    // 2. Clean phone number (digits only)
+    let cleanPhone = phone.replace(/\D/g, "");
+    
+    // 3. Prompt for number if empty
+    if (!cleanPhone) {
+      const inputPhone = prompt(
+        lang === "gu" ? "ગ્રાહકનો વોટ્સએપ નંબર દાખલ કરો (મોબાઈલ નંબર):" : 
+        lang === "hi" ? "ग्राहक का व्हाट्सएप नंबर दर्ज करें (मोबाइल नंबर):" : 
+        "Enter Client's WhatsApp Number (with country code, e.g., 919999999999):", 
+        ""
+      );
+      if (inputPhone !== null) {
+        cleanPhone = inputPhone.replace(/\D/g, "");
+      }
+    }
+    
+    // 4. Prepend India country code (91) if 10 digits
+    if (cleanPhone.length === 10) {
+      cleanPhone = "91" + cleanPhone;
+    }
+    
+    // 5. Format message details
+    const quoteNum = quote.quoteNumber || quote.quote_number || quoteNumber || "—";
+    const quoteDateStr = quote.quoteDate || quote.quote_date || quoteDate || "—";
+    const totalAmount = (quote.total || quote.total_amount || total || 0).toLocaleString("en-IN");
+    const compName = companyInfo?.name || "Our Store";
+    
+    const message = `Hello ${cName},\n\nHere is your *Quotation Ref: ${quoteNum}* from *${compName}*\n*Date:* ${quoteDateStr}\n*Total Amount:* ₹${totalAmount}\n\nPlease find the detailed quotation PDF attached.\n\nThank you!`;
+    
+    const encodedText = encodeURIComponent(message);
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+    
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleDownloadQuoteExcel = async (quote: any) => {
     let itemsToLoad = quote.items;
     if (!itemsToLoad) {
@@ -2106,6 +2147,18 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             <Printer className="h-4 w-4" />
             {t("printExportPdf")}
           </button>
+
+          <button
+            onClick={() => handleShareWhatsApp({})}
+            disabled={selectedItems.length === 0}
+            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-50 active:scale-95 shadow-sm shrink-0 cursor-pointer"
+            title="Share on WhatsApp"
+          >
+            <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
+            </svg>
+            WhatsApp
+          </button>
         </div>
       </div>
 
@@ -2320,6 +2373,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               <Download className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => handleShareWhatsApp(quote)}
+                              className="p-1.5 bg-green-50 hover:bg-green-600 hover:text-white text-green-600 rounded-lg border border-green-100 transition active:scale-95 cursor-pointer flex items-center justify-center"
+                              title="Share on WhatsApp"
+                            >
+                              <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
+                              </svg>
+                            </button>
+                            <button
                               onClick={() => handleDeleteQuote(quote.id)}
                               className="p-1.5 bg-red-50 hover:bg-red-650 hover:text-white text-red-655 rounded-lg border border-red-100 transition active:scale-95 cursor-pointer"
                               title="Delete"
@@ -2453,6 +2515,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             title="Download PDF"
                           >
                             <Download className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleShareWhatsApp(quote)}
+                            className="p-2 bg-white hover:bg-green-50 text-green-600 rounded-xl border border-slate-200 transition active:scale-95 shadow-sm flex items-center justify-center"
+                            title="Share on WhatsApp"
+                          >
+                            <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
+                            </svg>
                           </button>
                           <button
                             onClick={() => handleDeleteQuote(quote.id)}
@@ -4324,6 +4395,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         >
           <Printer className="h-4 w-4" />
           {t("printExportPdf")}
+        </button>
+
+        <button
+          onClick={() => handleShareWhatsApp({})}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 text-xs font-black text-white transition active:scale-95 cursor-pointer uppercase tracking-wider"
+        >
+          <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.811 1.452 5.518 0 10.006-4.486 10.01-10.002.002-2.673-1.03-5.185-2.905-7.062C16.688 1.666 14.184.63 11.52.63c-5.522 0-10.013 4.49-10.018 10.007-.002 1.741.464 3.441 1.348 4.954l-1.018 3.715 3.81-1 .005.003zM16.65 13.56c-.28-.14-1.65-.815-1.905-.907-.255-.093-.44-.14-.625.14-.185.28-.71.907-.87 1.092-.16.185-.32.208-.6.07-2.73-1.37-3.93-2.067-5.49-4.755-.16-.28-.16-.48-.02-.62.13-.13.28-.32.42-.48.14-.16.19-.28.28-.465.09-.19.05-.35-.02-.49-.07-.14-.625-1.505-.855-2.06-.225-.542-.455-.47-.625-.47-.16 0-.345-.02-.53-.02-.185 0-.485.07-.74.348-.255.28-.97.95-.97 2.32 0 1.37 1 2.695 1.14 2.88.14.185 1.96 3 4.75 4.2 2.79 1.2 2.79.8 3.285.75.5-.05 1.65-.675 1.88-1.33.23-.653.23-1.21.16-1.33-.08-.105-.26-.15-.54-.29z" />
+          </svg>
+          WhatsApp
         </button>
       </div>
     )}
