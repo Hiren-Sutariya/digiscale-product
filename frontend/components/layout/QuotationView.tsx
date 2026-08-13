@@ -2652,27 +2652,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     }, 150);
   };
 
-  const handleOnlyPrint = async () => {
-    setShowPrintSaveModal(false);
-    const currentQuote = {
-      id: "preview",
-      quoteNumber,
-      clientName,
-      clientCompany,
-      clientAddress,
-      date: quoteDate,
-      items: selectedItems,
-      taxInput,
-      cashAmount,
-      bankAmount,
-      applyEventMarkup,
-      eventMarkupPercent,
-      total: total,
-      staffName: localStorage.getItem("user_name") || "Admin"
-    };
-    await executePrint(currentQuote);
-  };
-
   if (loadingProfile) {
     return (
       <div className="flex flex-col h-[calc(100vh-140px)] items-center justify-center">
@@ -5130,14 +5109,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             >
               <Check className="h-4 w-4" />
               {lang === "gu" ? "સેવ અને પ્રિન્ટ કરો" : lang === "hi" ? "सेव और प्रिंट करें" : "Save & Print"}
-            </button>
-            
-            <button
-              onClick={handleOnlyPrint}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase py-3 transition active:scale-95 cursor-pointer shadow-sm tracking-wider"
-            >
-              <Printer className="h-4 w-4" />
-              {lang === "gu" ? "માત્ર પ્રિન્ટ કરો" : lang === "hi" ? "केवल प्रिंट करें" : "Only Print (No Save)"}
             </button>
 
             <button
