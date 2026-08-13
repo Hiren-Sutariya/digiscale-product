@@ -1061,6 +1061,86 @@ function CollectionsPageContent() {
     }
   };
 
+  const syncProductToSiblings = async (sourceProductId: string, oldName: string, updatedFields: Partial<Product>) => {
+    if (!oldName || !currentUserId) return;
+    
+    // Only sync if the current collection is a code collection
+    const isCode = selectedCol ? isCodeCollection(selectedCol) : false;
+    if (!isCode) return;
+
+    try {
+      // Find sibling products with the same name and user_id in other collections
+      const { data: siblings } = await supabase
+        .from('products')
+        .select('id, collection_id, warehouse')
+        .eq('user_id', currentUserId)
+        .eq('name', oldName)
+        .neq('id', sourceProductId);
+
+      if (siblings && siblings.length > 0) {
+        const siblingIds = siblings.map(s => s.id);
+
+        const payload: any = {};
+        if (updatedFields.name !== undefined) payload.name = updatedFields.name;
+        if (updatedFields.stock !== undefined) payload.stock = updatedFields.stock;
+        if (updatedFields.cartonQty !== undefined) payload.cartonQty = updatedFields.cartonQty;
+        if (updatedFields.rate !== undefined) payload.rate = updatedFields.rate;
+        if (updatedFields.length !== undefined) payload.length = updatedFields.length;
+        if (updatedFields.color !== undefined) payload.color = updatedFields.color;
+        if (updatedFields.unit_type !== undefined) payload.unit_type = updatedFields.unit_type;
+        if (updatedFields.description !== undefined) payload.description = updatedFields.description;
+        if (updatedFields.photoUrl !== undefined) payload.photoUrl = updatedFields.photoUrl;
+        if (updatedFields.warehouse !== undefined) payload.warehouse = updatedFields.warehouse;
+
+        if (Object.keys(payload).length > 0) {
+          const { error: siblingUpdateError } = await supabase
+            .from('products')
+            .update(payload)
+            .in('id', siblingIds);
+
+          if (siblingUpdateError) throw siblingUpdateError;
+
+          // If warehouse locations changed, update assignments for all siblings
+          if (updatedFields.warehouse !== undefined) {
+            for (const sibling of siblings) {
+              const sOldWarehouse = sibling.warehouse || "";
+              if (sOldWarehouse) {
+                await supabase.from("warehouse_assignments").delete().eq("product_id", sibling.id);
+                setWarehouseAssignments(prev => {
+                  const next = { ...prev };
+                  const oldLocs = sOldWarehouse.split(',').filter(Boolean);
+                  oldLocs.forEach((loc: string) => {
+                    if (next[loc]) next[loc] = next[loc].filter(i => i.productId !== sibling.id);
+                  });
+                  return next;
+                });
+              }
+              if (updatedFields.warehouse) {
+                const locations = updatedFields.warehouse.split(',').filter(Boolean);
+                const assignments = locations.map(loc => ({
+                  location_key: loc,
+                  product_id: sibling.id,
+                  collection_id: sibling.collection_id,
+                  user_id: currentUserId
+                }));
+                await supabase.from("warehouse_assignments").insert(assignments);
+                setWarehouseAssignments(prev => {
+                  const next = { ...prev };
+                  locations.forEach(loc => {
+                    next[loc] = [...(next[loc] || []), { productId: sibling.id, collectionId: sibling.collection_id }];
+                  });
+                  return next;
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sync product siblings:", err);
+    }
+  };
+
   const handleSaveEditRow = async () => {
     if (!editingProductState || !editingProductRowId) return;
     if (isSavingEditRow) return; // Prevent double-click
@@ -1101,6 +1181,11 @@ function CollectionsPageContent() {
 
       if (error) throw error;
 
+      // Sync copied products in other collections if editing a product in a Code Collection
+      const existingProd = products.find(p => p.id === editingProductRowId);
+      const oldName = existingProd?.name || "";
+      await syncProductToSiblings(editingProductRowId, oldName, productPayload);
+
       setProducts((prev) =>
         prev.map((p) =>
           p.id === editingProductRowId
@@ -1110,7 +1195,6 @@ function CollectionsPageContent() {
       );
 
       // Handle warehouse assignment change
-      const existingProd = products.find(p => p.id === editingProductRowId);
       const oldWarehouse = existingProd?.warehouse || "";
       if (oldWarehouse !== productPayload.warehouse) {
         if (oldWarehouse) {
@@ -1835,6 +1919,10 @@ ${rows}
         supabase.from('products').update({ photoUrl: dataUrl }).eq('id', photoAssignTargetId)
           .then(({ error }) => {
             if (error) console.error("Failed to update product photoUrl in Supabase:", error);
+            const prod = products.find(p => p.id === photoAssignTargetId) || allProducts.find(p => p.id === photoAssignTargetId);
+            if (prod?.name) {
+              syncProductToSiblings(photoAssignTargetId, prod.name, { photoUrl: dataUrl });
+            }
           });
       };
       img.src = src;
@@ -4446,6 +4534,9 @@ ${rows}
                           supabase.from('products').update({ photoUrl: dataUrl }).eq('id', prod.id)
                             .then(({ error }) => {
                               if (error) console.error("Failed to update product photoUrl in Supabase:", error);
+                              if (prod.name) {
+                                syncProductToSiblings(prod.id, prod.name, { photoUrl: dataUrl });
+                              }
                             });
                         };
                         img.src = src;
