@@ -465,6 +465,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   // Selected Quotation Items
   const [selectedItems, setSelectedItems] = useState<QuotationItem[]>([]);
   const [taxInput, setTaxInput] = useState<string>("");
+  const [otherLabel, setOtherLabel] = useState<string>("");
+  const [otherAmount, setOtherAmount] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<string>("");
   const [bankAmount, setBankAmount] = useState<string>("");
 
@@ -975,6 +977,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             let addr = q.client_address || "";
             let validDate = "";
             let orderStatus = q.is_order_done ? "done" : "follow_up";
+            let parsedOtherLabel = "";
+            let parsedOtherAmount = "";
             
             if (addr.includes(" ||status:")) {
               const parts = addr.split(" ||status:");
@@ -986,6 +990,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               addr = parts[0];
               validDate = parts[1];
             }
+            if (addr.includes(" ||otherLabel:")) {
+              const parts = addr.split(" ||otherLabel:");
+              addr = parts[0];
+              parsedOtherLabel = parts[1];
+            }
+            if (addr.includes(" ||otherAmount:")) {
+              const parts = addr.split(" ||otherAmount:");
+              addr = parts[0];
+              parsedOtherAmount = parts[1];
+            }
             return {
               id: q.id,
               quoteNumber: q.quote_number,
@@ -996,6 +1010,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               orderStatus: orderStatus,
               quoteDate: q.quote_date,
               taxInput: q.tax_input || "",
+              otherLabel: parsedOtherLabel,
+              otherAmount: parsedOtherAmount,
               cashAmount: q.cash_amount?.toString() || "",
               bankAmount: q.bank_amount?.toString() || "",
               total: q.total_amount,
@@ -1256,12 +1272,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             let addr = q.client_address || "";
             let validDate = "";
             let orderStatus = q.is_order_done ? "done" : "follow_up";
+            let parsedOtherLabel2 = "";
+            let parsedOtherAmount2 = "";
             if (addr.includes(" ||status:")) { const parts = addr.split(" ||status:"); addr = parts[0]; orderStatus = parts[1]; }
             if (addr.includes(" ||validUntil:")) { const parts = addr.split(" ||validUntil:"); addr = parts[0]; validDate = parts[1]; }
+            if (addr.includes(" ||otherLabel:")) { const parts = addr.split(" ||otherLabel:"); addr = parts[0]; parsedOtherLabel2 = parts[1]; }
+            if (addr.includes(" ||otherAmount:")) { const parts = addr.split(" ||otherAmount:"); addr = parts[0]; parsedOtherAmount2 = parts[1]; }
             return {
               id: q.id, quoteNumber: q.quote_number, clientName: q.client_name, clientCompany: q.client_company,
               clientAddress: addr, validUntil: validDate, orderStatus, quoteDate: q.quote_date,
-              taxInput: q.tax_input || "", cashAmount: q.cash_amount?.toString() || "", bankAmount: q.bank_amount?.toString() || "",
+              taxInput: q.tax_input || "", otherLabel: parsedOtherLabel2, otherAmount: parsedOtherAmount2, cashAmount: q.cash_amount?.toString() || "", bankAmount: q.bank_amount?.toString() || "",
               total: q.total_amount, applyEventMarkup: q.apply_event_markup, eventMarkupPercent: q.event_markup_percent,
               createdAt: q.created_at, isOrderDone: q.is_order_done || false,
               items: q.items ? (typeof q.items === 'string' ? JSON.parse(q.items) : q.items) : undefined,
@@ -1332,6 +1352,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       quoteDate,
       items: selectedItems,
       taxInput,
+      otherLabel,
+      otherAmount,
       cashAmount,
       bankAmount,
       total,
@@ -1358,7 +1380,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         quote_number: finalQuoteNumber,
         client_name: clientName,
         client_company: clientCompany,
-        client_address: clientAddress + (validUntil ? ` ||validUntil:${validUntil}` : ""),
+        client_address: clientAddress + (validUntil ? ` ||validUntil:${validUntil}` : "") + (otherLabel ? ` ||otherLabel:${otherLabel}` : "") + (otherAmount ? ` ||otherAmount:${otherAmount}` : ""),
         quote_date: quoteDate,
         tax_input: taxInput,
         cash_amount: cashAmount ? parseFloat(cashAmount) : 0,
@@ -1481,6 +1503,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setQuoteDate(quote.quoteDate || "");
     setSelectedItems(itemsToLoad || []);
     setTaxInput(quote.taxInput || "");
+    setOtherLabel(quote.otherLabel || "");
+    setOtherAmount(quote.otherAmount || "");
     setCashAmount(quote.cashAmount || "");
     setBankAmount(quote.bankAmount || "");
     setApplyEventMarkup(quote.applyEventMarkup || false);
@@ -1507,6 +1531,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setQuoteDate(() => getLocalDateString());
     setSelectedItems([]);
     setTaxInput("");
+    setOtherLabel("");
+    setOtherAmount("");
     setCashAmount("");
     setBankAmount("");
     setApplyEventMarkup(false);
@@ -1826,6 +1852,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         validUntil: quote.validUntil || "",
         items: itemsToLoad,
         taxInput: quote.taxInput || quote.tax_input || "",
+        otherLabel: quote.otherLabel || "",
+        otherAmount: quote.otherAmount?.toString() || "",
         cashAmount: quote.cashAmount?.toString() || quote.cash_amount?.toString() || "",
         bankAmount: quote.bankAmount?.toString() || quote.bank_amount?.toString() || "",
         total: quote.total || quote.total_amount || 0,
@@ -1845,6 +1873,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         validUntil,
         items: selectedItems,
         taxInput,
+        otherLabel,
+        otherAmount,
         cashAmount,
         bankAmount,
         total,
@@ -2602,8 +2632,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       taxAmount = parseFloat(rawTax) || 0;
     }
   }
+
+  // Other deduction (e.g. advance amount)
+  const otherDeduction = parseFloat(otherAmount) || 0;
   
-  const total = Math.max(0, subtotal + taxAmount);
+  const total = Math.max(0, subtotal + taxAmount - otherDeduction);
 
   // Auto-balance cash/bank when total changes
   // Auto-balance cash/bank only when total changes
@@ -2638,6 +2671,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       date: quoteDate,
       items: selectedItems,
       taxInput,
+      otherLabel,
+      otherAmount,
       cashAmount,
       bankAmount,
       applyEventMarkup,
@@ -4139,6 +4174,39 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                     </span>
                   </div>
 
+                  {/* 3. Other / Advance deduction */}
+                  <div className={`flex justify-between font-bold text-slate-500 items-center ${otherDeduction > 0 || otherLabel || otherAmount ? "" : "print:hidden"}`}>
+                    <span className="flex items-center gap-1.5">
+                      <span className="no-print">Other</span>
+                      <span className="hidden print:inline">{otherLabel || "Other"}</span>
+                      <span className="no-print flex items-center gap-0.5">
+                        (
+                        <input
+                          type="text"
+                          placeholder="e.g. Advance"
+                          value={otherLabel}
+                          onChange={(e) => setOtherLabel(e.target.value)}
+                          className="w-20 text-center font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded py-0.5 px-1.5 outline-none text-[10px]"
+                        />
+                        )
+                      </span>
+                      <span className="hidden print:inline">({otherLabel})</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="no-print text-red-500">-</span>
+                      <span className="no-print">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={otherAmount}
+                          onChange={(e) => setOtherAmount(e.target.value)}
+                          className="w-20 text-right font-bold text-slate-800 bg-slate-100 border border-slate-200 rounded py-0.5 px-1.5 outline-none text-[10px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </span>
+                      <span className="hidden print:inline">-₹{otherDeduction.toLocaleString("en-IN")}</span>
+                    </span>
+                  </div>
+
                   <hr className="border-slate-200" />
 
                   {/* 4. Grand Total */}
@@ -4513,6 +4581,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                   </div>
                 )}
 
+                {selectedQuoteForPreview.otherAmount && parseFloat(selectedQuoteForPreview.otherAmount) > 0 && (
+                  <div className="flex justify-between font-bold text-slate-500">
+                    <span>{selectedQuoteForPreview.otherLabel || "Other"} (Deduction)</span>
+                    <span>-₹{parseFloat(selectedQuoteForPreview.otherAmount).toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+
                 <hr className="border-slate-200" />
 
                 <div className="flex justify-between text-base font-black text-slate-950 bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -4781,6 +4856,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                       return tAmt;
                     })().toLocaleString("en-IN")}
                   </span>
+                </div>
+              )}
+
+              {printQuoteData.otherAmount && parseFloat(String(printQuoteData.otherAmount)) > 0 && (
+                <div className="flex justify-between font-bold text-slate-500 px-1 items-center">
+                  <span className="text-[11px]">{printQuoteData.otherLabel || "Other"}</span>
+                  <span className="text-sm">-₹{parseFloat(String(printQuoteData.otherAmount)).toLocaleString("en-IN")}</span>
                 </div>
               )}
               
