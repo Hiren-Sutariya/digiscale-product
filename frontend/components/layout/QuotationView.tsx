@@ -582,6 +582,28 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     return () => window.removeEventListener("open-mobile-camera-scanner", handleOpenScanner);
   }, []);
 
+  // Intercept mobile back button when camera scanner is open
+  // Push a history state when scanner opens so back button closes scanner instead of navigating
+  useEffect(() => {
+    if (showCameraScanner) {
+      // Push a dummy state so back button has something to pop
+      window.history.pushState({ cameraScanner: true }, "");
+
+      const handlePopState = (e: PopStateEvent) => {
+        // If the popped state is NOT our camera state, it means user went "too far back"
+        // Just close the scanner — do NOT navigate
+        setShowCameraScanner(false);
+        setCameras([]);
+        setCurrentCameraIndex(0);
+      };
+
+      window.addEventListener("popstate", handlePopState);
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+      };
+    }
+  }, [showCameraScanner]);
+
   useEffect(() => {
     if (selectedQuoteForPreview && zoomMode === "fit") {
       const updateScale = () => {
@@ -1558,13 +1580,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   const handleSaveAndExit = () => {
     setShowLeaveModal(false);
-    // Always save and switch to History tab — never redirect away from quotation page
-    redirectAfterSaveRef.current = null;
-    handleSaveQuotation().then(() => {
-      setActiveSubView("history");
-    });
-    setPendingAction(null);
-    setPendingNavigationUrl(null);
+    if (pendingAction === "go_history") {
+      // Save and then switch to history view
+      redirectAfterSaveRef.current = null;
+      handleSaveQuotation().then(() => {
+        setActiveSubView("history");
+      });
+    } else {
+      redirectAfterSaveRef.current = pendingNavigationUrl || "/projects";
+      handleSaveQuotation();
+    }
   };
 
   const handleCreateNew = () => {
@@ -5109,13 +5134,13 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             </h3>
             <button
               onClick={() => {
-                setShowCameraScanner(false);
-                setCameras([]);
-                setCurrentCameraIndex(0);
+                // history.back() triggers our popstate handler which closes scanner cleanly
+                window.history.back();
               }}
-              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition cursor-pointer"
+              title="Close scanner"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
           
