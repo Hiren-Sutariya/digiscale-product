@@ -464,7 +464,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   // Selected Quotation Items
   const [selectedItems, setSelectedItems] = useState<QuotationItem[]>([]);
-  const [isDirty, setIsDirty] = useState(false); // true = unsaved changes exist
   const [taxInput, setTaxInput] = useState<string>("");
   const [otherLabel, setOtherLabel] = useState<string>("");
   const [otherAmount, setOtherAmount] = useState<string>("");
@@ -1167,7 +1166,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     // 1. Handle browser tab close or reload
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isLeavingRef.current) return;
-      if (activeSubView === "create" && isDirty) {
+      if (activeSubView === "create" && selectedItems.length > 0) {
         e.preventDefault();
         e.returnValue = "";
         return "";
@@ -1176,7 +1175,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     // 2. Handle routing inside SPA by intercepting clicks on nav links
     const handleAnchorClick = (e: MouseEvent) => {
-      if (activeSubView !== "create" || !isDirty) return;
+      if (activeSubView !== "create" || selectedItems.length === 0) return;
 
       const target = e.target as HTMLElement;
       const anchor = target.closest("a");
@@ -1208,7 +1207,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("click", handleAnchorClick, true);
     };
-  }, [selectedItems, lang, activeSubView, isDirty]);
+  }, [selectedItems, lang, activeSubView]);
 
   // Realtime sync: auto-refresh quotation data when changes happen from another device/user
   useEffect(() => {
@@ -1448,7 +1447,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       }
 
       setSavedQuotes(updatedQuotes);
-      setIsDirty(false); // mark clean after successful save
       
       if (redirectAfterSaveRef.current) {
         isLeavingRef.current = true;
@@ -1504,7 +1502,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setClientAddress(quote.clientAddress || "");
     setQuoteDate(quote.quoteDate || "");
     setSelectedItems(itemsToLoad || []);
-    setIsDirty(false); // loading an existing quote = no unsaved changes
     setTaxInput(quote.taxInput || "");
     setOtherLabel(quote.otherLabel || "");
     setOtherAmount(quote.otherAmount || "");
@@ -1533,7 +1530,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     setClientContact("");
     setQuoteDate(() => getLocalDateString());
     setSelectedItems([]);
-    setIsDirty(false);
     setTaxInput("");
     setOtherLabel("");
     setOtherAmount("");
@@ -1562,20 +1558,17 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   const handleSaveAndExit = () => {
     setShowLeaveModal(false);
-    if (pendingAction === "go_history") {
-      // Save and then switch to history view
-      redirectAfterSaveRef.current = null;
-      handleSaveQuotation().then(() => {
-        setActiveSubView("history");
-      });
-    } else {
-      redirectAfterSaveRef.current = pendingNavigationUrl || "/projects";
-      handleSaveQuotation();
-    }
+    // Always save and switch to History tab — never redirect away from quotation page
+    redirectAfterSaveRef.current = null;
+    handleSaveQuotation().then(() => {
+      setActiveSubView("history");
+    });
+    setPendingAction(null);
+    setPendingNavigationUrl(null);
   };
 
   const handleCreateNew = () => {
-    if (activeSubView === "create" && isDirty) {
+    if (activeSubView === "create" && selectedItems.length > 0) {
       setPendingAction("reset");
       setShowLeaveModal(true);
     } else {
@@ -2566,7 +2559,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         }
       ];
     });
-    setIsDirty(true);
   };
 
   // Update cartons (CTNS)
@@ -2584,8 +2576,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         return item;
       })
     );
-    setIsDirty(true);
   };
+
+  // Update quantity (QTY) manually
   const handleUpdateQuantity = (itemId: string, qty: number) => {
     setSelectedItems(
       selectedItems.map(item => {
@@ -2598,8 +2591,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         return item;
       })
     );
-    setIsDirty(true);
   };
+
+  // Update rate manually
   const handleUpdateRate = (itemId: string, newRate: string) => {
     setSelectedItems(
       selectedItems.map(item => {
@@ -2612,7 +2606,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         return item;
       })
     );
-    setIsDirty(true);
   };
 
   // Filter products by global search query
@@ -2867,7 +2860,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         <button
           onClick={() => {
             // If there are unsaved items and we're on the create view, warn before switching
-            if (activeSubView === "create" && isDirty) {
+            if (activeSubView === "create" && selectedItems.length > 0) {
               setPendingAction("go_history");
               setShowLeaveModal(true);
             } else {
@@ -3955,7 +3948,6 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                               onChange={(e) => {
                                 const newDesc = e.target.value;
                                 setSelectedItems(prev => prev.map(si => si.id === item.id ? { ...si, description: newDesc } : si));
-                                setIsDirty(true);
                               }}
                               className="w-full px-2.5 py-1 text-[11px] font-semibold border border-slate-205 rounded-lg focus:outline-none focus:border-blue-500 bg-white shadow-inner"
                             />
@@ -4074,7 +4066,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                             <span>₹{(item.quantity * (parseFloat(getItemRate(item.rate)) || 0)).toLocaleString("en-IN")}</span>
                             <button
                               type="button"
-                              onClick={() => { setSelectedItems(selectedItems.filter((_, idx) => idx !== selectedItems.indexOf(item))); setIsDirty(true); }}
+                              onClick={() => setSelectedItems(selectedItems.filter((_, idx) => idx !== selectedItems.indexOf(item)))}
                               className="no-print p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                               title="Remove item"
                             >
