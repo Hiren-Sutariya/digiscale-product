@@ -410,7 +410,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const redirectAfterSaveRef = useRef<string | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"navigate" | "reset" | "go_history" | null>(null);
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
   const [showPrintSaveModal, setShowPrintSaveModal] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -1549,6 +1549,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       window.location.href = pendingNavigationUrl;
     } else if (pendingAction === "reset") {
       executeCreateNew();
+    } else if (pendingAction === "go_history") {
+      setActiveSubView("history");
     }
     setPendingAction(null);
     setPendingNavigationUrl(null);
@@ -1556,8 +1558,16 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   const handleSaveAndExit = () => {
     setShowLeaveModal(false);
-    redirectAfterSaveRef.current = pendingNavigationUrl || "/projects";
-    handleSaveQuotation();
+    if (pendingAction === "go_history") {
+      // Save and then switch to history view
+      redirectAfterSaveRef.current = null;
+      handleSaveQuotation().then(() => {
+        setActiveSubView("history");
+      });
+    } else {
+      redirectAfterSaveRef.current = pendingNavigationUrl || "/projects";
+      handleSaveQuotation();
+    }
   };
 
   const handleCreateNew = () => {
@@ -2851,7 +2861,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           📝 {t("createQuotation")}
         </button>
         <button
-          onClick={() => setActiveSubView("history")}
+          onClick={() => {
+            // If there are unsaved items and we're on the create view, warn before switching
+            if (activeSubView === "create" && selectedItems.length > 0) {
+              setPendingAction("go_history");
+              setShowLeaveModal(true);
+            } else {
+              setActiveSubView("history");
+            }
+          }}
           className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 md:px-5 py-2 md:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition active:scale-95 shadow-sm cursor-pointer ${
             activeSubView === "history"
               ? "bg-blue-600 hover:bg-blue-700 text-white"
