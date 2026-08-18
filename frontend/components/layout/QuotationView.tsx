@@ -5133,7 +5133,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     {/* CAMERA BARCODE SCANNER MODAL */}
     {showCameraScanner && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/70 backdrop-blur-sm select-none">
         
         {/* Global Screen-Level Scan Notification Banner (iOS style top notification) */}
         {barcodeFeedback && (
@@ -5172,7 +5172,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           </div>
         )}
 
-        <div className="w-full h-full flex flex-col bg-white">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col mx-4">
           {/* Header */}
           <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100 shrink-0">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -5190,14 +5190,14 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             </button>
           </div>
 
-          {/* Body — no scroll, compact layout */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 pb-4 overflow-hidden">
-            <p className="text-[11px] text-slate-500 font-bold text-center shrink-0">
+          {/* Body — compact, no stretch */}
+          <div className="flex flex-col items-center gap-3 px-4 py-4">
+            <p className="text-[11px] text-slate-500 font-bold text-center">
               {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the camera to scan"}
             </p>
 
-            {/* Camera scanner container — square, compact so flash button shows below */}
-            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0" style={{ maxWidth: "320px", maxHeight: "320px" }}>
+            {/* Camera scanner — square, compact */}
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black" style={{ maxWidth: "320px", maxHeight: "320px" }}>
               <div
                 id="camera-scanner-reader"
                 className="w-full"
@@ -5208,7 +5208,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             {torchSupported && (
               <button
                 onClick={toggleTorch}
-                className={`shrink-0 flex items-center gap-2 px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm border ${
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm border ${
                   torchOn
                     ? "bg-amber-400 hover:bg-amber-500 text-white border-amber-400 shadow-amber-300/50 shadow-md"
                     : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
