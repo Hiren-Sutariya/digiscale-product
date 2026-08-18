@@ -5377,7 +5377,7 @@ ${rows}
                             </p>
                           );
                         })()}
-                        <LabelDataMatrix value={prod.name || "DIGISCALE"} is50x25={is50x25} />
+                        <LabelDataMatrix value={prod.id || prod.name || "DIGISCALE"} is50x25={is50x25} />
                       </div>
 
                       {/* Line 3: Carton Qty & Length / Location */}

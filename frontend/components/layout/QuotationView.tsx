@@ -2516,21 +2516,36 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     const searchTarget = cleanCode.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
     
-    // 1. Local array search
+    // 1. Local array search — try ID first (permanent), then name (backward compat for old labels)
     let matchedProduct = products.find(p => {
-      const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
-      return sanitizedName === searchTarget;
+      const sanitizedId = (p.id || "").replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+      return sanitizedId === searchTarget;
     });
+
+    if (!matchedProduct) {
+      matchedProduct = products.find(p => {
+        const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+        return sanitizedName === searchTarget;
+      });
+    }
 
     // 2. Direct Supabase fallback if local search yields no results (useful on mobile first mounts)
     if (!matchedProduct) {
       try {
         const { data } = await supabase.from("products").select("*");
         if (data) {
+          // Try ID first (new labels)
           matchedProduct = data.find(p => {
-            const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
-            return sanitizedName === searchTarget;
+            const sanitizedId = (p.id || "").replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+            return sanitizedId === searchTarget;
           });
+          // Fallback to name (old labels printed before fix)
+          if (!matchedProduct) {
+            matchedProduct = data.find(p => {
+              const sanitizedName = p.name.replace(/[^a-zA-Z0-9-]/g, "").toLowerCase();
+              return sanitizedName === searchTarget;
+            });
+          }
         }
       } catch (e) {
         console.error("Supabase direct lookup failed:", e);
