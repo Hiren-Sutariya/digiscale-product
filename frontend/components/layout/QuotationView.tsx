@@ -820,7 +820,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             activeCamera,
             {
               fps: 30, // Max frame rate for speed
-              aspectRatio: 1.777778, // Restore HD 16:9 aspect ratio for accurate coordinate mapping and scan success
+              aspectRatio: 1.0, // Square (1:1) keeps camera compact so Flash button stays visible below
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: false // Disable to prevent silent failures on iOS Safari / iPhone devices
               },
@@ -830,11 +830,11 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               },
               videoConstraints: typeof activeCamera === "string" ? {
                 deviceId: { exact: activeCamera },
-                width: { ideal: 1280 },
+                width: { ideal: 720 },
                 height: { ideal: 720 }
               } : {
                 facingMode: { ideal: "environment" },
-                width: { ideal: 1280 },
+                width: { ideal: 720 },
                 height: { ideal: 720 }
               },
               formatsToSupport: [
@@ -5196,8 +5196,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the camera to scan"}
             </p>
 
-            {/* Camera scanner container — fills available space */}
-            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0" style={{ maxWidth: "340px" }}>
+            {/* Camera scanner container — square, compact so flash button shows below */}
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0" style={{ maxWidth: "320px", maxHeight: "320px" }}>
               <div
                 id="camera-scanner-reader"
                 className="w-full"
