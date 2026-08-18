@@ -588,11 +588,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   // Push a history state when scanner opens so back button closes scanner instead of navigating
   useEffect(() => {
     if (showCameraScanner) {
+      // Lock body scroll — prevents background page scrolling on iOS
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+
       // Push a dummy state so back button has something to pop
       window.history.pushState({ cameraScanner: true }, "");
 
       const handlePopState = (e: PopStateEvent) => {
-        // If the popped state is NOT our camera state, it means user went "too far back"
         // Just close the scanner — do NOT navigate
         setShowCameraScanner(false);
         setCameras([]);
@@ -603,6 +607,10 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
       window.addEventListener("popstate", handlePopState);
       return () => {
+        // Restore body scroll
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.width = "";
         window.removeEventListener("popstate", handlePopState);
       };
     }
@@ -5149,16 +5157,15 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           </div>
         )}
 
-        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden relative">
-          {/* Header (Sticky at top) */}
-          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 shrink-0">
+        <div className="w-full h-full flex flex-col bg-white">
+          {/* Header */}
+          <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100 shrink-0">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <span>📷</span>
               {lang === "gu" ? "કેમેરા બારકોડ સ્કેનર" : "Camera Barcode Scanner"}
             </h3>
             <button
               onClick={() => {
-                // history.back() triggers our popstate handler which closes scanner cleanly
                 window.history.back();
               }}
               className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition cursor-pointer"
@@ -5167,42 +5174,40 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
               <X className="h-5 w-5" />
             </button>
           </div>
-          
-          {/* Body Content (Pure clear camera stream, no overlays) */}
-          <div className="p-5 flex-1 overflow-y-auto space-y-4 flex flex-col justify-start">
-            <p className="text-[11px] text-slate-500 font-bold text-center">
+
+          {/* Body — no scroll, compact layout */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 pb-4 overflow-hidden">
+            <p className="text-[11px] text-slate-500 font-bold text-center shrink-0">
               {lang === "gu" ? "તમારા મોબાઈલ કેમેરાને પ્રોડક્ટ બારકોડ સામે રાખો" : "Align the barcode inside the camera to scan"}
             </p>
-            
-            {/* Camera scanner container */}
-            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mx-auto max-w-[320px] shrink-0">
-              <div 
-                id="camera-scanner-reader" 
+
+            {/* Camera scanner container — fills available space */}
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0" style={{ maxWidth: "340px" }}>
+              <div
+                id="camera-scanner-reader"
                 className="w-full"
               />
             </div>
 
             {/* Flashlight / Torch toggle button */}
             {torchSupported && (
-              <div className="flex justify-center pt-1">
-                <button
-                  onClick={toggleTorch}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm border ${
-                    torchOn
-                      ? "bg-amber-400 hover:bg-amber-500 text-white border-amber-400 shadow-amber-300/50 shadow-md"
-                      : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
-                  }`}
-                  title={torchOn ? "Turn off flashlight" : "Turn on flashlight"}
-                >
-                  <svg className={`h-4 w-4 transition-transform ${torchOn ? "rotate-12 scale-110" : ""}`} fill={torchOn ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  {torchOn
-                    ? (lang === "gu" ? "ફ્લેશ બંધ" : "Flash OFF")
-                    : (lang === "gu" ? "ફ્લેશ ચાલુ" : "Flash ON")
-                  }
-                </button>
-              </div>
+              <button
+                onClick={toggleTorch}
+                className={`shrink-0 flex items-center gap-2 px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm border ${
+                  torchOn
+                    ? "bg-amber-400 hover:bg-amber-500 text-white border-amber-400 shadow-amber-300/50 shadow-md"
+                    : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                }`}
+                title={torchOn ? "Turn off flashlight" : "Turn on flashlight"}
+              >
+                <svg className={`h-4 w-4 transition-transform ${torchOn ? "rotate-12 scale-110" : ""}`} fill={torchOn ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {torchOn
+                  ? (lang === "gu" ? "ફ્લેશ બંધ" : "Flash OFF")
+                  : (lang === "gu" ? "ફ્લેશ ચાલુ" : "Flash ON")
+                }
+              </button>
             )}
           </div>
         </div>
