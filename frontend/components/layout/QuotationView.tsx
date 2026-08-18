@@ -510,6 +510,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
   const scannerRef = useRef<any>(null);
   const lastScannedRef = useRef<{ code: string; time: number } | null>(null);
   const lastNoQrTimeRef = useRef<number | null>(null);
@@ -595,6 +597,8 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
         setShowCameraScanner(false);
         setCameras([]);
         setCurrentCameraIndex(0);
+        setTorchOn(false);
+        setTorchSupported(false);
       };
 
       window.addEventListener("popstate", handlePopState);
@@ -856,7 +860,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             }
           );
 
-          // Get capabilities and set zoom limits
+          // Get capabilities and set zoom limits + torch support
           try {
             const capabilities = scannerInstance.getRunningTrackCapabilities() as any;
             if (capabilities && capabilities.zoom) {
@@ -867,8 +871,14 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                 advanced: [{ zoom: defaultZoom } as any]
               });
             }
+            // Check if torch/flashlight is supported
+            if (capabilities && capabilities.torch) {
+              setTorchSupported(true);
+            } else {
+              setTorchSupported(false);
+            }
           } catch (e) {
-            console.warn("Zoom capabilities not supported on this device:", e);
+            console.warn("Zoom/torch capabilities not supported on this device:", e);
           }
         } catch (err) {
           console.error("Failed to start Html5Qrcode:", err);
@@ -909,6 +919,20 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       }
     };
   }, [showCameraScanner, currentCameraIndex]);
+
+  // Toggle flashlight / torch
+  const toggleTorch = async () => {
+    if (!scannerRef.current || !torchSupported) return;
+    const newState = !torchOn;
+    try {
+      await scannerRef.current.applyVideoConstraints({
+        advanced: [{ torch: newState } as any]
+      });
+      setTorchOn(newState);
+    } catch (e) {
+      console.warn("Torch toggle failed:", e);
+    }
+  };
 
   // Load configuration and aggregates on mount
   useEffect(() => {
@@ -5157,6 +5181,29 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
                 className="w-full"
               />
             </div>
+
+            {/* Flashlight / Torch toggle button */}
+            {torchSupported && (
+              <div className="flex justify-center pt-1">
+                <button
+                  onClick={toggleTorch}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm border ${
+                    torchOn
+                      ? "bg-amber-400 hover:bg-amber-500 text-white border-amber-400 shadow-amber-300/50 shadow-md"
+                      : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                  }`}
+                  title={torchOn ? "Turn off flashlight" : "Turn on flashlight"}
+                >
+                  <svg className={`h-4 w-4 transition-transform ${torchOn ? "rotate-12 scale-110" : ""}`} fill={torchOn ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  {torchOn
+                    ? (lang === "gu" ? "ફ્લેશ બંધ" : "Flash OFF")
+                    : (lang === "gu" ? "ફ્લેશ ચાલુ" : "Flash ON")
+                  }
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
