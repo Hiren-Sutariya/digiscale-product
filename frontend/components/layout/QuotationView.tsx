@@ -383,22 +383,32 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
     let hasMore = true;
 
     while (hasMore) {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, stock, cartonQty, rate, color, length, collection_id, description')
-        .eq('user_id', userId)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, stock, cartonQty, rate, color, length, collection_id, description')
+          .eq('user_id', userId)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if (error) throw error;
-      if (data) {
-        allLoadedProducts = [...allLoadedProducts, ...data];
-        if (data.length < pageSize) {
+        if (error) {
+          console.warn("Product page fetch warning:", error.message || error);
           hasMore = false;
-        } else {
-          page++;
+          break;
         }
-      } else {
+        if (data) {
+          allLoadedProducts = [...allLoadedProducts, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      } catch (err) {
+        console.warn("Product page fetch error:", err);
         hasMore = false;
+        break;
       }
     }
     return allLoadedProducts;
@@ -434,7 +444,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
   // Loaded Company Info from Profile
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [showBankDetails, setShowBankDetails] = useState<boolean>(true);
-  const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
+  const [loadingProfile, setLoadingProfile] = useState<boolean>(false);
 
   // Authorized Sign option (Optional)
   const [showAuthSign, setShowAuthSign] = useState<boolean>(true);
@@ -476,6 +486,7 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   // Saved Quotations & Subview History
   const [savedQuotes, setSavedQuotes] = useState<any[]>([]);
+  const [isQuotesLoading, setIsQuotesLoading] = useState<boolean>(true);
   const [clientsList, setClientsList] = useState<any[]>([]);
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [showClientSearch, setShowClientSearch] = useState(false);
@@ -944,90 +955,49 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
   // Load configuration and aggregates on mount
   useEffect(() => {
+    let activeUserId: string | null = null;
+
     async function loadData(userId: string) {
       try {
-        const cacheKey = `quotation_data_${userId}`;
+        const cleanUserId = String(userId).trim();
+        const cacheKey = `quotation_data_${cleanUserId}`;
         const cachedData = getCache(cacheKey);
         
         if (cachedData) {
           setCollections(cachedData.collections);
           setProducts(cachedData.products);
           setSavedQuotes(cachedData.savedQuotes);
+          if (cachedData.savedQuotes && cachedData.savedQuotes.length > 0) {
+            setIsQuotesLoading(false);
+          }
           if (cachedData.clientsList) setClientsList(cachedData.clientsList);
           setQuoteNumber(cachedData.quoteNumber);
         }
 
-        // Fetch all data from Supabase concurrently for faster loading
+        // Stage 1: Fast load lightweight quotation bills, collections, clients & assignments (~50ms)
         const [
-          { data: colsData, error: colsErr },
-          prodsData,
-          { data: assignsData, error: assignsErr },
-          { data: quotesData, error: quotesErr },
-          { data: clientsData, error: clientsErr }
-        ] = await Promise.all([
-          supabase.from('collections').select('*').eq('user_id', userId),
-          fetchAllProducts(userId),
-          supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name, items').eq('user_id', userId).order('created_at', { ascending: false }),
-          supabase.from('clients').select('*').eq('user_id', userId)
+          colsRes,
+          quotesRes,
+          clientsRes,
+          assignsRes
+        ] = await Promise.allSettled([
+          supabase.from('collections').select('*').eq('user_id', cleanUserId),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', cleanUserId).order('created_at', { ascending: false }),
+          supabase.from('clients').select('*').eq('user_id', cleanUserId),
+          supabase.from('warehouse_assignments').select('*').eq('user_id', cleanUserId)
         ]);
 
-        if (colsErr) throw colsErr;
-        if (assignsErr) throw assignsErr;
-        if (quotesErr) throw quotesErr;
-        if (clientsErr) throw clientsErr;
-        setClientsList(clientsData || []);
+        const colsData = colsRes.status === 'fulfilled' && !colsRes.value.error ? colsRes.value.data : null;
+        const quotesData = quotesRes.status === 'fulfilled' && !quotesRes.value.error ? quotesRes.value.data : null;
+        const clientsData = clientsRes.status === 'fulfilled' && !clientsRes.value.error ? clientsRes.value.data : null;
+        const assignsData = assignsRes.status === 'fulfilled' && !assignsRes.value.error ? assignsRes.value.data : null;
 
-        setCollections(colsData || []);
+        if (clientsData) setClientsList(clientsData);
+        if (colsData) setCollections(colsData);
 
-        // Group and format assignments by product_id
-        const assignsMap: Record<string, string[]> = {};
-        if (assignsData) {
-          assignsData.forEach((a: any) => {
-            if (!a.product_id) return;
-            if (!assignsMap[a.product_id]) {
-              assignsMap[a.product_id] = [];
-            }
-            
-            // Format location_key (e.g. "A-1-upper" -> "A-1 (U)")
-            const parts = a.location_key.split('-');
-            if (parts.length >= 3) {
-              const row = parts[0];
-              const slot = parts[1];
-              const zone = parts[2];
-              const zoneShort = zone.toLowerCase() === 'upper' ? 'U' : zone.toLowerCase() === 'lower' ? 'L' : zone;
-              assignsMap[a.product_id].push(`${row}-${slot} (${zoneShort})`);
-            } else {
-              assignsMap[a.product_id].push(a.location_key);
-            }
-          });
-        }
-
-        const colsMap: Record<string, string> = {};
-        if (colsData) {
-          colsData.forEach((c: any) => {
-            colsMap[c.id] = c.name;
-          });
-        }
-
-        const mappedProds = (prodsData || []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          stock: p.stock,
-          cartonQty: p.cartonQty,
-          rate: p.rate?.toString(),
-          color: p.color,
-          length: p.length?.toString(),
-          photoUrl: p.photoUrl,
-          collectionName: colsMap[p.collection_id] || '',
-          collectionId: p.collection_id,
-          description: p.description,
-          location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
-        }));
-        setProducts(mappedProds);
-
+        let parsedQuotes: any[] = [];
         if (quotesData && quotesData.length > 0) {
-          const parsedQuotes = quotesData.map((q: any) => {
+          parsedQuotes = quotesData.map((q: any) => {
             let addr = q.client_address || "";
             let validDate = "";
             let orderStatus = q.is_order_done ? "done" : "follow_up";
@@ -1078,41 +1048,88 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             };
           });
           setSavedQuotes(parsedQuotes);
+          setIsQuotesLoading(false);
           const nextNum = getNextQuoteNumber(parsedQuotes);
           setQuoteNumber(nextNum);
-          
-          const payload = {
-            collections: colsData || [],
-            products: mappedProds,
-            savedQuotes: parsedQuotes,
-            quoteNumber: nextNum,
-            clientsList: clientsData || []
-          };
-          setCache(cacheKey, payload);
-          if (typeof window !== "undefined") {
-            try {
-              localStorage.setItem(cacheKey, JSON.stringify(payload));
-            } catch (e) {
-              console.warn("Could not save to localStorage, quota exceeded.");
-            }
-          }
-        } else {
+        } else if (quotesData && quotesData.length === 0) {
+          setIsQuotesLoading(false);
           setQuoteNumber("Q-1");
-          const payload = {
-            collections: colsData || [],
-            products: mappedProds,
-            savedQuotes: [],
-            quoteNumber: "Q-1",
-            clientsList: clientsData || []
-          };
-          setCache(cacheKey, payload);
-          if (typeof window !== "undefined") {
-            try {
-              localStorage.setItem(cacheKey, JSON.stringify(payload));
-            } catch (e) {
-              console.warn("Could not save to localStorage, quota exceeded.");
+        } else {
+          setIsQuotesLoading(false);
+        }
+
+        // Save Stage 1 data immediately to cache so next load is 0ms
+        const currentNextNum = parsedQuotes.length > 0 ? getNextQuoteNumber(parsedQuotes) : "Q-1";
+        const stage1Payload = {
+          collections: colsData || [],
+          products: cachedData?.products || [],
+          savedQuotes: parsedQuotes,
+          quoteNumber: currentNextNum,
+          clientsList: clientsData || []
+        };
+        setCache(cacheKey, stage1Payload);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(stage1Payload));
+          } catch (e) {}
+        }
+
+        // Stage 2: Asynchronously load products without blocking instant quotation bills render
+        const prodsData = await fetchAllProducts(cleanUserId);
+
+        // Group and format assignments by product_id
+        const assignsMap: Record<string, string[]> = {};
+        if (assignsData) {
+          assignsData.forEach((a: any) => {
+            if (!a.product_id) return;
+            if (!assignsMap[a.product_id]) {
+              assignsMap[a.product_id] = [];
             }
-          }
+            const parts = a.location_key.split('-');
+            if (parts.length >= 3) {
+              const zoneShort = parts[2].toLowerCase() === 'upper' ? 'U' : parts[2].toLowerCase() === 'lower' ? 'L' : parts[2];
+              assignsMap[a.product_id].push(`${parts[0]}-${parts[1]} (${zoneShort})`);
+            } else {
+              assignsMap[a.product_id].push(a.location_key);
+            }
+          });
+        }
+
+        const colsMap: Record<string, string> = {};
+        if (colsData) {
+          colsData.forEach((c: any) => {
+            colsMap[c.id] = c.name;
+          });
+        }
+
+        const mappedProds = (prodsData || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          stock: p.stock,
+          cartonQty: p.cartonQty,
+          rate: p.rate?.toString(),
+          color: p.color,
+          length: p.length?.toString(),
+          photoUrl: p.photoUrl,
+          collectionName: colsMap[p.collection_id] || '',
+          collectionId: p.collection_id,
+          description: p.description,
+          location: assignsMap[p.id] ? assignsMap[p.id].join(', ') : ''
+        }));
+        setProducts(mappedProds);
+
+        const fullPayload = {
+          collections: colsData || [],
+          products: mappedProds,
+          savedQuotes: parsedQuotes,
+          quoteNumber: currentNextNum,
+          clientsList: clientsData || []
+        };
+        setCache(cacheKey, fullPayload);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(fullPayload));
+          } catch (e) {}
         }
 
       } catch (e: any) {
@@ -1122,19 +1139,51 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
 
     // Fetch company info from profile settings
     if (typeof window !== "undefined") {
-      const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
-      if (cachedUserId) {
-        setCurrentUserId(cachedUserId);
-        const cachedQuotes = localStorage.getItem(`quotation_data_${cachedUserId}`);
+      activeUserId = localStorage.getItem("digiscale_cached_user_id");
+      if (!activeUserId) {
+        const cachedProfile = localStorage.getItem("digiscale_profile");
+        if (cachedProfile) {
+          try {
+            const p = JSON.parse(cachedProfile);
+            if (p.id) {
+              activeUserId = (p.role === "Staff" && p.admin_id) ? p.admin_id.toString() : p.id.toString();
+              if (activeUserId) {
+                localStorage.setItem("digiscale_cached_user_id", activeUserId);
+              }
+            }
+          } catch (e) {}
+        }
+      }
+      if (!activeUserId) {
+        const cachedProfile = localStorage.getItem("digiscale_profile");
+        if (cachedProfile) {
+          try {
+            const p = JSON.parse(cachedProfile);
+            if (p.id) {
+              activeUserId = (p.role === "Staff" && p.admin_id) ? p.admin_id.toString() : p.id.toString();
+              if (activeUserId) {
+                localStorage.setItem("digiscale_cached_user_id", activeUserId);
+              }
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (activeUserId) {
+        const uIdStr: string = activeUserId;
+        setCurrentUserId(uIdStr);
+        const cachedQuotes = localStorage.getItem(`quotation_data_${uIdStr}`);
         if (cachedQuotes) {
           try {
             const parsed = JSON.parse(cachedQuotes);
-            setCollections(parsed.collections);
-            setProducts(parsed.products);
-            setSavedQuotes(parsed.savedQuotes);
-            setQuoteNumber(parsed.quoteNumber);
+            if (parsed.collections) setCollections(parsed.collections);
+            if (parsed.products) setProducts(parsed.products);
+            if (parsed.savedQuotes) setSavedQuotes(parsed.savedQuotes);
+            if (parsed.quoteNumber) setQuoteNumber(parsed.quoteNumber);
+            if (parsed.clientsList) setClientsList(parsed.clientsList);
           } catch(e) {}
         }
+        loadData(uIdStr);
       }
 
       const cachedProfile = localStorage.getItem("digiscale_profile");
@@ -1172,7 +1221,9 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
           if (profile && profile.id) {
             const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
             setCurrentUserId(uId);
-            loadData(uId);
+            if (uId !== activeUserId) {
+              loadData(uId);
+            }
 
           const data = {
             logo: settingsData.company_logo,
@@ -1271,21 +1322,27 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
       try {
         const userId = currentUserId;
         const [
-          { data: colsData },
-          prodsData,
-          { data: assignsData },
-          { data: quotesData },
-          { data: clientsData }
-        ] = await Promise.all([
+          colsRes,
+          prodsRes,
+          assignsRes,
+          quotesRes,
+          clientsRes
+        ] = await Promise.allSettled([
           supabase.from('collections').select('*').eq('user_id', userId),
           fetchAllProducts(userId),
           supabase.from('warehouse_assignments').select('*').eq('user_id', userId),
-          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name, items').eq('user_id', userId).order('created_at', { ascending: false }),
+          supabase.from('quotations').select('id, quote_number, client_name, client_company, client_address, quote_date, tax_input, cash_amount, bank_amount, total_amount, apply_event_markup, event_markup_percent, created_at, is_order_done, staff_name').eq('user_id', userId).order('created_at', { ascending: false }),
           supabase.from('clients').select('*').eq('user_id', userId)
         ]);
 
-        setClientsList(clientsData || []);
-        setCollections(colsData || []);
+        const colsData = colsRes.status === 'fulfilled' && !colsRes.value.error ? colsRes.value.data : null;
+        const prodsData = prodsRes.status === 'fulfilled' ? prodsRes.value : [];
+        const assignsData = assignsRes.status === 'fulfilled' && !assignsRes.value.error ? assignsRes.value.data : null;
+        const quotesData = quotesRes.status === 'fulfilled' && !quotesRes.value.error ? quotesRes.value.data : null;
+        const clientsData = clientsRes.status === 'fulfilled' && !clientsRes.value.error ? clientsRes.value.data : null;
+
+        if (clientsData) setClientsList(clientsData);
+        if (colsData) setCollections(colsData);
 
         const assignsMap: Record<string, string[]> = {};
         if (assignsData) {
@@ -3005,7 +3062,12 @@ export default function QuotationView({ permission = "edit" }: { permission?: st
             </div>
           </div>
 
-          {savedQuotes.length === 0 ? (
+          {isQuotesLoading && savedQuotes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-3" />
+              <p className="text-sm font-semibold text-slate-600 animate-pulse">Loading saved quotations...</p>
+            </div>
+          ) : savedQuotes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <FileText className="h-12 w-12 text-slate-200 mb-3" />
               <p className="text-sm font-semibold">No saved quotations found</p>

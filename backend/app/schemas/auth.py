@@ -13,8 +13,17 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+    user_id: int
     user_name: str
     user_email: str
+    role: Optional[str] = "Admin"
+    admin_id: Optional[int] = None
+    plan: Optional[str] = "Starter"
+    perm_collections: Optional[str] = "edit"
+    perm_warehouse: Optional[str] = "edit"
+    perm_stockbook: Optional[str] = "edit"
+    perm_clients: Optional[str] = "edit"
+    perm_quotations: Optional[str] = "edit"
 
 class ForgotPasswordRequest(BaseModel):
     email: str

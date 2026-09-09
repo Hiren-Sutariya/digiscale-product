@@ -40,8 +40,17 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=token,
         token_type="bearer",
+        user_id=new_user.id,
         user_name=new_user.name,
-        user_email=new_user.email
+        user_email=new_user.email,
+        role=new_user.role or "Admin",
+        admin_id=new_user.admin_id,
+        plan=new_user.plan or "Free",
+        perm_collections=new_user.perm_collections or "edit",
+        perm_warehouse=new_user.perm_warehouse or "edit",
+        perm_stockbook=new_user.perm_stockbook or "edit",
+        perm_clients=new_user.perm_clients or "edit",
+        perm_quotations=new_user.perm_quotations or "edit",
     )
 
 @router.post("/login", response_model=TokenResponse)
@@ -76,8 +85,17 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=token,
         token_type="bearer",
+        user_id=user.id,
         user_name=user.name,
-        user_email=user.email
+        user_email=user.email,
+        role=user.role or "Admin",
+        admin_id=user.admin_id,
+        plan=user.plan or "Starter",
+        perm_collections=user.perm_collections or "edit",
+        perm_warehouse=user.perm_warehouse or "edit",
+        perm_stockbook=user.perm_stockbook or "edit",
+        perm_clients=user.perm_clients or "edit",
+        perm_quotations=user.perm_quotations or "edit",
     )
 
 @router.post("/forgot-password")

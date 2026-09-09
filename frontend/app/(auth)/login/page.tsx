@@ -81,23 +81,6 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // Pre-fetch profile and cache permissions so dashboard renders instantly with no blink
-      try {
-        const profile = await getUserProfile();
-        if (profile && typeof window !== "undefined") {
-          const uId = (profile.role === "Staff" && profile.admin_id) ? profile.admin_id.toString() : profile.id.toString();
-          localStorage.setItem("digiscale_cached_user_id", uId);
-          localStorage.setItem("user_role", profile.role || "Admin");
-          localStorage.setItem("user_name", profile.name || "");
-          localStorage.setItem("user_email", profile.email || "");
-          localStorage.setItem("user_plan", profile.plan || "Starter");
-          localStorage.setItem("perm_collections", profile.perm_collections || "edit");
-          localStorage.setItem("perm_warehouse", profile.perm_warehouse || "edit");
-          localStorage.setItem("perm_stockbook", profile.perm_stockbook || "edit");
-          localStorage.setItem("perm_clients", profile.perm_clients || "edit");
-          localStorage.setItem("perm_quotations", profile.perm_quotations || "edit");
-        }
-      } catch (_) {}
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || t("invalidCredentials"));

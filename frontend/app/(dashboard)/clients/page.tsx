@@ -184,6 +184,24 @@ export default function ClientsPage() {
   });
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("digiscale_clients") || localStorage.getItem("digiscale_clients");
+      const cachedQuotes = sessionStorage.getItem("digiscale_client_quotes") || localStorage.getItem("digiscale_client_quotes");
+      if (cachedQuotes) {
+        try {
+          setClientQuotes(JSON.parse(cachedQuotes));
+        } catch (e) {}
+      }
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setClients(parsed);
+            setLoading(false);
+          }
+        } catch (e) {}
+      }
+    }
     fetchClients();
   }, []);
 
@@ -206,7 +224,9 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      setLoading(true);
+      if (typeof window !== "undefined" && !sessionStorage.getItem("digiscale_clients") && !localStorage.getItem("digiscale_clients")) {
+        setLoading(true);
+      }
       const [profile, settings] = await Promise.all([
         getUserProfile(), 
         getUserSettings().catch(() => null)
@@ -253,7 +273,9 @@ export default function ClientsPage() {
       
       try {
         sessionStorage.setItem("digiscale_clients", JSON.stringify(clientsRes.data || []));
+        localStorage.setItem("digiscale_clients", JSON.stringify(clientsRes.data || []));
         sessionStorage.setItem("digiscale_client_quotes", JSON.stringify(quotesMap));
+        localStorage.setItem("digiscale_client_quotes", JSON.stringify(quotesMap));
       } catch (e) {}
     } catch (err: any) {
       alert(err.message || "Failed to load clients");

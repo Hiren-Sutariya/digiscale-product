@@ -131,6 +131,11 @@ export default function StockBookPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLang(localStorage.getItem("digiscale_language") || "en");
+      const cachedUserId = localStorage.getItem("digiscale_cached_user_id");
+      if (cachedUserId) {
+        setCurrentUserId(cachedUserId);
+        setLoading(false);
+      }
 
       // Warm up state instantly using stale-while-revalidate from localStorage cache
       const cachedProds = localStorage.getItem("digiscale_cached_all_products");

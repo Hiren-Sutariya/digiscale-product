@@ -1,11 +1,9 @@
 const getApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") {
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      return `http://${window.location.hostname}:8000`;
-    }
+    return `http://${window.location.hostname}:8000`;
   }
-  return "https://digiscale-backend-j8zz.onrender.com";
+  return "http://localhost:8000";
 };
 const API_BASE_URL = getApiBaseUrl();
 import { getCache, setCache, clearCache } from "@/lib/cache";
@@ -62,6 +60,17 @@ export async function login(email: string, password: string): Promise<any> {
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
+    if (data.user_id) {
+      const uId = (data.role === "Staff" && data.admin_id) ? data.admin_id.toString() : data.user_id.toString();
+      localStorage.setItem("digiscale_cached_user_id", uId);
+    }
+    if (data.role) localStorage.setItem("user_role", data.role);
+    if (data.plan) localStorage.setItem("user_plan", data.plan);
+    if (data.perm_collections) localStorage.setItem("perm_collections", data.perm_collections);
+    if (data.perm_warehouse) localStorage.setItem("perm_warehouse", data.perm_warehouse);
+    if (data.perm_stockbook) localStorage.setItem("perm_stockbook", data.perm_stockbook);
+    if (data.perm_clients) localStorage.setItem("perm_clients", data.perm_clients);
+    if (data.perm_quotations) localStorage.setItem("perm_quotations", data.perm_quotations);
     document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
   return data;
@@ -85,6 +94,17 @@ export async function signup(name: string, email: string, password: string): Pro
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user_name", data.user_name);
     localStorage.setItem("user_email", data.user_email);
+    if (data.user_id) {
+      const uId = (data.role === "Staff" && data.admin_id) ? data.admin_id.toString() : data.user_id.toString();
+      localStorage.setItem("digiscale_cached_user_id", uId);
+    }
+    if (data.role) localStorage.setItem("user_role", data.role);
+    if (data.plan) localStorage.setItem("user_plan", data.plan);
+    if (data.perm_collections) localStorage.setItem("perm_collections", data.perm_collections);
+    if (data.perm_warehouse) localStorage.setItem("perm_warehouse", data.perm_warehouse);
+    if (data.perm_stockbook) localStorage.setItem("perm_stockbook", data.perm_stockbook);
+    if (data.perm_clients) localStorage.setItem("perm_clients", data.perm_clients);
+    if (data.perm_quotations) localStorage.setItem("perm_quotations", data.perm_quotations);
     document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
   return data;
